@@ -41,3 +41,8 @@ Every change to this project goes here — from people and from AI tools. Git sh
 - Why: Phase 0 of `IMPLEMENTATION_PLAN.md`; placeholder models for all art until final assets.
 - Status: committed (Phase 0: packages, _Game folders and asmdefs, merged GDD)
 - Notes / risks: no scene or prefab changes; the only ProjectSettings change is the scoped registry above. Unity MCP (CoplayDev) works over HTTP. Package resolution is clean (only "VoxReader installed without a signature" info). An MCP EditMode test run got stuck because the Editor was unfocused with an unsaved untitled scene open, which also held back the recompile; after Burak stopped it, VoxReader and Game.Tests compiled and the EditMode smoke tests passed 2/2 through MCP, with no console errors. No `.mcp.json` added: the MCP server is configured on Burak's machine.
+
+### 2026-10-24 — Burak (Claude Code) — branch claude/project-thread-yuc0gi
+- Changed: `MAIN_GDD.md` (jam deadline 2026-10-26 15:00 in §14 and A-19, Son güncelleme, Değişiklik geçmişi).
+- Why: Burak gave the deliverable date.
+- Status: committed (GDD: record jam deadline)

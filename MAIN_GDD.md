@@ -1,6 +1,6 @@
 # MAIN GDD — Dance with the Devil (Bir Şey Olmaz)
 
-**Son güncelleme: 2026-10-24 03:40 (UTC+3)**
+**Son güncelleme: 2026-10-24 03:57 (UTC+3)**
 
 > **Bu dosya projenin tek ve yaşayan Game Design Document'ıdır.** Sürüm numarası yoktur (GDD2, GDD3…
 > diye gitmez). Yeni bir mekanik eklendiğinde, var olan bir mekanik değiştiğinde ya da bir tasarım kararı
@@ -258,6 +258,8 @@ Kendin kaldın."
 
 ## 14. Kapsam (jam teslimine kadar) — ⬜
 
+**Teslim:** 2026-10-26 15:00 (UTC+3), kullanıcı kararı. 24 Ekim gecesinden itibaren ~59 saat kalır. Öneri (producer): hedef **Minimum** katman olsun, İsteğe bağlı ekler ancak Minimum oynanır olunca başlasın.
+
 **Kapsam ilkesi:** temanın taşıyıcısı ölüm anındaki Şeytan sözleşmesi ve "Hayır" seçeneğidir. Kesmek gerekirse önce
 görsel gösteriş, sonra içerik çeşitliliği gider. Sözleşme → bedel → son zinciri en son kesilir.
 
@@ -292,7 +294,7 @@ savaş içi fısıltı modülleri.
 | A-16 | "Hasardan kaçınma" skoru zorunlu ölümlerle her koşuda 0 olur. Kalsın mı? | Kalsın / değişsin / çıkarılsın |
 | A-17 | Diriliş değerleri (can dolar, 2 sn dokunulmazlık, 6 m şok dalgası iriyi de öldürür) onaylanıyor mu? | Onay / değişiklik |
 | A-18 | Küçük kurallar: imp patlaması diğer düşmanlara vurur mu? Pala dalgası kalkanı yok sayar mı (öneri: hayır)? Voksel kaybı isabet alanını küçültür mü (öneri: hayır)? | — |
-| A-19 | Jam teslim tarihi ve kişi başı iş dağılımı nedir? Kapsam tahmini buna bağlı. | — |
+| A-19 | Kişi başı iş dağılımı nedir? (Teslim tarihi kararlaştı: 2026-10-26 15:00, bkz. §14.) | — |
 
 ---
 
@@ -300,3 +302,4 @@ savaş içi fısıltı modülleri.
 
 - 2026-10-23 — SefaSelim (Claude Code) — boş GDD iskeleti oluşturuldu.
 - 2026-10-24 03:40 — Burak (Claude Code) — ilk GDD ile birleşik tasarım (Şeytan sözleşmeleri, üç silah, beş düşman, ölüm takvimi, sonlar, defter, hikâye, replikler, kapsam) yazıldı; 19 açık soru listelendi.
+- 2026-10-24 03:57 — Burak (Claude Code) — jam teslim tarihi kaydedildi (2026-10-26 15:00).
