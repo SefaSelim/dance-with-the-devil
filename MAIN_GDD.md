@@ -1,6 +1,6 @@
 # MAIN GDD — Dance with the Devil (Bir Şey Olmaz)
 
-**Son güncelleme: 2026-10-24 03:59 (UTC+3)**
+**Son güncelleme: 2026-10-24 04:14 (UTC+3)**
 
 > **Bu dosya projenin tek ve yaşayan Game Design Document'ıdır.** Sürüm numarası yoktur (GDD2, GDD3…
 > diye gitmez). Yeni bir mekanik eklendiğinde, var olan bir mekanik değiştiğinde ya da bir tasarım kararı
@@ -182,12 +182,18 @@ uygulanır, şarj sayısını değiştirmez.
 **Oyuncu HAYIR dediğinde:** 1. ölümde "Hayır mı? Hem de ilk seferde. Pek eğlenceli değilsin." · 2–5. ölümde
 "Şimdi mi hayır? Aldıklarım bende kalıyor."
 
-## 9. Arena — ⬜
+## 9. Arena — 🟡 (yer tutucu blok arena kuruldu)
 
 İlk GDD §9 düzeni: ~32 × 28 m dikdörtgen platform, kesintisiz dış sekme duvarı (kırılmaz), ~12 × 10 m açık merkez,
 kuzeybatı ve güneydoğuda birbirini karşılayan iki L duvar, en dar geçit 4 m, dört kenarda işaretli giriş. Kamera
 yakınındaki duvarlar karakteri gizlediğinde saydamlaşır. İç L duvarlar ve dekorlar kırılabilir olarak planlandı;
 ne kadarının kırılacağı Faz 4'te dengelenir (❓ A-12: Yankı'nın sekme yüzeyleriyle çakışma).
+
+**Kurulan yerleşim (yer tutucu):** oynanabilir alan 32 × 28 m; kuzey ve doğu duvarları 2 m, kameraya yakın güney ve batı
+duvarları görüşü kapatmasın diye 1 m yüksekliktedir ama 2 m gibi seker. L bloklar 1,5 m yüksek, 3 m kalındır. Çevre
+halkası 5–6 m, iki L arası en az 11,7 m; merkezde kuzey–güney ve doğu–batı yönünde 4 m'lik iki açık görüş koridoru
+vardır. Açık merkez ~14 × 12 m çıktı (ilk GDD ~12 × 10 m), halkayı ≥5 m ve 6 m diriliş şokuna yer bırakmak için.
+Dört giriş kenarların ortasında, içe bakan şeritli zemin plakalarıdır; doğuş noktaları oyuncu başlangıcından 12–14 m uzaktadır.
 
 ## 10. Dalgalar ve zorluk — ⬜
 
@@ -250,16 +256,17 @@ Kendin kaldın."
 üzerinde tek satır avantaj, tek satır bedel. Ek olarak HUD'da Defne'nin küçük fotoğrafı (Sözleşme 3 bedeli) ve roket
 şarjları. Bağlamsal ipuçları ilk dakikada sırayla gelir, oyunu durdurmaz. Renk tek ayırt edici değildir.
 
-## 13. Görsel ve ses yönü — ⬜
+## 13. Görsel ve ses yönü — 🟡 (sabit izometrik kamera ve pikselli görüntü var; dış çizgi ve toon ışık yok)
 
-- **Görünüm:** ortografik izometrik kamera, düşük çözünürlükte (640×360) çizilip nokta filtresiyle büyütülen, hafif
+- **Görünüm:** sabit ortografik izometrik kamera (35° eğim, 45° dönüş; bütün arena görünür, metre başına 12 piksel), düşük çözünürlükte (640×360) çizilip nokta filtresiyle büyütülen, hafif
   pikselli voksel görünüm; düz gölgeli toon ışık; 1 px dış çizgi; kamera kayarken titreme olmaz.
 - **Parçalanma:** vurulan her şey, düşmanlar ve çevre, piksellerine (küplere) dağılır. Roket geniş, pala düzlemsel kesik,
   mermi küçük delik açar.
 - **Karakterler:** parçalı voksel (baş, gövde, kollar, bacaklar), yordamsal animasyon (yürüme sallanması, nişan, geri tepme).
 - **Şeytan:** ekranın sağ kenarından, monitör çerçevesinin dışından eğilen 2B çizim; ekibin kendi çizimiyle değişecek.
 - **Ses:** kısa okunur SFX, karanlık tek müzik döngüsü; Sözleşme 2 bir müzik katmanını susturur.
-- **Yer tutucular:** son modeller gelene kadar ilkel şekiller ve basit üretilmiş vokseller kullanılır 🧪.
+- **Yer tutucular 🧪:** son modeller gelene kadar küplerden Defne (16 parça) ve Takipçi (8 parça) kullanılır. Yer tutucu
+  renkler: koyu soğuk zemin ve duvarlar, krem sekme kenarı, erik rengi saç, petrol tulum, turkuaz detay, kırmızı Takipçi.
 
 ## 14. Kapsam (jam teslimine kadar) — ⬜
 
@@ -319,3 +326,4 @@ savaş içi fısıltı modülleri.
 - 2026-10-24 03:40 — Burak (Claude Code) — ilk GDD ile birleşik tasarım (Şeytan sözleşmeleri, üç silah, beş düşman, ölüm takvimi, sonlar, defter, hikâye, replikler, kapsam) yazıldı; 19 açık soru listelendi.
 - 2026-10-24 03:57 — Burak (Claude Code) — jam teslim tarihi kaydedildi (2026-10-26 15:00).
 - 2026-10-24 03:59 — Burak (Claude Code) — Burak "önerilerini uygula" dedi: 13 açık soru öneriler doğrultusunda karara bağlandı (K-1…K-13, ör. ölüm garanti, modüller yalnız tüfekte, Minimum kapsam); 9 soru açık kaldı.
+- 2026-10-24 04:14 — Burak (Claude Code) — Faz 1 başlangıcı: yer tutucu blok arena (§9 yerleşimi) ve sabit pikselli izometrik kamera (§13) kuruldu.

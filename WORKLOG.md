@@ -51,3 +51,16 @@ Every change to this project goes here — from people and from AI tools. Git sh
 - Changed: `MAIN_GDD.md` §2, §3, §5, §8, §10, §11, §15: 13 open questions closed as decisions K-1…K-13 after Burak said "önerilerini uygula" (apply your recommendations); 9 stay open.
 - Why: user design decision.
 - Status: committed (GDD: apply recommended decisions)
+
+### 2026-10-24 — Burak (Claude Code) — branch claude/project-thread-yuc0gi
+- Changed: Phase 1 start (look and arena, placeholder art).
+  - New `Assets/_Game/Scripts/Core/PixelCameraRig.cs`: game camera renders into a 642×362 RenderTexture (640×360 visible + 1-texel border, point filter, no MSAA), shown full screen by a runtime display camera + Screen Space Overlay RawImage with integer scaling, texel snapping, sub-texel uvRect offset and `ScreenPointToWorldRay` for mouse aim. With no target it holds a fixed focus point.
+  - New `Assets/_Game/Editor/PlaceholderBuilder.cs`: menu `Dance/Placeholders/Rebuild All` builds the materials, prefabs and arena scene from the layout and palette tables (level-designer and art-director plans).
+  - New assets: 17 flat materials `Assets/_Game/Art/Materials/mat_*_flat.mat` (URP Simple Lit), prefabs `Assets/_Game/Prefabs/char_defne_placeholder.prefab` (16 cubes) and `char_chaser_placeholder.prefab` (8 cubes), no colliders on the parts.
+  - New scene `Assets/_Game/Scenes/Arena.unity`: Directional Light (soft shadows, rotation 50/75/0), flat ambient #3A3F5C, Arena (Floor 34×0.1×30 with BoxCollider; Wall_N/Wall_E 2 m and Wall_S/Wall_W 1 m with BoxCollider size (1,2,1) center (0,0.5,0); four L-block boxes 1.5 m with BoxColliders; cream edge strips without colliders; four entrance plates without colliders), SpawnPoints (4 empties), Player (Defne prefab at origin), Chaser_Preview (🧪), CameraRig › PixelCameraRig (ortho size 15, pitch 35, yaw 45, focus (1,0,1)) › GameCamera (Camera ortho, URP Base, post-processing off, AA none, AudioListener).
+  - `Game.Runtime.asmdef` + `UnityEngine.UI`; `Game.Editor.asmdef` + URP core/universal runtime.
+  - ProjectSettings: `EditorBuildSettings.asset` › scenes (Arena.unity added at index 0); `URPProjectSettings.asset` › m_ProjectSettingFolderPath added by Unity.
+  - `MAIN_GDD.md` §9 and §13 status 🟡 and the built layout.
+- Why: Phase 1 of the plan, minimum scope (K-11): RawImage upscale instead of a custom Render Graph pass.
+- Status: committed (Phase 1: pixel camera rig, placeholder Defne/Chaser and block arena)
+- Notes / risks: checked through MCP: console clean, play-mode screenshot, every wall/block/character base raycasts onto the floor at y 0.000, 0 collider overlaps. Not done yet in Phase 1: 1 px outline, toon shader, .vox importer and its EditMode test, panning jitter test (camera is fixed for now). `Assets/Scenes/aaaa.unity` is Burak's local scene and is not committed.
