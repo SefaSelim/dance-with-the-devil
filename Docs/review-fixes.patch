@@ -1,0 +1,255 @@
+From ced4cff39dbdcd94bf23e7a19f3295de6af1bc0c Mon Sep 17 00:00:00 2001
+From: SefaSelim <sefaselimtura@gmail.com>
+Date: Sat, 24 Oct 2026 10:54:18 +0300
+Subject: [PATCH 1/2] Fire rifle and rocket from the muzzle toward the cursor
+ aim point
+
+Shots left the muzzle (0.37 m beside the body) along the body-to-cursor
+direction, so they flew parallel to the cursor line and could miss an
+enemy under the cursor at close range.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ Assets/_Game/Scripts/Weapons/WeaponHub.cs | 26 +++++++++++++++++++++--
+ 1 file changed, 24 insertions(+), 2 deletions(-)
+
+diff --git a/Assets/_Game/Scripts/Weapons/WeaponHub.cs b/Assets/_Game/Scripts/Weapons/WeaponHub.cs
+index 550900c..55bf4ee 100644
+--- a/Assets/_Game/Scripts/Weapons/WeaponHub.cs
++++ b/Assets/_Game/Scripts/Weapons/WeaponHub.cs
+@@ -35,6 +35,8 @@ private void Awake()
+             if (_machete == null) _machete = GetComponentInChildren<Machete>();
+         }
+ 
++        private const float MinMuzzleAimDistance = 1f;
++
+         private void Update()
+         {
+             if (_input == null || _player == null || _player.Health.IsDead) return;
+@@ -45,11 +47,31 @@ private void Update()
+             if (_machete != null && _input.MeleePressed) _machete.TrySwing(aim);
+ 
+             if (_rocketLauncher != null && _input.RocketPressed)
+-                _rocketLauncher.TryFire(_rocketLauncher.MuzzlePosition, aim);
++            {
++                Vector3 muzzle = _rocketLauncher.MuzzlePosition;
++                _rocketLauncher.TryFire(muzzle, AimFrom(muzzle, aim));
++            }
+ 
+             bool swinging = _machete != null && _machete.IsSwinging;
+             if (_rifle != null && !swinging && _input.FireHeld)
+-                _rifle.TryFire(_rifle.MuzzlePosition, aim);
++            {
++                Vector3 muzzle = _rifle.MuzzlePosition;
++                _rifle.TryFire(muzzle, AimFrom(muzzle, aim));
++            }
++        }
++
++        /// <summary>
++        /// Flat direction from the muzzle to the cursor's aim point, so shots go where the cursor is although the
++        /// muzzle sits beside the body. Falls back to the body aim when the cursor is closer than
++        /// <see cref="MinMuzzleAimDistance"/> to the muzzle or behind it (the line would swing wildly).
++        /// </summary>
++        private Vector3 AimFrom(Vector3 muzzle, Vector3 bodyAim)
++        {
++            Vector3 toAim = _player.AimPoint - muzzle;
++            toAim.y = 0f;
++            if (toAim.sqrMagnitude < MinMuzzleAimDistance * MinMuzzleAimDistance) return bodyAim;
++            toAim.Normalize();
++            return Vector3.Dot(toAim, bodyAim) > 0f ? toAim : bodyAim;
+         }
+     }
+ }
+-- 
+2.51.0.windows.2
+
+
+From 817b79640b93da5409a1a63af4a42c8c1e1a98c0 Mon Sep 17 00:00:00 2001
+From: SefaSelim <sefaselimtura@gmail.com>
+Date: Sat, 24 Oct 2026 10:56:33 +0300
+Subject: [PATCH 2/2] Review fixes: wall-shielded rockets, safe contract YES
+ key, stable spawn queue
+
+- RocketLauncher: walls block explosion damage (raycast to each target).
+- DevilScreen: E only accepts after it stayed up 0.4 s on the card, so
+  rocket taps from combat cannot sign a contract.
+- WaveDirector: snap jittered spawns onto the NavMesh; stable insertion
+  sort keeps the interleaved sub-group order (List.Sort is unstable).
+- PixelCameraRig: XML doc back on ScreenPointToWorldRay.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ Assets/_Game/Scripts/Core/PixelCameraRig.cs   |  8 +++---
+ Assets/_Game/Scripts/Core/WaveDirector.cs     | 19 ++++++++++++--
+ Assets/_Game/Scripts/UI/DevilScreen.cs        | 16 +++++++++++-
+ .../_Game/Scripts/Weapons/RocketLauncher.cs   | 25 ++++++++++++++++++-
+ 4 files changed, 60 insertions(+), 8 deletions(-)
+
+diff --git a/Assets/_Game/Scripts/Core/PixelCameraRig.cs b/Assets/_Game/Scripts/Core/PixelCameraRig.cs
+index 1b14812..a78e77f 100644
+--- a/Assets/_Game/Scripts/Core/PixelCameraRig.cs
++++ b/Assets/_Game/Scripts/Core/PixelCameraRig.cs
+@@ -156,16 +156,16 @@ public void SetTarget(Transform target, bool snap = true)
+             }
+         }
+ 
+-        /// <summary>
+-        /// Converts a screen position (pixels, bottom-left origin, e.g. Mouse.current.position) into a world
+-        /// ray from the low-res game camera, accounting for letterbox, scale, border and sub-texel offset.
+-        /// </summary>
+         /// <summary>Adds camera trauma (0..1). Shake = trauma² so small hits stay subtle.</summary>
+         public void AddTrauma(float amount)
+         {
+             _trauma = Mathf.Clamp01(_trauma + Mathf.Max(0f, amount));
+         }
+ 
++        /// <summary>
++        /// Converts a screen position (pixels, bottom-left origin, e.g. Mouse.current.position) into a world
++        /// ray from the low-res game camera, accounting for letterbox, scale, border and sub-texel offset.
++        /// </summary>
+         public Ray ScreenPointToWorldRay(Vector2 screenPos)
+         {
+             Vector2 viewport = ScreenToGameViewport(screenPos);
+diff --git a/Assets/_Game/Scripts/Core/WaveDirector.cs b/Assets/_Game/Scripts/Core/WaveDirector.cs
+index ba4d2d6..00663ed 100644
+--- a/Assets/_Game/Scripts/Core/WaveDirector.cs
++++ b/Assets/_Game/Scripts/Core/WaveDirector.cs
+@@ -1,6 +1,7 @@
+ using System;
+ using System.Collections.Generic;
+ using UnityEngine;
++using UnityEngine.AI;
+ 
+ namespace DanceWithTheDevil
+ {
+@@ -272,8 +273,19 @@ private void EnqueueWindow(in WaveWindow window)
+                     if (shooters-- > 0) _pending.Add(new PendingSpawn { Type = EnemyType.Shooter, ReleaseTime = release });
+                 }
+             }
+-            // Keep the queue ordered by release time (earlier windows' late spawns stay in front).
+-            _pending.Sort((a, b) => a.ReleaseTime.CompareTo(b.ReleaseTime));
++            // Keep the queue ordered by release time (earlier windows' late spawns stay in front). Insertion sort:
++            // List.Sort is unstable above 16 items and would shuffle the interleaved types of a sub-group.
++            for (int i = 1; i < _pending.Count; i++)
++            {
++                PendingSpawn item = _pending[i];
++                int j = i - 1;
++                while (j >= 0 && _pending[j].ReleaseTime > item.ReleaseTime)
++                {
++                    _pending[j + 1] = _pending[j];
++                    j--;
++                }
++                _pending[j + 1] = item;
++            }
+         }
+ 
+         /// <summary>Group <paramref name="index"/>'s share of <paramref name="total"/>; the remainder goes to earlier groups.</summary>
+@@ -429,6 +441,9 @@ private void SpawnAt(EnemyType type, int entrance)
+             if (pool == null || point == null) return;
+ 
+             Vector3 position = point.position + point.right * UnityEngine.Random.Range(-_spawnJitter, _spawnJitter);
++            // The jitter can push the point into a wall; an agent that cannot attach never moves but still counts
++            // toward the active cap for the rest of the run. Snap to the nearest NavMesh point when there is one.
++            if (NavMesh.SamplePosition(position, out NavMeshHit hit, 1.5f, NavMesh.AllAreas)) position = hit.position;
+             Vector3 facing = _player != null ? _player.position - position : point.forward;
+             facing.y = 0f;
+             Quaternion rotation = facing.sqrMagnitude > 1e-6f ? Quaternion.LookRotation(facing, Vector3.up) : point.rotation;
+diff --git a/Assets/_Game/Scripts/UI/DevilScreen.cs b/Assets/_Game/Scripts/UI/DevilScreen.cs
+index c4b6552..38113f0 100644
+--- a/Assets/_Game/Scripts/UI/DevilScreen.cs
++++ b/Assets/_Game/Scripts/UI/DevilScreen.cs
+@@ -47,6 +47,11 @@ public sealed class DevilScreen : MonoBehaviour
+         private enum Mode { Hidden, Entering, Line, Card }
+         private Mode _mode = Mode.Hidden;
+         private bool _cardHasChoice;
++        // E is also the rocket key: it only counts as YES after it has been seen released while the card is up,
++        // so a rocket tap held or repeated from combat never signs a contract.
++        private bool _eArmed;
++        private float _eUpTime;
++        private const float EArmDelay = 0.4f;
+         private float _enterTime;
+         private float _promptTime;
+ 
+@@ -98,6 +103,8 @@ public void ShowCard(DealDefinition deal, bool offersChoice)
+             _no.SetActive(offersChoice);
+             _card.SetActive(true);
+             _cardHasChoice = offersChoice;
++            _eArmed = false;
++            _eUpTime = 0f;
+             _mode = Mode.Card;
+             _promptTime = 0f;
+         }
+@@ -120,13 +127,20 @@ private void Update()
+                 ApplyEnter(EnterDuration > 0f ? _enterTime / EnterDuration : 1f);
+             }
+ 
++            if (_mode == Mode.Card && Keyboard.current != null)
++            {
++                // Arms only after E has stayed up for a moment: repeated rocket taps keep it disarmed.
++                _eUpTime = Keyboard.current.eKey.isPressed ? 0f : _eUpTime + dt;
++                if (_eUpTime >= EArmDelay) _eArmed = true;
++            }
++
+             if (_promptTime < _inputLock) return;
+ 
+             if (_mode == Mode.Card && _cardHasChoice)
+             {
+                 Keyboard k = Keyboard.current;
+                 Gamepad g = Gamepad.current;
+-                if (UiKit.ConfirmPressed() || (k != null && k.eKey.wasPressedThisFrame)) RaiseYes();
++                if (UiKit.ConfirmPressed() || (_eArmed && k != null && k.eKey.wasPressedThisFrame)) RaiseYes();
+                 else if ((k != null && k.hKey.wasPressedThisFrame) || (g != null && g.buttonEast.wasPressedThisFrame)) RaiseNo();
+                 return;
+             }
+diff --git a/Assets/_Game/Scripts/Weapons/RocketLauncher.cs b/Assets/_Game/Scripts/Weapons/RocketLauncher.cs
+index 4dfd3a0..29563a4 100644
+--- a/Assets/_Game/Scripts/Weapons/RocketLauncher.cs
++++ b/Assets/_Game/Scripts/Weapons/RocketLauncher.cs
+@@ -58,6 +58,7 @@ public sealed class RocketLauncher : MonoBehaviour
+         [SerializeField, Range(0f, 1f)] private float _launchIntensity = 0.35f;
+ 
+         private readonly Collider[] _overlaps = new Collider[MaxOverlaps];
++        private readonly RaycastHit[] _lineHits = new RaycastHit[16];
+         private readonly HashSet<IDamageable> _damagedThisExplosion = new HashSet<IDamageable>();
+         private ProjectileDetonateHandler _onDetonate;
+         private Transform _ownerRoot;
+@@ -208,7 +209,10 @@ private void Explode(Projectile projectile, Vector3 point, Vector3 normal)
+                 if (_ownerRoot != null && collider.transform.IsChildOf(_ownerRoot)) continue; // never the player
+ 
+                 IDamageable target = collider.GetComponentInParent<IDamageable>();
+-                if (target == null || !_damagedThisExplosion.Add(target)) continue;
++                if (target == null || _damagedThisExplosion.Contains(target)) continue;
++                // Unbroken walls shield what is behind them (GDD §7 rule for module blasts, applied to rockets too).
++                if (IsShieldedByWall(point + normal * 0.05f, collider.bounds.center)) continue;
++                _damagedThisExplosion.Add(target);
+ 
+                 var targetComponent = target as Component;
+                 Vector3 targetPosition = targetComponent != null ? targetComponent.transform.position : collider.bounds.center;
+@@ -237,5 +241,24 @@ private void Explode(Projectile projectile, Vector3 point, Vector3 normal)
+             });
+             Exploded?.Invoke(point);
+         }
++
++        /// <summary>True if a non-damageable collider (not the owner) lies between the blast point and the target.</summary>
++        private bool IsShieldedByWall(Vector3 from, Vector3 to)
++        {
++            Vector3 delta = to - from;
++            float distance = delta.magnitude;
++            if (distance <= 1e-4f) return false;
++            int count = Physics.RaycastNonAlloc(from, delta / distance, _lineHits, distance, _explosionMask,
++                QueryTriggerInteraction.Ignore);
++            for (int i = 0; i < count; i++)
++            {
++                Collider collider = _lineHits[i].collider;
++                if (collider == null) continue;
++                if (_ownerRoot != null && collider.transform.IsChildOf(_ownerRoot)) continue;
++                if (collider.GetComponentInParent<IDamageable>() != null) continue;
++                return true;
++            }
++            return false;
++        }
+     }
+ }
+-- 
+2.51.0.windows.2
+
