@@ -10,12 +10,17 @@ namespace DanceWithTheDevil
     /// <see cref="InputDelay"/> (Contract 6, GDD §8): when above 0, move, aim, held and pressed states are read from a
     /// time-stamped ring buffer (unscaled time, no allocations) that much in the past; a press is delivered exactly
     /// once. Restart is never delayed.
+    /// The buffer is sized by time, not by frames: frames closer than <see cref="MinSampleInterval"/> are merged into one
+    /// sample (presses OR-ed, latest move/aim/held kept), so at any frame rate it holds over a second of input; if it
+    /// ever fills, the oldest sample is delivered early instead of being overwritten, so no press is lost.
     /// </summary>
     [DefaultExecutionOrder(-100)]
     [DisallowMultipleComponent]
     public sealed class PlayerInputReader : MonoBehaviour
     {
-        private const int BufferSize = 512;
+        private const int BufferSize = 1024;
+        private const float MinSampleInterval = 0.001f; // at most 1000 samples/s: 1024 samples cover > 1 s of delay
+        private const int RebaseThreshold = BufferSize * 1024 * 1024;
         private const byte RocketBit = 1;
         private const byte MeleeBit = 2;
         private const byte DodgeBit = 4;
@@ -46,6 +51,7 @@ namespace DanceWithTheDevil
         private int _consumed;  // serial of the next sample not yet delivered
         private InputSample _delayed;
         private byte _delayedPressed;
+        private byte _carriedPressed; // presses of samples delivered early because the buffer was full
         private float _inputDelay;
 
         /// <summary>Seconds of input delay (default 0; Contract 6 sets 0.25). Min 0.</summary>
@@ -130,9 +136,10 @@ namespace DanceWithTheDevil
         private void Update()
         {
             // Always record, so turning the delay on mid-run has a history to read from.
+            float now = Time.unscaledTime;
             var sample = new InputSample
             {
-                Time = Time.unscaledTime,
+                Time = now,
                 Move = LiveMove,
                 Aim = LiveAim,
                 FireHeld = LiveFireHeld,
@@ -140,8 +147,37 @@ namespace DanceWithTheDevil
                 Pressed = (byte)((WasPressed(_rocket) ? RocketBit : 0) | (WasPressed(_melee) ? MeleeBit : 0) |
                                  (WasPressed(_dodge) ? DodgeBit : 0) | (WasPressed(_reject) ? RejectBit : 0)),
             };
-            _buffer[_written % BufferSize] = sample;
-            _written++;
+
+            bool merge = _written > _consumed && now - _buffer[(_written - 1) % BufferSize].Time < MinSampleInterval;
+            if (merge)
+            {
+                // Very high frame rate: fold this frame into the newest undelivered sample (keeps its time stamp).
+                ref InputSample newest = ref _buffer[(_written - 1) % BufferSize];
+                newest.Move = sample.Move;
+                newest.Aim = sample.Aim;
+                newest.FireHeld = sample.FireHeld;
+                newest.EjectHeld = sample.EjectHeld;
+                newest.Pressed |= sample.Pressed;
+            }
+            else
+            {
+                int slot = _written % BufferSize;
+                if (_written - _consumed >= BufferSize)
+                {
+                    // Full (only with a delay over ~1 s): deliver the oldest early rather than lose its presses.
+                    _delayed = _buffer[slot];
+                    _carriedPressed |= _buffer[slot].Pressed;
+                    _consumed++;
+                }
+                _buffer[slot] = sample;
+                _written++;
+                if (_written >= RebaseThreshold)
+                {
+                    // Keep the serials far from int overflow; a multiple of BufferSize keeps every slot in place.
+                    _written -= RebaseThreshold;
+                    _consumed -= RebaseThreshold;
+                }
+            }
 
             if (!Delayed)
             {
@@ -150,12 +186,13 @@ namespace DanceWithTheDevil
                 _delayed = sample;
                 _delayed.Pressed = 0;
                 _delayedPressed = 0;
+                _carriedPressed = 0;
                 return;
             }
 
-            if (_written - _consumed > BufferSize) _consumed = _written - BufferSize; // oldest overwritten
-            float cutoff = Time.unscaledTime - _inputDelay;
-            byte pressed = 0;
+            float cutoff = now - _inputDelay;
+            byte pressed = _carriedPressed;
+            _carriedPressed = 0;
             while (_consumed < _written)
             {
                 InputSample next = _buffer[_consumed % BufferSize];

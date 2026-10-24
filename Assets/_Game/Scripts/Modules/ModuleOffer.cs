@@ -9,20 +9,36 @@ namespace DanceWithTheDevil
     /// reused instance (at most one offer at a time). No colliders: it never blocks bullets or the player.
     /// The UI reads <see cref="Type"/>, <see cref="Position"/>, <see cref="AcceptProgress"/>, <see cref="TimeLeft"/>
     /// and <see cref="IsEquippedDuplicate"/> ("TAKILI").
+    /// World-side readability (audit F14): the core is drawn 1.8x and pulses, the contact ring has a bright edge in
+    /// the module's colour, a duplicate shows a flat cream X across its ring (and a smaller, still core), and the core
+    /// blinks in its last 3 seconds before it fades. Visual scale never changes the contact radius.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class ModuleOffer : MonoBehaviour
     {
-        private const float CoreHeight = 1f;
-        private const float BobAmplitude = 0.08f;
+        private const float CoreHeight = 1.1f;
+        private const float CoreScale = 1.8f;            // the 1x core read as a 3-6 px speck
+        private const float DuplicateCoreScale = 1.2f;   // a duplicate ("TAKILI") sits smaller and still
+        private const float BobAmplitude = 0.1f;
         private const float BobFrequency = 1.2f;
         private const float SpinDegreesPerSecond = 90f;
+        private const float PulseFrequency = 1.6f;
+        private const float PulseAmount = 0.14f;
+        private const float ExpiryWarning = 3f;          // seconds left when the core starts to blink
+        private const float ExpiryBlinkHz = 5f;
+        private const int EdgeSegments = 16;
+        private static readonly Color MarkerColor = new Color(0.96f, 0.9f, 0.74f); // cream, like the bounce edge
 
         private Transform _core;
         private readonly Transform[] _shapes = new Transform[ModuleCatalog.Count];
         private Transform _ringBase;
         private Transform _ringFill;
         private MeshRenderer _ringFillRenderer;
+        private Transform _edge;
+        private readonly MeshRenderer[] _edgeRenderers = new MeshRenderer[EdgeSegments];
+        private GameObject _duplicateMarker;
+        private Material _markerMaterial;
+        private bool _coreVisible = true;
         private Material[] _materials;
         private float _ringDiameter = 1.4f;
 
@@ -99,6 +115,50 @@ namespace DanceWithTheDevil
             _ringFillRenderer = _ringFill.GetComponent<MeshRenderer>();
             _ringBase.GetComponent<MeshRenderer>().receiveShadows = false;
             _ringFillRenderer.receiveShadows = false;
+
+            // Bright edge of the contact ring in the module's colour (the dark base alone vanished on the dark floor).
+            _edge = new GameObject("RingEdge").transform;
+            _edge.SetParent(transform, false);
+            float edgeRadius = _ringDiameter * 0.5f;
+            float edgeLength = 2f * Mathf.PI * edgeRadius / EdgeSegments * 0.6f;
+            for (int i = 0; i < EdgeSegments; i++)
+            {
+                float a = (i + 0.5f) * 2f * Mathf.PI / EdgeSegments;
+                var radial = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a));
+                Transform segment = ModuleVisuals.CreatePart("Edge_" + i, PrimitiveType.Cube, _edge,
+                    radial * edgeRadius + Vector3.up * 0.05f, new Vector3(edgeLength, 0.08f, 0.12f), null);
+                segment.localRotation = Quaternion.LookRotation(radial);
+                _edgeRenderers[i] = segment.GetComponent<MeshRenderer>();
+                _edgeRenderers[i].receiveShadows = false;
+            }
+
+            // "TAKILI" in the world (GDD §7): a flat cream X across the ring of a type the player already has. The
+            // bars run along the world axes, which the 45° camera shows as an X.
+            _markerMaterial = CreateMarkerMaterial(materials);
+            _duplicateMarker = new GameObject("DuplicateMarker");
+            _duplicateMarker.transform.SetParent(transform, false);
+            float barLength = _ringDiameter * 1.2f;
+            Transform barA = ModuleVisuals.CreatePart("Bar_A", PrimitiveType.Cube, _duplicateMarker.transform,
+                Vector3.up * 0.06f, new Vector3(barLength, 0.06f, 0.16f), _markerMaterial);
+            Transform barB = ModuleVisuals.CreatePart("Bar_B", PrimitiveType.Cube, _duplicateMarker.transform,
+                Vector3.up * 0.065f, new Vector3(0.16f, 0.06f, barLength), _markerMaterial);
+            barA.GetComponent<MeshRenderer>().receiveShadows = false;
+            barB.GetComponent<MeshRenderer>().receiveShadows = false;
+            _duplicateMarker.SetActive(false);
+        }
+
+        private static Material CreateMarkerMaterial(Material[] materials)
+        {
+            Material source = materials != null && materials.Length > 0 ? materials[0] : null;
+            if (source == null) return null;
+            var material = new Material(source) { name = "mat_module_duplicate_marker" };
+            if (material.HasProperty(ModuleVisuals.BaseColorId)) material.SetColor(ModuleVisuals.BaseColorId, MarkerColor);
+            return material;
+        }
+
+        private void OnDestroy()
+        {
+            if (_markerMaterial != null) Destroy(_markerMaterial);
         }
 
         private Transform NewShape(ModuleType type)
@@ -127,7 +187,12 @@ namespace DanceWithTheDevil
             transform.SetPositionAndRotation(floorPosition, Quaternion.identity);
             for (int i = 0; i < _shapes.Length; i++)
                 if (_shapes[i] != null) _shapes[i].gameObject.SetActive(i == (int)type);
-            if (_ringFillRenderer != null) _ringFillRenderer.sharedMaterial = Mat(type);
+            Material typeMaterial = Mat(type);
+            if (_ringFillRenderer != null) _ringFillRenderer.sharedMaterial = typeMaterial;
+            for (int i = 0; i < _edgeRenderers.Length; i++)
+                if (_edgeRenderers[i] != null && typeMaterial != null) _edgeRenderers[i].sharedMaterial = typeMaterial;
+            if (_duplicateMarker != null) _duplicateMarker.SetActive(false);
+            SetCoreVisible(true);
 
             gameObject.SetActive(true);
             UpdateVisual();
@@ -165,16 +230,36 @@ namespace DanceWithTheDevil
 
         private void UpdateVisual()
         {
+            bool duplicate = IsEquippedDuplicate;
+            float beat = duplicate ? 0f : Mathf.Sin(_age * PulseFrequency * 2f * Mathf.PI);
+            beat *= beat; // 0..1, two soft beats per cycle
             if (_core != null)
             {
                 _core.localPosition = Vector3.up * (CoreHeight + Mathf.Sin(_age * BobFrequency * 2f * Mathf.PI) * BobAmplitude);
-                _core.localRotation = Quaternion.Euler(0f, _age * SpinDegreesPerSecond, 0f);
+                _core.localRotation = Quaternion.Euler(0f, _age * SpinDegreesPerSecond * (duplicate ? 0.3f : 1f), 0f);
+                float scale = (duplicate ? DuplicateCoreScale : CoreScale) * (1f + PulseAmount * beat);
+                _core.localScale = new Vector3(scale, scale, scale);
+                // Expiry warning: the core blinks in its last seconds (TimeLeft had no visual).
+                SetCoreVisible(_timeLeft > ExpiryWarning || Mathf.Repeat(_timeLeft * ExpiryBlinkHz, 1f) < 0.6f);
             }
+            if (_edge != null)
+            {
+                float pulse = 1f - 0.08f * beat; // breathes inward, never past the real contact edge
+                _edge.localScale = new Vector3(pulse, 1f, pulse);
+            }
+            if (_duplicateMarker != null && _duplicateMarker.activeSelf != duplicate) _duplicateMarker.SetActive(duplicate);
             if (_ringFill != null)
             {
                 float d = _ringDiameter * _progress;
                 _ringFill.localScale = new Vector3(d, 0.01f, d);
             }
+        }
+
+        private void SetCoreVisible(bool visible)
+        {
+            if (_core == null || _coreVisible == visible) return;
+            _coreVisible = visible;
+            _core.gameObject.SetActive(visible);
         }
     }
 }

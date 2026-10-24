@@ -4,8 +4,8 @@ namespace DanceWithTheDevil
 {
     /// <summary>
     /// When the <see cref="Health"/> dies, bursts the model's cube parts into coloured cubes through
-    /// <see cref="PixelImpactFeedback.Shatter"/> (GDD §13: everything that gets hit scatters into its pixels).
-    /// Hiding the model is left to the owner (enemy, training dummy).
+    /// <see cref="PixelImpactFeedback.Shatter"/> (GDD §13: everything that gets hit scatters into its pixels), with a
+    /// short white pop at the body's centre. Hiding the model is left to the owner (enemy, training dummy).
     /// </summary>
     [RequireComponent(typeof(Health))]
     [DisallowMultipleComponent]
@@ -14,7 +14,7 @@ namespace DanceWithTheDevil
         [Tooltip("Root of the cube parts. Empty = this object.")]
         [SerializeField] private Transform _model;
         [Tooltip("Cube speed multiplier for bullet kills.")]
-        [SerializeField, Min(0f)] private float _bulletForce = 0.8f;
+        [SerializeField, Min(0f)] private float _bulletForce = 1f;
         [Tooltip("Cube speed multiplier for machete kills.")]
         [SerializeField, Min(0f)] private float _meleeForce = 1.1f;
         [Tooltip("Cube speed multiplier for rocket and explosion kills.")]
@@ -57,9 +57,12 @@ namespace DanceWithTheDevil
             };
             // Only parts that are showing (e.g. not a hidden swing visual, not voxels already lost to a contract).
             int visible = 0;
+            Vector3 center = Vector3.zero;
             for (int i = 0; i < _renderers.Length; i++)
             {
-                if (_renderers[i].gameObject.activeInHierarchy) visible++;
+                if (!_renderers[i].gameObject.activeInHierarchy) continue;
+                visible++;
+                center += _parts[i].position;
             }
             if (_visibleParts == null || _visibleParts.Length != visible)
             {
@@ -76,6 +79,7 @@ namespace DanceWithTheDevil
 
             Vector3 point = info.Point.sqrMagnitude > 0f ? info.Point : transform.position + Vector3.up;
             feedback.Shatter(_visibleParts, _visibleColors, point, info.Direction, force);
+            if (visible > 0) feedback.KillFlash(center / visible);
         }
     }
 }

@@ -10,6 +10,9 @@ namespace DanceWithTheDevil
     /// Contract 2: <see cref="AudioCosts.VoiceMuted"/> mutes the Voice bus instantly; <see cref="AudioCosts.MusicLayerMuted"/>
     /// fades the melody stem out over 1.5 s of unscaled time. Unscaled events ignore listener pause and use unscaled
     /// cooldowns; audio is never paused on timeScale 0. Listens to existing gameplay events; no per-frame allocations.
+    /// Mix trims on top of the baked bank (first listening fixes, no re-bake needed): the rifle is quieter and cycles
+    /// through small pitch steps so 6 shots a second do not repeat one identical "pew"; the explosion is a little
+    /// lower; both music stems sit a few dB under the SFX.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class GameAudio : MonoBehaviour
@@ -59,6 +62,16 @@ namespace DanceWithTheDevil
         [SerializeField, Min(0.01f)] private float _melodyFadeSeconds = 1.5f;
         [Tooltip("Delay before both stems start on the same dspTime, seconds.")]
         [SerializeField, Min(0.01f)] private float _musicStartDelay = 0.1f;
+        [Tooltip("Added to both music stems, dB, so the music sits under the SFX.")]
+        [SerializeField, Range(-24f, 6f)] private float _musicTrimDb = -5f;
+
+        [Header("Mix trims (dB added to the bank's event volume)")]
+        [Tooltip("rifle_shot (bank -14 dB): the most frequent sound, kept below the rest.")]
+        [SerializeField, Range(-24f, 6f)] private float _rifleTrimDb = -3f;
+        [Tooltip("explosion (bank -4 dB): rocket blasts stacking with kills must not clip.")]
+        [SerializeField, Range(-24f, 6f)] private float _explosionTrimDb = -3f;
+        [Tooltip("Rifle shots cycle through these pitch factors on top of the bank's jitter (stand-in round-robin).")]
+        [SerializeField] private float[] _riflePitchSteps = { 1f, 0.955f, 1.04f, 0.975f, 1.02f };
 
         private sealed class Voice
         {
@@ -93,6 +106,8 @@ namespace DanceWithTheDevil
         private PlayerModules _modules;
         private ModuleThrower _thrower;
         private DevilState _lastDevilState = DevilState.Playing;
+        private float _musicTrim = 1f;
+        private int _rifleStep;
 
         /// <summary>0..1 melody stem fade (0 after contract 2 has faded it out).</summary>
         public float MelodyFade => _melodyFade;
@@ -150,9 +165,18 @@ namespace DanceWithTheDevil
 
             for (int c = 0; c < _cueIds.Length; c++)
                 _cueIds[c] = _ids.TryGetValue(CueNames[c], out int id) ? id : -1;
+            Trim(Cue.RifleShot, _rifleTrimDb);
+            Trim(Cue.Explosion, _explosionTrimDb);
+            _musicTrim = SoundBank.DbToLinear(_musicTrimDb);
 
             if (bank != null && bank.MusicBase != null && bank.MusicMelody != null) StartMusic(bank);
             ApplyBuses(true);
+        }
+
+        private void Trim(Cue cue, float db)
+        {
+            int id = _cueIds[(int)cue];
+            if (id >= 0 && id < _slots.Length && _slots[id] != null) _slots[id].BaseVolume *= SoundBank.DbToLinear(db);
         }
 
         private AudioSource CreateSource(bool unscaled)
@@ -198,8 +222,9 @@ namespace DanceWithTheDevil
 
             if (_bank == null) return;
             float master = Mathf.Clamp01(MasterVolume);
-            if (_musicBase != null) _musicBase.volume = SoundBank.DbToLinear(_bank.MusicBaseDb) * master;
-            if (_musicMelody != null) _musicMelody.volume = SoundBank.DbToLinear(_bank.MusicMelodyDb) * master * _melodyFade;
+            if (_musicBase != null) _musicBase.volume = SoundBank.DbToLinear(_bank.MusicBaseDb) * master * _musicTrim;
+            if (_musicMelody != null)
+                _musicMelody.volume = SoundBank.DbToLinear(_bank.MusicMelodyDb) * master * _musicTrim * _melodyFade;
         }
 
         // ------------------------------------------------------------------ playback API
@@ -410,7 +435,16 @@ namespace DanceWithTheDevil
             }
         }
 
-        private void OnRifleFired(Rifle rifle, bool tripleShot) => PlayCue(Cue.RifleShot, tripleShot ? TripleShotPitch : 1f);
+        private void OnRifleFired(Rifle rifle, bool tripleShot)
+        {
+            float step = 1f;
+            if (_riflePitchSteps != null && _riflePitchSteps.Length > 0)
+            {
+                _rifleStep = (_rifleStep + 1) % _riflePitchSteps.Length;
+                step = Mathf.Max(0.5f, _riflePitchSteps[_rifleStep]);
+            }
+            PlayCue(Cue.RifleShot, (tripleShot ? TripleShotPitch : 1f) * step);
+        }
         private void OnRocketLaunched(RocketLauncher launcher) => PlayCue(Cue.RocketLaunch);
         private void OnRocketExploded(Vector3 point) => PlayCueAt(Cue.Explosion, point);
         private void OnModuleExploded(Vector3 point) => PlayCueAt(Cue.Explosion, point, ModuleExplosionPitch, ModuleExplosionVolume);

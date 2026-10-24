@@ -9,6 +9,9 @@ namespace DanceWithTheDevil
     /// ring with fixed slots, Q + right-click eject, the shared 0.65 s cooldown, and applying/removing every module
     /// effect on the Rifle and PlayerController in one place (<see cref="ApplyEffects"/>).
     /// Offers are placed by <see cref="ModuleSpawner"/> through <see cref="PresentOffer"/>. Scaled time throughout.
+    /// World-side feedback: every reject pulse flashes its cone on the floor (cream on a whiff, the module's colour
+    /// when it throws an offer), and Defne's body feedback (<see cref="HurtFeedback"/>) is added here when the scene
+    /// has none, so it needs no scene edit.
     /// </summary>
     [DefaultExecutionOrder(5)] // after PlayerController (aim), before WeaponHub
     [RequireComponent(typeof(PlayerController))]
@@ -42,6 +45,8 @@ namespace DanceWithTheDevil
         [SerializeField, Min(0f)] private float _rejectRange = 3f;
         [Tooltip("Shared reject/eject cooldown in seconds (GDD: 0.65). A whiffed reject starts it too.")]
         [SerializeField, Min(0f)] private float _cooldown = 0.65f;
+        [Tooltip("Colour of the reject cone flash on a whiff (a hit flashes in the thrown module's colour).")]
+        [SerializeField] private Color _rejectWhiffColor = new Color(0.96f, 0.9f, 0.74f);
 
         [Header("Selection ring (first GDD §6)")]
         [Tooltip("Slot offsets in the camera-flat frame (x = screen right, z = screen up on the floor, y = height), index = ModuleType.")]
@@ -81,6 +86,7 @@ namespace DanceWithTheDevil
         private int _smallNoCount;
         private bool _selectionOpen;
         private int _highlighted = -1;
+        private ConeFlash _rejectFlash;
 
         public event Action<ModuleType> OfferAppeared;
         public event Action<ModuleType> Accepted;
@@ -145,12 +151,16 @@ namespace DanceWithTheDevil
             _materials = ModuleVisuals.CreateMaterials(_moduleMaterial);
             BuildSlots();
             ApplyEffects(false);
+
+            // Defne's hurt / dodge feedback (audit F9) without a scene edit.
+            if (!TryGetComponent(out HurtFeedback _)) gameObject.AddComponent<HurtFeedback>();
         }
 
         private void OnDestroy()
         {
             if (_offer != null) Destroy(_offer.gameObject);
             if (_slotRoot != null) Destroy(_slotRoot.gameObject);
+            if (_rejectFlash != null) _rejectFlash.Dispose();
             ModuleVisuals.DestroyMaterials(_materials);
         }
 
@@ -279,13 +289,9 @@ namespace DanceWithTheDevil
             RejectPulsed?.Invoke(transform.position, aim);
 
             ModuleOffer offer = Current;
-            if (offer == null) return false;
-
-            Vector3 toOffer = offer.Position - transform.position;
-            toOffer.y = 0f;
-            float distance = toOffer.magnitude;
-            if (distance > _rejectRange) return false;
-            if (distance > 1e-3f && Vector3.Angle(aim, toOffer) > _rejectConeDegrees * 0.5f) return false;
+            bool inCone = offer != null && IsInRejectCone(offer, aim);
+            PlayRejectFlash(aim, inCone ? ModuleCatalog.ColorOf(offer.Type) : _rejectWhiffColor);
+            if (!inCone) return false;
 
             ModuleType type = offer.Type;
             Vector3 origin = offer.CorePosition;
@@ -294,6 +300,29 @@ namespace DanceWithTheDevil
             _smallNoCount++;
             Rejected?.Invoke(type);
             return true;
+        }
+
+        private bool IsInRejectCone(ModuleOffer offer, Vector3 aim)
+        {
+            Vector3 toOffer = offer.Position - transform.position;
+            toOffer.y = 0f;
+            float distance = toOffer.magnitude;
+            if (distance > _rejectRange) return false;
+            return distance <= 1e-3f || Vector3.Angle(aim, toOffer) <= _rejectConeDegrees * 0.5f;
+        }
+
+        // The cone on the floor, so a whiff is visible too (audit F14). Built on first use: the feedback router's
+        // unlit material exists only after every Awake.
+        private void PlayRejectFlash(Vector3 aim, Color color)
+        {
+            if (_rejectFlash == null)
+            {
+                PixelImpactFeedback feedback = PixelImpactFeedback.Instance;
+                Material material = feedback != null && feedback.FlashMaterial != null ? feedback.FlashMaterial : _materials[0];
+                if (material == null) return;
+                _rejectFlash = new ConeFlash(name + "_RejectCone", material);
+            }
+            _rejectFlash.Play(transform.position, aim, _rejectConeDegrees, _rejectRange, color);
         }
 
         /// <summary>Ejects an equipped module toward the aim (removes its effects, throws it). Shares the cooldown.</summary>
@@ -424,6 +453,8 @@ namespace DanceWithTheDevil
 
         private void LateUpdate()
         {
+            if (_rejectFlash != null) _rejectFlash.Tick(Time.unscaledDeltaTime);
+
             for (int i = 0; i < ModuleCatalog.Count; i++)
             {
                 Transform cube = _slotCubes[i];

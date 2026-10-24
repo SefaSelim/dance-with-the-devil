@@ -1,6 +1,6 @@
 # MAIN GDD — Dance with the Devil (Bir Şey Olmaz)
 
-**Son güncelleme: 2026-10-24 05:56 (UTC+3)**
+**Son güncelleme: 2026-10-24 12:45 (UTC+3)**
 
 > **Bu dosya projenin tek ve yaşayan Game Design Document'ıdır.** Sürüm numarası yoktur (GDD2, GDD3…
 > diye gitmez). Yeni bir mekanik eklendiğinde, var olan bir mekanik değiştiğinde ya da bir tasarım kararı
@@ -77,15 +77,15 @@ kabul et / reddet / sök → yeni hareket alanına göre konumlan.
 **Ölüm takvimi (hedef, orta beceri):** ~0:50, 1:40, 2:30, 3:15, 4:00 → 5 sözleşme. **6. ölümde** Şeytan **yalnızca alır**
 ("Son anlaşma: neyin kaldıysa"). Ölümleri zorluk getirir: düşman canları sabittir; sayı ve tür karışımı büyür. **Ölüm garantidir; ilk GDD'deki "5. dakikada dalga temizlenince kazanılır" koşulu kalkar** (karar K-4). Zorluk adil ve okunur kalmalıdır.
 
-**Diriliş (karar K-12):** can yeni azami değere dolar; 2,0 sn dokunulmazlık; şok dalgası 6 m içindeki
-bütün düşmanları parçalar; dalga saati kaldığı yerden sürer. Sözleşme ekranı açıkken dalga saati de durur.
+**Diriliş (karar K-12, şok dalgası K-16):** can yeni azami değere dolar; 2,0 sn dokunulmazlık; şok dalgası 6 m içindeki
+bütün düşmanları parçalar (K-16: artık bütün arena); dalga saati kaldığı yerden sürer. Sözleşme ekranı açıkken dalga saati de durur.
 
 ## 4. Kontroller — 🟡 (hareket, nişan, kaçınma, tüfek, roket, pala çalışıyor; ret, Q ve R henüz yok)
 
 | Girdi | İşlev |
 |---|---|
 | WASD | Kamera düzlemine göre hareket (6 m/sn) |
-| Fare | Zemindeki imleç noktasına nişan |
+| Fare | Nişan: imlecin altındaki düşmana, yoksa imlecin gövde yüksekliğindeki noktasına; mermiler silahın ucundan o noktaya gider. Ekranda piksel artı nişangah |
 | Sol tık / basılı tut | Tüfek |
 | E / orta tık | Roket (şarjlı) |
 | F | Pala (yakın vuruş, her an kullanılabilir) |
@@ -93,10 +93,13 @@ bütün düşmanları parçalar; dalga saati kaldığı yerden sürer. Sözleşm
 | Sağ tık | İmleç yönüne reddetme darbesi |
 | Q basılı | Takılı modülleri karakter çevresinde göster |
 | Q + sağ tık | Vurgulanan modülü sök ve imleç yönüne fırlat |
-| R | Yeniden başlat (❓ A-15: yalnız sonuç ekranında mı, oyun içinde de mi?) |
+| R | Yeniden başlat (yalnız sonuç ekranında; ❓ A-15) |
+| Esc | Duraklat: "Devam" / "Çık" |
 
 **Kaçınma (ilk GDD §5):** ~3 m / 0,18 sn, bekleme 1,6 sn. Hareket yönüne, girdi yoksa imleç yönüne gider. Sırasında
 hasar alınmaz, kabul halkası ilerlemez, ateş ve pala kesilir; ret/sökme girdisi tamponlanmaz.
+
+**Hareket:** tam hıza ~0,06 sn'de çıkar, ~0,05 sn'de durur; gövde nişana hızlıca döner.
 
 **Oyuncu:** 100 can; hasardan sonra 0,6 sn dokunulmazlık (aynı anda gelen atışlar tek karede yığılmaz).
 Pala vuruşu bittikten sonra 0,5 sn bekleme başlar (yani en fazla 0,7 sn'de bir vuruş). Kaçınma sırasında üç silah da susar;
@@ -165,7 +168,7 @@ tabana döndürür; Yankı'nın havadaki mermileri oyuncuya zararsız olur. Öl�
 
 **Eğri:** vaat küçülür, bedel büyür. Eğri sabittir, hikâye için yazılmıştır, rastgele değildir. Her bedel görünür ve
 mekaniktir. Ölümde zaman donar, ekran solar, Şeytan sağ kenardan eğilir ve sözleşme kartı açılır: EVET / HAYIR.
-Kartta bedelin hem şiirsel adı hem tam mekanik etkisi yazar (K-3). HAYIR her zaman görünür ve seçilebilir; ama
+Kartta bedelin hem şiirsel adı hem tam mekanik etkisi yazar (K-3). EVET'in altında "dirilirsin · bedeli kalıcı", HAYIR'ın altında "koşu biter" yazar. EVET, Enter ya da fare 0,6 sn basılı tutularak seçilir (kazara imzayı önlemek için); HAYIR H ya da tık ile seçilir. Savaş tuşları (E, Space, sol tık) kartta hiçbir şey seçmez. HAYIR her zaman görünür ve seçilebilir; ama
 Şeytan'ın sunumu EVET'i öne çıkarır (büyük, parlak EVET; küçük, sönük HAYIR; Şeytan HAYIR'ı küçümser) (K-2).
 Şeytan oyuncuya "sen" der, Defne'den hep "o" diye söz eder: "Sana X, ondan Y" (K-10).
 
@@ -196,10 +199,12 @@ kuzeybatı ve güneydoğuda birbirini karşılayan iki L duvar, en dar geçit 4 
 yakınındaki duvarlar karakteri gizlediğinde saydamlaşır. İç L duvarlar ve dekorlar kırılabilir olarak planlandı;
 ne kadarının kırılacağı Faz 4'te dengelenir (❓ A-12: Yankı'nın sekme yüzeyleriyle çakışma).
 
+**Kamera (K-14):** Defne'yi takip eder, nişana doğru en fazla 2 m öne bakar, arena dışını göstermez; metre başına ~20 piksel.
+
 **Kurulan yerleşim (yer tutucu):** oynanabilir alan 32 × 28 m; kuzey ve doğu duvarları 2 m, kameraya yakın güney ve batı
 duvarları görüşü kapatmasın diye 1 m yüksekliktedir ama 2 m gibi seker. L bloklar 1,5 m yüksek, 3 m kalındır. Çevre
 halkası 5–6 m, iki L arası en az 11,7 m; merkezde kuzey–güney ve doğu–batı yönünde 4 m'lik iki açık görüş koridoru
-vardır. Açık merkez ~14 × 12 m çıktı (ilk GDD ~12 × 10 m), halkayı ≥5 m ve 6 m diriliş şokuna yer bırakmak için.
+vardır. Zemin 2 m'lik koyu karolar ve ince ızgara çizgileri; köşelerde çarpışmasız alçak kasa ve moloz; her girişte sıcak bir ışık; dış duvar üstünde soluk kırmızı bir çizgi. Açık merkez ~14 × 12 m çıktı (ilk GDD ~12 × 10 m), halkayı ≥5 m ve 6 m diriliş şokuna yer bırakmak için.
 Dört giriş kenarların ortasında, içe bakan şeritli zemin plakalarıdır; doğuş noktaları oyuncu başlangıcından 12–14 m uzaktadır.
 
 ## 10. Dalgalar ve zorluk — 🟡 (dalga yöneticisi çalışıyor; ölüm takvimi henüz dengelenmedi)
@@ -232,7 +237,15 @@ sınır doluysa doğuş bekler, geç kalanlar topluca boşaltılmaz. **Değişen
   insandan çok daha erken ölür; sonuçları alt sınır olarak okunur.
 - Sözleşme 2 (+1 kaçınma) ve 5 (bekleme ×2) sonrası sürekli kaçınma hızı tabanla aynıdır; yalnız arka arkaya 2 kaçınma kalır.
 
-**Uygulanan hâli (Minimum kapsam, K-11):** imp ve iri olmadığı için tablodaki her imp yerine 1 Takipçi + 1 Koşucu,
+**Güncel uygulama (2026-10-24 incelemesinden sonra):** her pencerenin bütçesi pencere boyunca 2–4 kişilik paketlere
+bölünür (16 sn'ye yayılır), arena ~3 sn'den fazla boş kalmaz, paketler tek girişten gelir. Takipçi ve Koşucu oyuncunun
+gideceği yere yönelir ve atılma mesafeleri uzar (Takipçi 2,6 m'ye, Koşucu 2,2 m'ye kadar); Nişancı hedefin hareketine göre
+önden nişan alır ve atışlar arasında yer değiştirir. Başlangıç değerleri: Takipçi hızı 3,5 → 4,2 m/sn, Koşucu hasarı 6 → 8,
+Nişancı mermisi 12 → 14 m/sn (başlangıç önerisi). Pencere sayıları ilk tablonun yaklaşık 1,75 katı, aktif sınır +3
+(K-17: 3:00'ten sonra artmaya devam eder; K-15: 5:00'ten sonra her 30 sn'de +1 Takipçi, +1 Koşucu, +1 Nişancı, sınır +1, en çok 16).
+Bot ölçümü (kaçınan, dolaşan, ±12° ıskalayan bot): sayılar ×1,35 iken ilk ölüm 1:47; ×1,75 iken ölümler 0:33 ve 1:14; şu anki değerler (×1,5) ikisinin ortası. Takvim insan oyun testiyle son hâlini alacak.
+
+**Önceki uygulama (Minimum kapsam, K-11):** imp ve iri olmadığı için tablodaki her imp yerine 1 Takipçi + 1 Koşucu,
 her iri yerine 2 Nişancı doğar; pencerelerin tehdit puanı aynı kalır. Her pencerenin bütçesi 0., 4. ve 8. saniyelerde
 üç alt gruba bölünür. Nişancılar 3 sn içinde en fazla 2 farklı girişten gelir. Uyarı süresindeki doğuş da aktif sınıra
 sayılır; oyuncu uyarı sırasında girişe 9 m'den fazla yaklaşırsa doğuş başka girişe kayar. Yeni doğuşlar 5:00'te durur.
@@ -252,6 +265,8 @@ ayarlanacak.
 | **Hep EVET (6. ölüm)** | Şeytan: **"Bir şey olmadı, değil mi?"** Gri kabuk dağılır. Son kartı: **Hayır demek de bir seçenekti.** Düğme: *Tekrar dene* (yeni koşu). |
 
 **Küçük hayırlar:** defterde puansız tek satır: "Küçük hayırların: N" (savaşta reddedilen ve sökülen modüller, karar K-9).
+
+**Sonlarda Defne:** sonuç ekranında Defne'nin blok portresi koşunun bıraktığı hâliyle görünür (1. ölümde HAYIR: tam renkli; sonraki HAYIR: alınan bedeller; hep EVET: gri kabuk dağılır).
 
 **Sonuç ekranı:** skor yerine **"Aldıkların / Verdiklerin"** defteri gösterilir ("Verdiklerin" üstünde küçük not: *Defne'den*).
 İlk GDD §10 skoru en altta, küçük kalır. 1. ölümde hayır denirse defter: "Aldıkların: Hiçbir şey · Verdiklerin: Hiçbir şey.
@@ -280,15 +295,15 @@ ret ya da sönmeyle biter); ilk kabulden sonra 6 sn "Q basılı + sağ tık: mod
 üzerinde tek satır avantaj, tek satır bedel. Ek olarak HUD'da Defne'nin küçük fotoğrafı (Sözleşme 3 bedeli) ve roket
 şarjları. Bağlamsal ipuçları ilk dakikada sırayla gelir, oyunu durdurmaz. Renk tek ayırt edici değildir.
 
-## 13. Görsel ve ses yönü — 🟡 (sabit izometrik kamera ve pikselli görüntü var; dış çizgi ve toon ışık yok)
+## 13. Görsel ve ses yönü — 🟡 (takip kamerası, pikselli görüntü, dış çizgi, animasyon ve vuruş efektleri var; toon ışık yok)
 
-- **Görünüm:** sabit ortografik izometrik kamera (35° eğim, 45° dönüş; bütün arena görünür, metre başına 12 piksel), düşük çözünürlükte (640×360) çizilip nokta filtresiyle büyütülen, hafif
+- **Görünüm:** Defne'yi takip eden ortografik izometrik kamera (35° eğim, 45° dönüş, metre başına ~20 piksel, K-14); karakterlerde 1 piksellik koyu dış çizgi; karakterler sahnenin en parlak ve en doygun şeyleri, zemin ve duvarlar koyu ve sakin; düşük çözünürlükte (640×360) çizilip nokta filtresiyle büyütülen, hafif
   pikselli voksel görünüm; düz gölgeli toon ışık; 1 px dış çizgi; kamera kayarken titreme olmaz.
 - **Parçalanma:** vurulan her şey, düşmanlar ve çevre, piksellerine (küplere) dağılır. Roket geniş, pala düzlemsel kesik,
   mermi küçük delik açar.
   Şu an 🟡: ölen hedef kendi parça renkleriyle küplere ayrılıp sıçrar, yere düşer ve küçülerek kaybolur; aynı karede çok
   ölüm olursa sonrakiler daha iri küplerle dağılır. Çevre kırılması ve delikler henüz yok (İsteğe bağlı katman).
-- **Karakterler:** parçalı voksel (baş, gövde, kollar, bacaklar), yordamsal animasyon (yürüme sallanması, nişan, geri tepme).
+- **Karakterler:** 🟡 parçalı voksel (baş, gövde, kollar, bacaklar); yordamsal animasyon var: yürüme salınımı, eğilme, nişan pozu, geri tepme, vurulunca sarsılma. Defne'nin elinde küplerden bir tüfek var.
 - **Şeytan:** ekranın sağ kenarından, monitör çerçevesinin dışından eğilen 2B çizim; ekibin kendi çizimiyle değişecek.
 - **Ses:** 🟡 kısa okunur SFX, karanlık tek müzik döngüsü; Sözleşme 2 bir müzik katmanını susturur. Bütün sesler ve müzik
   koddan üretilir (dış kaynak yok). Müzik Re minör, 90 BPM, 8 ölçülük (~21 sn) kesintisiz döngü; iki katman: taban (drone,
@@ -334,6 +349,10 @@ savaş içi fısıltı modülleri.
 | K-11 | Kapsam hedefi §14'teki **Minimum** katmandır; İsteğe bağlı ekler Minimum oynanır olunca başlar. |
 | K-12 | Diriliş: can yeni azami değere dolar, 2,0 sn dokunulmazlık (Sözleşme 5'ten sonra 0), şok dalgası 6 m içindeki bütün düşmanları (iri dahil) parçalar. |
 | K-13 | Pala dalgası kalkanı yok saymaz; Defne'den düşen vokseller isabet alanını küçültmez. |
+| K-14 | (Burak, 2026-10-24 11:22: "hepsi için önerini yap") **Kamera Defne'yi takip eder**; karakterler ekranda ~1,7 kat büyük (ortografik boyut 15 → 9), nişana doğru hafif öne bakar, arena dışını göstermez. §9'daki "bütün alanı gösteren sabit kamera" kuralının yerini alır. |
+| K-15 | **5:00'ten sonra düşmanlar gelmeye ve artmaya devam eder**, oyuncu ölene kadar (K-4 ölüm garantisi). HUD geri sayım yerine geçen süreyi gösterir. |
+| K-16 | **Diriliş şok dalgası canlı bütün düşmanları siler** (6 m yerine). K-12'nin yarıçap kısmının yerini alır. |
+| K-17 | **3:00'ten sonra oyun kolaylaşmaz**: düşman sayısı koşu süresiyle artmaya devam eder. K-5'teki "adet düşer" kuralının yerini alır. |
 
 ### Açık sorular (❓ AÇIK — kullanıcı kararı bekler)
 
@@ -374,3 +393,5 @@ seçenek seçerse değiştirilir:
 - 2026-10-24 05:23 — Burak (Claude Code) — Faz 5: Şeytan'ın ölüm sözleşmeleri, görünür bedeller, üç son, defter, HUD ve fısıltı modülleri oynanır hâle geldi (§3, §7, §8, §11, §12 🟡); açık sorularda geçici seçimler 🧪 listelendi (§15).
 - 2026-10-24 05:40 — Burak (Claude Code) — Faz 6: koddan üretilen sesler ve iki katmanlı müzik eklendi; Sözleşme 2 ses bedeli çalışıyor (§13).
 - 2026-10-24 05:56 — Burak (Claude Code) — Faz 7: ilk dakika ipuçları eklendi (§12); Sözleşme 1 satırı geçici 3,5 m yarıçapla uyumlu yazıldı (§8); Windows build alındı.
+- 2026-10-24 11:23 — Burak (Claude Code) — Oyun incelemesinden sonra Burak dört öneriyi onayladı: K-14 takip eden kamera, K-15 5:00 sonrası tırmanan dalgalar, K-16 bütün arenayı silen şok dalgası, K-17 3:00 sonrası artan düşman sayısı.
+- 2026-10-24 12:45 — Burak (Claude Code) — İnceleme sonrası düzeltmeler: takip kamerası (K-14), animasyon ve silah, nişan, vuruş efektleri, paketli dalgalar ve tırmanan zorluk (K-15, K-17), şok dalgası (K-16), kart ve HUD açıklığı, Esc menüsü (§4, §5, §6, §8, §9, §10, §11, §13).

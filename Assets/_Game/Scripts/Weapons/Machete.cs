@@ -11,18 +11,38 @@ namespace DanceWithTheDevil
     /// Contract hooks (GDD §8): <see cref="DamageMultiplier"/> (blade and wave) and <see cref="WaveEnabled"/> (Contract 2):
     /// every swing also sends a forward wave (GDD §5: 20 damage, pierces, 8 m, 2.5 m wide, 20 m/s). The wave hits each
     /// damageable once and not through walls (line from the swing origin). Shielded fronts do not exist yet.
+    /// Visual: on the frame the damage lands, a bright flat fan covering the real hit area (arc × reach) appears and
+    /// thins out over ~0.12 s, and the blade crosses the arc in ~0.06 s. Both run on unscaled time, so they read during
+    /// the melee hitstop instead of freezing at the start angle.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class Machete : MonoBehaviour
     {
         private const int MaxOverlaps = 128;
         private const int MaxLineHits = 16;
+        private const int ArcSegments = 16;
 
         [Header("References")]
         [Tooltip("Owner, for the dodge block and ignoring own colliders. If empty, found in parents.")]
         [SerializeField] private PlayerController _owner;
         [Tooltip("Optional placeholder visual, shown and rotated through the arc during the swing.")]
         [SerializeField] private Transform _swingVisual;
+
+        [Header("Swing visual")]
+        [Tooltip("Material of the swing arc fan. Empty = the swing visual's material.")]
+        [SerializeField] private Material _arcMaterial;
+        [Tooltip("Seconds (unscaled) the arc stays on screen, thinning out from the inside.")]
+        [SerializeField, Min(0.01f)] private float _arcDuration = 0.12f;
+        [Tooltip("Inner radius of the arc on its first frame, metres (the outer radius is the reach).")]
+        [SerializeField, Min(0f)] private float _arcInnerRadius = 0.35f;
+        [Tooltip("How far the arc's outer edge grows while it fades, metres.")]
+        [SerializeField, Min(0f)] private float _arcGrowth = 0.2f;
+        [Tooltip("Height of the arc above the feet, metres (about an enemy's body centre).")]
+        [SerializeField] private float _arcHeight = 0.7f;
+        [Tooltip("Seconds (unscaled) for the blade to cross the arc; it then holds at the end while the arc fades.")]
+        [SerializeField, Min(0.001f)] private float _bladeSweepTime = 0.06f;
+        [Tooltip("Blade thickness multiplier applied once at start, so the blade shows at pixel scale.")]
+        [SerializeField, Min(0.1f)] private float _bladeWidthScale = 2.5f;
 
         [Header("Stats (GDD §5)")]
         [Tooltip("Damage per target.")]
@@ -81,11 +101,16 @@ namespace DanceWithTheDevil
         }
         private Transform _ownerRoot;
 
-        private float _swingStartTime = float.NegativeInfinity;
+        private float _swingStartUnscaled = float.NegativeInfinity;
         private float _swingEndTime = float.NegativeInfinity;
         private float _readyTime = float.NegativeInfinity;
         private Quaternion _swingRotation = Quaternion.identity;
         private bool _visualActive;
+
+        private Transform _arc;
+        private Mesh _arcMesh;
+        private Vector3[] _arcVertices;
+        private bool _arcActive;
 
         public bool IsSwinging => Time.time < _swingEndTime;
         public bool IsReady => Time.time >= _readyTime;
@@ -134,7 +159,18 @@ namespace DanceWithTheDevil
         {
             if (_owner == null) _owner = GetComponentInParent<PlayerController>();
             _ownerRoot = _owner != null ? _owner.transform : transform.root;
-            if (_swingVisual != null) _swingVisual.gameObject.SetActive(false);
+            if (_swingVisual != null)
+            {
+                // The placeholder blade is ~1.7 texels wide: thicken it once so it reads at pixel scale.
+                for (int i = 0; i < _swingVisual.childCount; i++)
+                {
+                    Transform blade = _swingVisual.GetChild(i);
+                    Vector3 scale = blade.localScale;
+                    scale.x *= _bladeWidthScale;
+                    blade.localScale = scale;
+                }
+                _swingVisual.gameObject.SetActive(false);
+            }
         }
 
         /// <summary>
@@ -155,11 +191,13 @@ namespace DanceWithTheDevil
             direction.Normalize();
 
             float now = Time.time;
-            _swingStartTime = now;
+            _swingStartUnscaled = Time.unscaledTime;
             _swingEndTime = now + _swingDuration;
             _readyTime = _swingEndTime + _cooldown;
             _swingRotation = Quaternion.LookRotation(direction, Vector3.up);
 
+            // The arc shows on the same frame the damage lands.
+            ShowArc();
             bool hit = ApplyHits(direction);
             SwingStarted?.Invoke(this);
             if (hit) SwingHit?.Invoke(this);
@@ -171,14 +209,115 @@ namespace DanceWithTheDevil
         private void Update()
         {
             UpdateVisual();
+            TickArc();
             TickWaves(Time.deltaTime);
+        }
+
+        private void OnDisable()
+        {
+            if (_arc != null) _arc.gameObject.SetActive(false);
+            _arcActive = false;
         }
 
         private void OnDestroy()
         {
+            if (_arc != null) Destroy(_arc.gameObject);
+            if (_arcMesh != null) Destroy(_arcMesh);
             if (_waves == null) return;
             for (int i = 0; i < _waves.Length; i++)
                 if (_waves[i].Visual != null) Destroy(_waves[i].Visual.gameObject);
+        }
+
+        private void ShowArc()
+        {
+            if (_arc == null) CreateArc();
+            _arcActive = true;
+            WriteArc(0f);
+            PlaceArc();
+            if (!_arc.gameObject.activeSelf) _arc.gameObject.SetActive(true);
+        }
+
+        private void TickArc()
+        {
+            if (!_arcActive) return;
+            float t = (Time.unscaledTime - _swingStartUnscaled) / _arcDuration;
+            if (t >= 1f)
+            {
+                _arcActive = false;
+                _arc.gameObject.SetActive(false);
+                return;
+            }
+            WriteArc(t);
+            PlaceArc();
+        }
+
+        private void PlaceArc() =>
+            _arc.SetPositionAndRotation(transform.position + Vector3.up * _arcHeight, _swingRotation);
+
+        /// <summary>Fan over the hit area at fade time <paramref name="t"/> (0..1): the inner edge eases out to the rim.</summary>
+        private void WriteArc(float t)
+        {
+            float outer = _reach + _arcGrowth * t;
+            float inner = Mathf.Lerp(Mathf.Min(_arcInnerRadius, _reach), outer, t * t);
+            float half = _arcDegrees * 0.5f;
+            for (int k = 0; k <= ArcSegments; k++)
+            {
+                float angle = Mathf.Lerp(-half, half, k / (float)ArcSegments) * Mathf.Deg2Rad;
+                var direction = new Vector3(Mathf.Sin(angle), 0f, Mathf.Cos(angle));
+                _arcVertices[k * 2] = direction * inner;
+                _arcVertices[k * 2 + 1] = direction * outer;
+            }
+            _arcMesh.SetVertices(_arcVertices);
+            _arcMesh.RecalculateBounds();
+        }
+
+        /// <summary>Creates the arc fan once: a flat ring sector facing up, no collider, no shadows.</summary>
+        private void CreateArc()
+        {
+            var go = new GameObject(name + "_MacheteArc");
+            _arc = go.transform;
+            var filter = go.AddComponent<MeshFilter>();
+            var meshRenderer = go.AddComponent<MeshRenderer>();
+
+            int vertexCount = (ArcSegments + 1) * 2;
+            _arcVertices = new Vector3[vertexCount];
+            var normals = new Vector3[vertexCount];
+            for (int i = 0; i < vertexCount; i++) normals[i] = Vector3.up;
+            var triangles = new int[ArcSegments * 6];
+            for (int k = 0; k < ArcSegments; k++)
+            {
+                int inner0 = k * 2;
+                int outer0 = inner0 + 1;
+                int inner1 = inner0 + 2;
+                int outer1 = inner0 + 3;
+                int t = k * 6;
+                // Clockwise seen from above, so the fan faces the camera.
+                triangles[t] = inner0;
+                triangles[t + 1] = outer0;
+                triangles[t + 2] = outer1;
+                triangles[t + 3] = inner0;
+                triangles[t + 4] = outer1;
+                triangles[t + 5] = inner1;
+            }
+
+            _arcMesh = new Mesh { name = "MacheteArc" };
+            _arcMesh.MarkDynamic();
+            WriteArc(0f);
+            _arcMesh.SetNormals(normals);
+            _arcMesh.SetTriangles(triangles, 0);
+            _arcMesh.RecalculateBounds();
+            filter.sharedMesh = _arcMesh;
+
+            Material material = _arcMaterial;
+            if (material == null && _swingVisual != null)
+            {
+                var bladeRenderer = _swingVisual.GetComponentInChildren<Renderer>(true);
+                if (bladeRenderer != null) material = bladeRenderer.sharedMaterial;
+            }
+            if (material != null) meshRenderer.sharedMaterial = material;
+            meshRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            meshRenderer.receiveShadows = false;
+            go.SetActive(false);
         }
 
         private void StartWave(Vector3 direction)
@@ -369,15 +508,19 @@ namespace DanceWithTheDevil
         {
             if (_swingVisual == null) return;
 
-            bool swinging = IsSwinging;
-            if (swinging != _visualActive)
+            // Unscaled: the blade crosses the arc during the hitstop instead of freezing at the start angle, and leaves
+            // with the arc.
+            float elapsed = Time.unscaledTime - _swingStartUnscaled;
+            bool show = IsSwinging && elapsed < Mathf.Max(_bladeSweepTime, _arcDuration);
+            if (show != _visualActive)
             {
-                _visualActive = swinging;
-                _swingVisual.gameObject.SetActive(swinging);
+                _visualActive = show;
+                _swingVisual.gameObject.SetActive(show);
             }
-            if (!swinging) return;
+            if (!show) return;
 
-            float t = Mathf.Clamp01((Time.time - _swingStartTime) / _swingDuration);
+            float t = Mathf.Clamp01(elapsed / _bladeSweepTime);
+            t = 1f - (1f - t) * (1f - t); // fast out of the start, settles at the end
             float yaw = Mathf.Lerp(-_arcDegrees * 0.5f, _arcDegrees * 0.5f, t);
             _swingVisual.rotation = _swingRotation * Quaternion.Euler(0f, yaw, 0f);
         }

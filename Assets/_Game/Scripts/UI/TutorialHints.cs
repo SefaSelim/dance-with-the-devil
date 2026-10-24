@@ -11,8 +11,10 @@ namespace DanceWithTheDevil
     ///  1. Move/aim/fire: from the start until the player has moved AND fired once.
     ///  2. Offer: from the first module offer until it is accepted, rejected or expires.
     ///  3. Eject: after the first accept, for <see cref="_ejectHintDuration"/> s or until the first eject.
-    ///  4. Rocket/machete/dodge: the first time a rocket is ready after <see cref="_rocketIdleDelay"/> s of play with
-    ///     no rocket fired, for <see cref="_rocketHintDuration"/> s (or until a rocket is fired).
+    ///  4. Rocket/machete/dodge: once, the first calm moment after <see cref="_rocketIdleDelay"/> s of play, unless
+    ///     the player has already used both the rocket and the machete; for <see cref="_rocketHintDuration"/> s (or
+    ///     until both have been used). The machete (F) has no other teacher, so a rocket fired early no longer
+    ///     cancels this hint.
     /// Priority when several apply: offer > eject > move/fire > rocket; a pre-empted move/fire hint comes back.
     /// Hidden while the Devil screen or an ending is up (DevilDirector.State != Playing). Gameplay timers run on
     /// scaled time, fades on unscaled time (skipped with UiKit.ReduceMotion). No per-frame allocations.
@@ -42,7 +44,7 @@ namespace DanceWithTheDevil
         [Header("Timing (game seconds)")]
         [Tooltip("Eject hint length after the first accept.")]
         [SerializeField, Min(0.1f)] private float _ejectHintDuration = 6f;
-        [Tooltip("Play time with no rocket fired before the rocket hint may appear.")]
+        [Tooltip("Play time before the rocket/machete/dodge hint may appear.")]
         [SerializeField, Min(0f)] private float _rocketIdleDelay = 20f;
         [Tooltip("Rocket hint length.")]
         [SerializeField, Min(0.1f)] private float _rocketHintDuration = 5f;
@@ -61,7 +63,7 @@ namespace DanceWithTheDevil
         private bool _offerSeen, _offerOpen;
         private bool _acceptSeen, _ejectDone;
         private float _ejectTimeLeft;
-        private bool _rocketFired, _rocketHintStarted;
+        private bool _rocketFired, _macheteSwung, _rocketHintStarted;
         private float _rocketTimeLeft;
         private float _playTime;
 
@@ -69,6 +71,7 @@ namespace DanceWithTheDevil
         private Action<ModuleType> _onOfferAppeared, _onOfferClosed, _onAccepted, _onEjected;
         private Action<Rifle, bool> _onRifleFired;
         private Action<RocketLauncher> _onRocketLaunched;
+        private Action<Machete> _onSwing;
 
         private void Awake()
         {
@@ -78,6 +81,7 @@ namespace DanceWithTheDevil
             _onEjected = OnEjected;
             _onRifleFired = OnRifleFired;
             _onRocketLaunched = OnRocketLaunched;
+            _onSwing = OnSwing;
             ResolveReferences();
             Build();
         }
@@ -118,6 +122,7 @@ namespace DanceWithTheDevil
             {
                 Rifle.Fired += _onRifleFired;
                 RocketLauncher.Launched += _onRocketLaunched;
+                Machete.SwingStarted += _onSwing;
                 if (_modules == null) return;
                 _modules.OfferAppeared += _onOfferAppeared;
                 _modules.Accepted += _onAccepted;
@@ -129,6 +134,7 @@ namespace DanceWithTheDevil
             {
                 Rifle.Fired -= _onRifleFired;
                 RocketLauncher.Launched -= _onRocketLaunched;
+                Machete.SwingStarted -= _onSwing;
                 if (_modules == null) return;
                 _modules.OfferAppeared -= _onOfferAppeared;
                 _modules.Accepted -= _onAccepted;
@@ -149,7 +155,13 @@ namespace DanceWithTheDevil
         {
             if (_rocket != null && launcher != _rocket) return;
             _rocketFired = true;
-            _rocketTimeLeft = 0f; // using it ends its hint
+            if (_macheteSwung) _rocketTimeLeft = 0f; // using both ends the hint
+        }
+
+        private void OnSwing(Machete machete)
+        {
+            _macheteSwung = true;
+            if (_rocketFired) _rocketTimeLeft = 0f;
         }
 
         private void OnOfferAppeared(ModuleType type)
@@ -199,7 +211,7 @@ namespace DanceWithTheDevil
             if (!_basicDone && ((_moved && _fired) || _input == null)) _basicDone = true;
             if (_ejectTimeLeft > 0f) _ejectTimeLeft = _ejectDone ? 0f : _ejectTimeLeft - dt;
 
-            if (!_rocketHintStarted && !_rocketFired && _rocket != null && _playTime >= _rocketIdleDelay
+            if (!_rocketHintStarted && !(_rocketFired && _macheteSwung) && _rocket != null && _playTime >= _rocketIdleDelay
                 && _rocket.Charges > 0 && !_offerOpen && _ejectTimeLeft <= 0f && _basicDone)
             {
                 _rocketHintStarted = true;
@@ -255,14 +267,15 @@ namespace DanceWithTheDevil
             Font font = UiKit.ResolveFont(_font);
             _root = UiKit.CreateCanvas(transform, "HintCanvas", _sortingOrder, false);
             Vector2 bottom = new Vector2(0.5f, 0f);
-            // Above the HUD's module slots (y 8..28); narrow enough to clear the charge pips at the bottom left.
+            // Above the HUD's module slots (y 8..28) and the Q eject label (y 26..38); narrow enough to clear the
+            // charge pips at the bottom left.
             Image panel = UiKit.Box(_root, "Hint", new Color(0.06f, 0.05f, 0.08f, 0.75f), bottom, bottom,
-                new Vector2(0f, 34f), new Vector2(330f, 18f));
+                new Vector2(0f, 44f), new Vector2(330f, 18f));
             _group = panel.gameObject.AddComponent<CanvasGroup>();
             _group.alpha = 0f;
             _group.interactable = false;
             _group.blocksRaycasts = false;
-            _text = UiKit.Label(panel.transform, "Text", font, 11, UiKit.Cream, TextAnchor.MiddleCenter,
+            _text = UiKit.Label(panel.transform, "Text", font, 12, UiKit.Cream, TextAnchor.MiddleCenter,
                 new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(324f, 16f), FontStyle.Bold);
             UiKit.AddShadow(_text);
         }

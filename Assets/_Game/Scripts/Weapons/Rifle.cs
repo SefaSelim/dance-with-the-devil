@@ -9,6 +9,9 @@ namespace DanceWithTheDevil
     /// decision K-7: only the rifle) are switched by <see cref="PlayerModules"/> through <see cref="TripleShot"/>,
     /// <see cref="RecoilSpeed"/>, <see cref="EchoEnabled"/> and <see cref="ModuleDamageMultiplier"/>; the two damage
     /// multipliers stack by product (GDD §8 Birikme kuralları).
+    /// Aiming (GDD §4): <see cref="TryFireAt"/> fires from the muzzle toward the aim point, so shots converge on the
+    /// cursor; the spawn point is pulled back out of walls (<see cref="WeaponAim.ClearSpawnPoint"/>). The muzzle is the
+    /// gun in Defne's hand (<see cref="CharacterAnimator.Muzzle"/>) when there is one; each salvo kicks that gun.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class Rifle : MonoBehaviour
@@ -18,7 +21,7 @@ namespace DanceWithTheDevil
         [SerializeField] private ProjectilePool _pool;
         [Tooltip("Material for the runtime bullet cubes when the pool is created automatically.")]
         [SerializeField] private Material _projectileMaterial;
-        [Tooltip("Bullet spawn point. If empty: this transform + muzzle height.")]
+        [Tooltip("Bullet spawn point when the character has no animated gun (CharacterAnimator.Muzzle wins). If empty: this transform + muzzle height.")]
         [SerializeField] private Transform _muzzle;
         [Tooltip("Fallback muzzle height above this transform when no muzzle is set.")]
         [SerializeField] private float _fallbackMuzzleHeight = 1f;
@@ -26,6 +29,18 @@ namespace DanceWithTheDevil
         [SerializeField] private PlayerController _owner;
         [Tooltip("Machete, for the swing block. If empty, found in parents.")]
         [SerializeField] private Machete _machete;
+        [Tooltip("Character animator holding the gun (muzzle and recoil kick). If empty, found in parents.")]
+        [SerializeField] private CharacterAnimator _animator;
+
+        [Header("Aim (GDD §4)")]
+        [Tooltip("With an owner, bullets leave at this height above the owner's feet (GDD: muzzle height 1.0 m); the gun model only sets where they start sideways. 0 = the muzzle's own height.")]
+        [SerializeField, Min(0f)] private float _shotHeight = 1f;
+        [Tooltip("If the aim point is closer than this to the muzzle (flat metres), shoot along the body aim direction instead.")]
+        [SerializeField, Min(0f)] private float _minConvergeDistance = 1f;
+        [Tooltip("If the muzzle-to-aim direction differs from the body aim direction by more than this (degrees), shoot along the body aim direction.")]
+        [SerializeField, Range(0f, 180f)] private float _maxConvergeAngle = 60f;
+        [Tooltip("Visual recoil kick passed to CharacterAnimator.Kick per salvo (0..2).")]
+        [SerializeField, Range(0f, 2f)] private float _recoilKick = 0.5f;
 
         [Header("Stats (GDD §5)")]
         [Tooltip("Damage per bullet.")]
@@ -139,11 +154,43 @@ namespace DanceWithTheDevil
         /// <summary>Damage per bullet with every multiplier (contracts × modules).</summary>
         public float Damage => _damage * _damageMultiplier * _moduleDamageMultiplier;
         public float FireRate => _fireRate;
-        public Transform Muzzle => _muzzle;
-        public Vector3 MuzzlePosition =>
-            _muzzle != null ? _muzzle.position : transform.position + Vector3.up * _fallbackMuzzleHeight;
+
+        /// <summary>The muzzle in use: the animated gun's (<see cref="CharacterAnimator.Muzzle"/>), else the assigned one.</summary>
+        public Transform Muzzle
+        {
+            get
+            {
+                if (_animator != null)
+                {
+                    Transform gunMuzzle = _animator.Muzzle;
+                    if (gunMuzzle != null) return gunMuzzle;
+                }
+                return _muzzle;
+            }
+        }
+
+        /// <summary>
+        /// Where a bullet starts: the muzzle (at <see cref="_shotHeight"/> above the owner's feet), pulled back toward
+        /// the body until it is clear of walls. Without an owner: the raw muzzle.
+        /// </summary>
+        public Vector3 MuzzlePosition
+        {
+            get
+            {
+                Transform muzzle = Muzzle;
+                Vector3 raw = muzzle != null ? muzzle.position : transform.position + Vector3.up * _fallbackMuzzleHeight;
+                if (_owner == null) return raw;
+                Vector3 feet = _owner.transform.position;
+                if (_shotHeight > 0f) raw.y = feet.y + _shotHeight;
+                return WeaponAim.ClearSpawnPoint(feet, raw, _projectileRadius, _hitMask, _ownerRoot);
+            }
+        }
+
         /// <summary>True while dodging or swinging the machete.</summary>
         public bool IsBlocked => (_owner != null && _owner.IsDodging) || (_machete != null && _machete.IsSwinging);
+
+        /// <summary>True if a shot would leave now (enabled, not blocked, fire rate allows).</summary>
+        public bool IsReady => isActiveAndEnabled && !IsBlocked && Time.time >= _nextFireTime;
 
         /// <summary>Raised once per salvo (audio). Bool: Triple Shot salvo.</summary>
         public static event System.Action<Rifle, bool> Fired;
@@ -152,6 +199,7 @@ namespace DanceWithTheDevil
         {
             if (_owner == null) _owner = GetComponentInParent<PlayerController>();
             if (_machete == null) _machete = GetComponentInParent<Machete>();
+            if (_animator == null) _animator = GetComponentInParent<CharacterAnimator>();
             _ownerRoot = _owner != null ? _owner.transform : transform.root;
 
             if (_pool == null)
@@ -159,6 +207,22 @@ namespace DanceWithTheDevil
                 _pool = gameObject.AddComponent<ProjectilePool>();
                 _pool.Configure(null, _projectileMaterial);
             }
+        }
+
+        /// <summary>
+        /// Fires one salvo from <see cref="MuzzlePosition"/> toward <paramref name="aimPoint"/> (flat, at muzzle height),
+        /// so the shots converge on the cursor (GDD §4). Uses <paramref name="fallbackDirection"/> (the body aim
+        /// direction) when the aim point is too close to the muzzle or far off to its side, and fires from the body axis
+        /// when the aim point is point-blank (see <see cref="WeaponAim.ResolveShot"/>). Call every frame while Fire is
+        /// held; no physics query runs while the rifle is not ready.
+        /// </summary>
+        public bool TryFireAt(Vector3 aimPoint, Vector3 fallbackDirection)
+        {
+            if (!IsReady) return false;
+            Vector3 body = _owner != null ? _owner.transform.position : transform.position;
+            WeaponAim.ResolveShot(body, MuzzlePosition, aimPoint, fallbackDirection, _minConvergeDistance,
+                _maxConvergeAngle, out Vector3 origin, out Vector3 direction);
+            return TryFire(origin, direction);
         }
 
         /// <summary>
@@ -216,6 +280,7 @@ namespace DanceWithTheDevil
 
             // One push per salvo, never per bullet (GDD §7 Üçlü Atış).
             if (_recoilSpeed > 0f && _owner != null) _owner.AddExternalVelocity(-direction * _recoilSpeed);
+            if (_animator != null) _animator.Kick(_recoilKick);
 
             Fired?.Invoke(this, _tripleShot);
             ImpactBus.Raise(new ImpactEvent
@@ -226,7 +291,7 @@ namespace DanceWithTheDevil
                 direction = direction,
                 intensity = _muzzleIntensity,
                 surface = SurfaceType.Default,
-                hitTransform = _muzzle,
+                hitTransform = Muzzle,
                 instigator = source,
                 instigatorIsLocalPlayer = isPlayer,
             });

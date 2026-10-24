@@ -4,8 +4,8 @@ namespace DanceWithTheDevil
 {
     /// <summary>
     /// The contract costs that show on Defne's model (MAIN_GDD §8): hair colour drains to grey (1 "Rengin"),
-    /// face parts disappear one by one (4 "Yüzün", minimum scope: parts hidden instead of single voxels; the hit
-    /// area stays, K-13), the whole body turns grey (6 "Kendin"), and the grey shell crumbles into cubes at the
+    /// face parts burst into cubes and disappear one by one (4 "Yüzün", minimum scope: whole parts instead of single
+    /// voxels; the hit area stays, K-13), the whole body turns grey (6 "Kendin"), and the grey shell crumbles into cubes at the
     /// always-yes ending. Colours are set through a MaterialPropertyBlock (_BaseColor), so shared materials are not
     /// touched. Runs on unscaled time so it also animates while time is frozen.
     /// Put it on the player root; the model is the child named "Model" unless assigned.
@@ -30,6 +30,10 @@ namespace DanceWithTheDevil
         [SerializeField, Range(0f, 2f)] private float _greyBrightness = 0.85f;
         [Tooltip("Cube speed multiplier when the shell crumbles.")]
         [SerializeField, Min(0f)] private float _crumbleForce = 0.6f;
+        [Tooltip("Contract 4: each face part bursts into cubes as it goes (so the loss reads at play scale).")]
+        [SerializeField] private bool _burstFaceParts = true;
+        [Tooltip("Cube speed multiplier of a face part's burst.")]
+        [SerializeField, Min(0f)] private float _faceBurstForce = 0.5f;
 
         private MeshRenderer[] _renderers = System.Array.Empty<MeshRenderer>();
         private Color[] _baseColors;
@@ -41,6 +45,9 @@ namespace DanceWithTheDevil
         private int _faceNext = -1;
         private float _faceTimer;
         private bool _fading;
+        private readonly Transform[] _onePart = new Transform[1];
+        private readonly Color[] _oneColor = new Color[1];
+        private bool _partsSettled;
 
         public Transform Model => _model;
         public bool IsCrumbled { get; private set; }
@@ -105,9 +112,21 @@ namespace DanceWithTheDevil
 
         private void Update()
         {
+            if (!_partsSettled) SettleParts();
             float dt = Time.unscaledDeltaTime;
             if (_fading) TickGrey(dt);
             if (_faceNext >= 0) TickFace(dt);
+        }
+
+        // CharacterAnimator builds Defne's rifle cubes in its Start, after this Awake cached the parts: pick them up
+        // once on the first frame (contract 6 greys the gun too, the crumble bursts it), unless a cost already began.
+        private void SettleParts()
+        {
+            _partsSettled = true;
+            if (_model == null || _fading || _faceNext >= 0) return;
+            for (int i = 0; i < _greyTarget.Length; i++)
+                if (_greyTarget[i] > 0f || _grey[i] > 0f) return;
+            if (_model.GetComponentsInChildren<MeshRenderer>(true).Length != _renderers.Length) Cache();
         }
 
         private void TickGrey(float dt)
@@ -131,10 +150,31 @@ namespace DanceWithTheDevil
             {
                 _faceTimer -= _facePartInterval;
                 Transform part = _faceTransforms[_faceNext];
-                if (part != null) part.gameObject.SetActive(false);
+                if (part != null)
+                {
+                    if (_burstFaceParts) BurstPart(part);
+                    part.gameObject.SetActive(false);
+                }
                 _faceNext++;
                 if (_faceNext >= _faceTransforms.Length) _faceNext = -1;
             }
+        }
+
+        /// <summary>One <see cref="PixelImpactFeedback.Shatter"/> call for a whole part in its current colour.</summary>
+        private void BurstPart(Transform part)
+        {
+            if (PixelImpactFeedback.Instance == null || !part.gameObject.activeInHierarchy) return;
+            Color color = Color.gray;
+            for (int i = 0; i < _renderers.Length; i++)
+            {
+                if (_renderers[i] == null || _renderers[i].transform != part) continue;
+                color = CurrentColor(i);
+                break;
+            }
+            _onePart[0] = part;
+            _oneColor[0] = color;
+            PixelImpactFeedback.Instance.Shatter(_onePart, _oneColor, part.position, Vector3.up, _faceBurstForce);
+            _onePart[0] = null;
         }
 
         private void Cache()

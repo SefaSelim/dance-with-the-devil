@@ -10,7 +10,10 @@ namespace DanceWithTheDevil
     /// On the player's death: hitstop cancelled, time frozen, wave clock paused, screen desaturates, the Devil
     /// slides in from the right (first time: "Psst..."), then the contract card.
     /// EVET: deal applied (DealEffects + visible costs), revive at the new max, 2 s invulnerability (0 from
-    /// contract 5 on), shockwave kills enemies within 6 m, saturation back to the run's base, time runs again.
+    /// contract 5 on), the shockwave kills every living enemy (D3, provisional; K-12's 6 m radius when
+    /// <see cref="_shockwaveClearsAll"/> is off), saturation back to the run's base, time runs again. Contract 1's
+    /// colour cost is played out on screen: the colour comes back first, then visibly drains past the base and
+    /// settles at it. Lines wait for the Devil's typewriter before their auto-advance timer starts.
     /// HAYIR: the NO line, then the ending/results.
     /// PROVISIONAL (open question A-4): death 6 shows contract 6 without a choice, Defne turns grey, controls get
     /// 0.25 s delay and play goes on; the next death is the always-yes ending (line, grey shell crumbles, end card).
@@ -55,11 +58,21 @@ namespace DanceWithTheDevil
 
         [Header("Revive (K-12)")]
         [SerializeField, Min(0f)] private float _reviveInvulnerability = DealEffects.ReviveInvulnerabilitySeconds;
+        [Tooltip("Shockwave radius when it does not clear every enemy (K-12: 6 m).")]
         [SerializeField, Min(0f)] private float _shockwaveRadius = 6f;
+        [Tooltip("D3 (provisional): the revive shockwave clears every living enemy. Off = only within the radius.")]
+        [SerializeField] private bool _shockwaveClearsAll = true;
 
         [Header("Visible costs")]
         [Tooltip("World saturation after contract 1 (GDD: −30%).")]
         [SerializeField, Range(0f, 1f)] private float _contractOneSaturation = 0.7f;
+        [Tooltip("Contract 1: seconds the colour is shown fully back before it drains (unscaled).")]
+        [SerializeField, Min(0f)] private float _contractOneColourHold = 0.5f;
+        [Tooltip("Contract 1: the drain overshoots to this saturation so the loss is seen, then settles at the base.")]
+        [SerializeField, Range(0f, 1f)] private float _contractOneOvershoot = 0.45f;
+        [Tooltip("Contract 1: seconds of the visible drain, then of the settle back to the base (unscaled).")]
+        [SerializeField, Min(0f)] private float _contractOneDrainDuration = 1.2f;
+        [SerializeField, Min(0f)] private float _contractOneSettleDuration = 0.8f;
         [Tooltip("Edge vignette after contract 5. Spawn warnings are in the world image, so keep the centre clear.")]
         [SerializeField, Range(0f, 1f)] private float _contractFiveVignette = 0.6f;
 
@@ -73,6 +86,7 @@ namespace DanceWithTheDevil
         private int _choice; // 0 none, 1 yes, -1 no
         private float _baseSaturation = 1f;
         private float _baseVignette;
+        private Coroutine _colourDrain;
 
         public DevilState State { get; private set; } = DevilState.Playing;
         public EndingKind Ending { get; private set; } = EndingKind.None;
@@ -174,6 +188,11 @@ namespace DanceWithTheDevil
         private IEnumerator DeathSequence()
         {
             Deaths++;
+            if (_colourDrain != null)
+            {
+                StopCoroutine(_colourDrain);
+                _colourDrain = null;
+            }
             SetState(DevilState.Freezing);
             if (HitStop.Instance != null) HitStop.Instance.CancelAll();
             Time.timeScale = 0f;
@@ -215,7 +234,7 @@ namespace DanceWithTheDevil
             {
                 SetState(DevilState.Forced);
                 if (_screen != null) _screen.ShowCard(deal, false);
-                yield return Wait(_forcedCardAutoAdvance);
+                yield return WaitAfterTyping(_forcedCardAutoAdvance);
             }
 
             CurrentDeal = null;
@@ -232,7 +251,11 @@ namespace DanceWithTheDevil
 
             Time.timeScale = 1f;
             if (_waves != null) _waves.Paused = false;
-            if (_grade != null) _grade.SetSaturation(_baseSaturation, _restoreDuration);
+            if (_grade != null)
+            {
+                if (deal.Number == 1) _colourDrain = StartCoroutine(ContractOneDrain());
+                else _grade.SetSaturation(_baseSaturation, _restoreDuration);
+            }
 
             Vector3 position = transform.position;
             if (_playerHealth != null)
@@ -242,8 +265,12 @@ namespace DanceWithTheDevil
                 position = _playerHealth.transform.position;
             }
 
-            // K-12 shockwave from the Devil.
-            if (_waves != null) _waves.KillWithin(position, _shockwaveRadius);
+            // Revive shockwave from the Devil: every living enemy (D3, provisional), else K-12's radius.
+            if (_waves != null)
+            {
+                if (_shockwaveClearsAll) _waves.KillAll();
+                else _waves.KillWithin(position, _shockwaveRadius);
+            }
             ImpactBus.Raise(new ImpactEvent
             {
                 kind = ImpactKind.Explosion,
@@ -251,6 +278,7 @@ namespace DanceWithTheDevil
                 normal = Vector3.up,
                 direction = Vector3.up,
                 intensity = 1f,
+                radius = _shockwaveClearsAll ? 0f : _shockwaveRadius, // 0 = the feedback's full-view sweep
                 surface = SurfaceType.Default,
                 instigator = gameObject,
                 instigatorIsLocalPlayer = true,
@@ -283,6 +311,31 @@ namespace DanceWithTheDevil
                 case 6:
                     if (_defne != null) _defne.TurnAllGrey();
                     break;
+            }
+        }
+
+        /// <summary>
+        /// Contract 1 "Rengin" on screen: full colour back, a beat, a visible drain past the base, then it settles at
+        /// the base (the permanent −30% stays as the GDD says; only the moment of loss is made visible).
+        /// </summary>
+        private IEnumerator ContractOneDrain()
+        {
+            _grade.SetSaturation(1f, _restoreDuration);
+            yield return Delay(_restoreDuration + _contractOneColourHold);
+            _grade.SetSaturation(Mathf.Min(_contractOneOvershoot, _baseSaturation), _contractOneDrainDuration);
+            yield return Delay(_contractOneDrainDuration);
+            _grade.SetSaturation(_baseSaturation, _contractOneSettleDuration);
+            _colourDrain = null;
+        }
+
+        /// <summary>Unscaled wait that cannot be skipped.</summary>
+        private static IEnumerator Delay(float seconds)
+        {
+            float t = 0f;
+            while (t < seconds)
+            {
+                t += Time.unscaledDeltaTime;
+                yield return null;
             }
         }
 
@@ -330,7 +383,20 @@ namespace DanceWithTheDevil
         {
             SetState(DevilState.Speaking);
             if (_screen != null) _screen.ShowLine(line);
-            yield return Wait(_lineAutoAdvance);
+            yield return WaitAfterTyping(_lineAutoAdvance);
+        }
+
+        /// <summary>Like <see cref="Wait"/>, but the clock only runs once the Devil's line has typed out.</summary>
+        private IEnumerator WaitAfterTyping(float seconds)
+        {
+            _advanceRequested = false;
+            float t = 0f;
+            while (t < seconds && !_advanceRequested)
+            {
+                if (_screen == null || !_screen.IsTyping) t += Time.unscaledDeltaTime;
+                yield return null;
+            }
+            _advanceRequested = false;
         }
 
         /// <summary>Waits unscaled seconds or until <see cref="Advance"/>.</summary>

@@ -7,19 +7,30 @@ using UnityEngine.UI;
 namespace DanceWithTheDevil
 {
     /// <summary>
-    /// Code-built uGUI helpers for the jam UI (no prefabs needed). Canvases are Screen Space Overlay with a
-    /// 640×360 reference resolution, the same grid as the pixel camera, so blocks stay chunky.
+    /// Code-built uGUI helpers for the jam UI (no prefabs needed). Canvases are Screen Space Overlay and are fitted to
+    /// the pixel camera's game image (<see cref="UiCanvasFit"/>): one canvas unit = one low-res texel, the scale
+    /// follows the integer scale of the image and the content lives in a 640×360 "Frame" over the image, so the HUD
+    /// never lands on the letterbox bars and its blocks have the world's pixel size.
     /// Text uses legacy uGUI Text: TextMesh Pro ships in com.unity.ugui 2.6 but its Essential Resources (default
-    /// SDF font) are not imported and Game.Runtime does not reference Unity.TextMeshPro.
+    /// SDF font) are not imported and Game.Runtime does not reference Unity.TextMeshPro. No synthesized italics
+    /// (the built-in font has one face); font sizes are even numbers (10, 12, 14, 16, 20, 24).
     /// </summary>
     public static class UiKit
     {
         public static readonly Vector2 ReferenceResolution = new Vector2(640f, 360f);
+        // Fallback layout when no rig is registered: the same rule as PixelCameraRig.UpdateLayout.
+        private const float FallbackMinIntegerCoverage = 0.8f;
 
         /// <summary>Accessibility: skip slide/fade animations (no settings menu yet).</summary>
         public static bool ReduceMotion;
         /// <summary>Accessibility: multiplies every font size at build time (no settings menu yet).</summary>
         public static float TextScale = 1f;
+
+        /// <summary>
+        /// The pixel camera rig whose game image the UI canvases fit (registered by <see cref="DisplayGrade"/>).
+        /// Null = the canvases compute the same integer-scaled, centred 640×360 rect themselves.
+        /// </summary>
+        public static PixelCameraRig DisplayRig { get; set; }
 
         /// <summary>Raised on every UI click/advance (audio "ui_click").</summary>
         public static event System.Action Clicked;
@@ -31,8 +42,10 @@ namespace DanceWithTheDevil
         public static readonly Color Panel = new Color(0.08f, 0.06f, 0.09f, 0.92f);
         public static readonly Color Cream = new Color(0.93f, 0.88f, 0.74f, 1f);
         public static readonly Color Dim = new Color(0.5f, 0.48f, 0.5f, 1f);
+        public static readonly Color Light = new Color(0.74f, 0.72f, 0.74f, 1f);
         public static readonly Color Turquoise = new Color(0.25f, 0.8f, 0.75f, 1f);
         public static readonly Color DevilRed = new Color(0.78f, 0.1f, 0.12f, 1f);
+        public static readonly Color CostRed = new Color(1f, 0.45f, 0.45f, 1f);
         public static readonly Color Gold = new Color(1f, 0.82f, 0.3f, 1f);
         public static readonly Color HealthRed = new Color(0.86f, 0.22f, 0.27f, 1f);
 
@@ -46,6 +59,31 @@ namespace DanceWithTheDevil
             return _builtinFont;
         }
 
+        /// <summary>
+        /// Screen-pixel rect of the game image: the registered rig's <see cref="PixelCameraRig.DisplayRect"/>, else
+        /// the same integer-scaled, centred 640×360 fit computed here.
+        /// </summary>
+        public static Rect CurrentDisplayRect()
+        {
+            if (DisplayRig != null)
+            {
+                Rect r = DisplayRig.DisplayRect;
+                if (r.width > 0f && r.height > 0f) return r;
+            }
+            float sw = Mathf.Max(1, Screen.width);
+            float sh = Mathf.Max(1, Screen.height);
+            float fit = Mathf.Min(sw / ReferenceResolution.x, sh / ReferenceResolution.y);
+            int integerScale = Mathf.FloorToInt(fit);
+            float scale = integerScale >= 1 && integerScale / fit >= FallbackMinIntegerCoverage ? integerScale : fit;
+            float w = Mathf.Round(ReferenceResolution.x * scale);
+            float h = Mathf.Round(ReferenceResolution.y * scale);
+            return new Rect(Mathf.Floor((sw - w) * 0.5f), Mathf.Floor((sh - h) * 0.5f), w, h);
+        }
+
+        /// <summary>
+        /// Creates an overlay canvas fitted to the game image and returns its 640×360 content frame (bottom-left
+        /// pivot). Anchors inside the frame are relative to the game image. Hide the UI by deactivating the frame.
+        /// </summary>
         public static RectTransform CreateCanvas(Transform parent, string name, int sortingOrder, bool interactive)
         {
             var go = new GameObject(name, typeof(RectTransform));
@@ -55,12 +93,20 @@ namespace DanceWithTheDevil
             canvas.sortingOrder = sortingOrder;
             canvas.pixelPerfect = true;
             var scaler = go.AddComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = ReferenceResolution;
-            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
-            scaler.matchWidthOrHeight = 0.5f;
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize;
+            scaler.referencePixelsPerUnit = 100f;
             if (interactive) go.AddComponent<GraphicRaycaster>();
-            return (RectTransform)go.transform;
+
+            var frameGo = new GameObject("Frame", typeof(RectTransform));
+            var frame = (RectTransform)frameGo.transform;
+            frame.SetParent(go.transform, false);
+            frame.anchorMin = Vector2.zero;
+            frame.anchorMax = Vector2.zero;
+            frame.pivot = Vector2.zero;
+            frame.sizeDelta = ReferenceResolution;
+
+            go.AddComponent<UiCanvasFit>().Initialize(scaler, frame);
+            return frame;
         }
 
         public static RectTransform Rect(Transform parent, string name, Vector2 anchor, Vector2 pivot,
@@ -100,7 +146,7 @@ namespace DanceWithTheDevil
             return image;
         }
 
-        /// <summary>A block with a 2-unit border: returns the inner block (child of the border block).</summary>
+        /// <summary>A block with a border: returns the inner block (child of the border block).</summary>
         public static Image Framed(Transform parent, string name, Color border, Color fill, Vector2 anchor,
             Vector2 pivot, Vector2 position, Vector2 size, float thickness = 2f)
         {
@@ -116,7 +162,8 @@ namespace DanceWithTheDevil
             Text text = Rect(parent, name, anchor, pivot, position, rectSize).gameObject.AddComponent<Text>();
             text.font = font;
             text.fontSize = Mathf.Max(6, Mathf.RoundToInt(size * TextScale));
-            text.fontStyle = style;
+            // The built-in font has a single face: italics would be synthesized (slanted smooth text). Never use them.
+            text.fontStyle = style == FontStyle.Italic ? FontStyle.Normal : style == FontStyle.BoldAndItalic ? FontStyle.Bold : style;
             text.color = color;
             text.alignment = alignment;
             text.supportRichText = true;
@@ -153,6 +200,13 @@ namespace DanceWithTheDevil
             return button;
         }
 
+        /// <summary>Makes a block report pointer hold/press (see <see cref="UiHoldButton"/>); no Button, no tint.</summary>
+        public static UiHoldButton MakeHoldButton(Image block)
+        {
+            block.raycastTarget = true;
+            return block.gameObject.AddComponent<UiHoldButton>();
+        }
+
         /// <summary>Adds an EventSystem with the Input System UI module when the scene has none. Call from Start.</summary>
         public static void EnsureEventSystem()
         {
@@ -173,15 +227,20 @@ namespace DanceWithTheDevil
                 || (g != null && g.buttonSouth.wasPressedThisFrame);
         }
 
-        /// <summary>Skip/advance a line: confirm, Space, E, left click.</summary>
-        public static bool AdvancePressed()
+        /// <summary>Confirm held: Enter / keypad Enter / gamepad South.</summary>
+        public static bool ConfirmHeld()
         {
-            if (ConfirmPressed()) return true;
             Keyboard k = Keyboard.current;
-            Mouse m = Mouse.current;
-            return (k != null && (k.spaceKey.wasPressedThisFrame || k.eKey.wasPressedThisFrame))
-                || (m != null && m.leftButton.wasPressedThisFrame);
+            Gamepad g = Gamepad.current;
+            return (k != null && (k.enterKey.isPressed || k.numpadEnterKey.isPressed))
+                || (g != null && g.buttonSouth.isPressed);
         }
+
+        /// <summary>
+        /// Skip/advance a line: confirm only (Enter / keypad Enter / pad South). Never fire, dodge or rocket keys,
+        /// which the player is usually mashing when they die. Clicks are handled by the screen's own blocks.
+        /// </summary>
+        public static bool AdvancePressed() => ConfirmPressed();
 
         /// <summary>Ease-out cubic.</summary>
         public static float EaseOut(float t)

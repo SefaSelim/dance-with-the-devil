@@ -67,6 +67,7 @@ MeshRenderer:
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: fb2e774699618594d8b114e3024c5899, type: 2}
+  - {fileID: 2100000, guid: 019085ea6ab775e469334decf883a64f, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -157,6 +158,7 @@ MeshRenderer:
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: 80f33ed4b502f48419fb6bda5bb2895d, type: 2}
+  - {fileID: 2100000, guid: 019085ea6ab775e469334decf883a64f, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -247,6 +249,7 @@ MeshRenderer:
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: 55cc580a97e254b43a1a289a81d5f4a0, type: 2}
+  - {fileID: 2100000, guid: 019085ea6ab775e469334decf883a64f, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -427,6 +430,7 @@ MeshRenderer:
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: 52a469197ad0fa545b28c0b315b47666, type: 2}
+  - {fileID: 2100000, guid: 019085ea6ab775e469334decf883a64f, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -517,6 +521,7 @@ MeshRenderer:
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: fb2e774699618594d8b114e3024c5899, type: 2}
+  - {fileID: 2100000, guid: 019085ea6ab775e469334decf883a64f, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -549,6 +554,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2792045100336890905}
+  - component: {fileID: 4526478481899716781}
   - component: {fileID: 8611912955345523493}
   - component: {fileID: 2857196398191646621}
   - component: {fileID: 368689715901747114}
@@ -578,6 +584,45 @@ Transform:
   - {fileID: 3049454831690029634}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4526478481899716781
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4036257437152509806}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 68165fcd24d2ded43a144d03663801a6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Runtime::DanceWithTheDevil.CharacterAnimator
+  _model: {fileID: 0}
+  _isPlayer: 0
+  _hasGun: 0
+  _gunMaterial: {fileID: 0}
+  _gunTipMaterial: {fileID: 0}
+  _gunLength: 0.5
+  _gunReach: 0.36
+  _aimArmPitch: 76
+  _aimArmInward: 8
+  _bobHeight: 0.05
+  _strideLength: 1
+  _fullSwingSpeed: 3
+  _maxCadenceSpeed: 8
+  _legSwingDegrees: 32
+  _armSwingDegrees: 26
+  _waddleDegrees: 6
+  _hipTwistDegrees: 12
+  _velocitySharpness: 18
+  _leanDegrees: 9
+  _fullLeanSpeed: 6
+  _leanFrequency: 4.5
+  _leanDamping: 0.5
+  _kickDistance: 0.12
+  _kickDegrees: 14
+  _kickBodyDegrees: 4
+  _kickRecoverTime: 0.08
+  _flinchDegrees: 14
 --- !u!136 &8611912955345523493
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -653,7 +698,7 @@ MonoBehaviour:
   _overrideStats: 0
   _stats:
     MaxHealth: 30
-    MoveSpeed: 3.5
+    MoveSpeed: 4.2
     AttackRange: 1.6
     TellDuration: 0.45
     TellLockTime: 0
@@ -662,13 +707,16 @@ MonoBehaviour:
     ThreatPoints: 1
     LungeDistance: 1.5
     LungeDuration: 0.12
+    MaxLungeDistance: 2.6
     LungeHitRadius: 1
     RetreatDistance: 0
     PreferredRange: {x: 0, y: 0}
     ProjectileSpeed: 0
   _model: {fileID: 3049454831690029634}
-  _flashDuration: 0.08
+  _flashDuration: 0.12
   _flashColor: {r: 1, g: 1, b: 1, a: 1}
+  _hitPunchDistance: 0.12
+  _hitSquash: 0.16
   _knockbackDuration: 0.15
 --- !u!114 &2432895199325011526
 MonoBehaviour:
@@ -683,7 +731,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Game.Runtime::DanceWithTheDevil.ShatterOnDeath
   _model: {fileID: 3049454831690029634}
-  _bulletForce: 0.8
+  _bulletForce: 1
   _meleeForce: 1.1
   _explosionForce: 1.6
 --- !u!114 &3978877049754159506
@@ -707,9 +755,16 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   _turnSpeed: 360
+  _aimLead: 0.85
+  _maxAimLead: 3.5
   _thinkInterval: 0.3
   _preferredDistance: 9
   _sampleRadius: 2
+  _flankAfterShot: 1
+  _minFlankAngle: 25
+  _separationWeight: 1
+  _travelLineWeight: 0.5
+  _walkCost: 0.08
   _projectileRadius: 0.2
   _projectileRange: 25
   _hitIntensity: 0.35
@@ -827,6 +882,7 @@ MeshRenderer:
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: fb2e774699618594d8b114e3024c5899, type: 2}
+  - {fileID: 2100000, guid: 019085ea6ab775e469334decf883a64f, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -917,6 +973,7 @@ MeshRenderer:
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: fb2e774699618594d8b114e3024c5899, type: 2}
+  - {fileID: 2100000, guid: 019085ea6ab775e469334decf883a64f, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1007,6 +1064,7 @@ MeshRenderer:
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: 52a469197ad0fa545b28c0b315b47666, type: 2}
+  - {fileID: 2100000, guid: 019085ea6ab775e469334decf883a64f, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0

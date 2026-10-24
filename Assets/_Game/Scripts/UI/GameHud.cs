@@ -1,15 +1,23 @@
 using System;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 namespace DanceWithTheDevil
 {
     /// <summary>
-    /// In-run HUD (MAIN_GDD §12). Top: HP bar whose width scales with max HP (contract 2 "can çubuğu kısalır") with
-    /// numbers, remaining run time (5:00 countdown from WaveDirector.Elapsed), score. Top-left: Defne's small framed
-    /// portrait (hidden by contract 3). Bottom: three fixed module slots, rocket charges, dodge charges and the
-    /// reject-ready pip. While a whisper offer exists (and the Devil is not up): its whisper line plus one-line
-    /// advantage and cost. The whole HUD hides while the ending screen is visible.
+    /// In-run HUD (MAIN_GDD §12), fitted to the game image (<see cref="UiKit.CreateCanvas"/>).
+    /// Top: HP bar drawn for the base 100 HP, with the part lost to contracts shown as a dark "lost" segment; the
+    /// elapsed run time (the run has no end time: D2, K-4); score. Top-left: Defne's small block portrait (hair
+    /// greys after contract 1, hidden by contract 3) and the "Verdiklerin" strip, one icon per cost taken (the
+    /// newest one pulses). Bottom: three fixed module slots (empty = a dim socket with no name until that module has
+    /// been offered once; equipped = the module's own colour; while Q is held the highlighted slot grows, turns gold
+    /// and "Sağ tık: sök" shows above it), "Küçük hayırlar: N", rocket / machete / dodge / reject pips (reject reads
+    /// PlayerModules' real cooldown). While a whisper offer exists (and the Devil is not up): its name in the module's
+    /// colour, the whisper, one-line advantage and cost, a shrinking lifetime bar and "TAKILI" on a duplicate.
+    /// Aim reticle: a chunky pixel crosshair at the mouse during play; the OS cursor is hidden and confined to the
+    /// window during play and released on the Devil, ending and pause screens. Adds a <see cref="PauseOverlay"/>
+    /// (Esc) when the GameObject has none. The whole HUD hides while the ending screen is visible.
     /// Display only; texts are rewritten only when their value changes (no per-frame allocations).
     /// Missing references are resolved from the player's GameObject; anything still missing is just not shown.
     /// </summary>
@@ -17,7 +25,19 @@ namespace DanceWithTheDevil
     public sealed class GameHud : MonoBehaviour
     {
         private const int MaxPips = 4;
-        private const int ModuleSlots = 3;
+        private const int ModuleSlots = ModuleCatalog.Count;
+        private const int MaxCostIcons = 6;
+        private const int TimeCacheSeconds = 3600;
+        private const float SlotSpacing = 84f;
+        private static readonly Vector2 SlotSize = new Vector2(78f, 20f);
+        private static readonly Vector2 SlotSizeHighlighted = new Vector2(86f, 26f);
+        private const float OfferTimerWidth = 456f;
+
+        private static readonly Color SlotEmptyFill = new Color(0.07f, 0.06f, 0.09f, 0.85f);
+        private static readonly Color SlotEmptyBorder = new Color(0.3f, 0.28f, 0.32f, 1f);
+        private static readonly Color LostHealth = new Color(0.2f, 0.05f, 0.08f, 1f);
+        private static readonly Color CostIconBorder = new Color(0.6f, 0.14f, 0.17f, 1f);
+        private static readonly Color IconGrey = new Color(0.55f, 0.55f, 0.57f, 1f);
 
         [Header("References")]
         [Tooltip("Player health. Other player components are taken from its GameObject when empty.")]
@@ -27,6 +47,8 @@ namespace DanceWithTheDevil
         [SerializeField] private PlayerInputReader _input;
         [Tooltip("Whisper modules (optional).")]
         [SerializeField] private PlayerModules _modules;
+        [Tooltip("Machete, for the 'Pala [F]' pip. Empty = taken from the player.")]
+        [SerializeField] private Machete _machete;
         [SerializeField] private WaveDirector _waves;
         [SerializeField] private ScoreKeeper _score;
         [Tooltip("The offer banner hides while its State is not Playing. Empty = searched in parents; null = no check.")]
@@ -43,15 +65,25 @@ namespace DanceWithTheDevil
         [SerializeField] private int _sortingOrder = 10;
         [Tooltip("HP bar width per hit point, canvas units (100 HP = 200).")]
         [SerializeField, Min(0.1f)] private float _unitsPerHealth = 2f;
-        [Tooltip("Run length for the countdown when there is no wave director, seconds.")]
-        [SerializeField, Min(1f)] private float _runLength = 300f;
-        [Tooltip("Reject cooldown shown by the pip (GDD §7: 0.65 s). Approximation until PlayerModules exposes readiness.")]
+        [Tooltip("Reject cooldown for the pip when there is no PlayerModules (GDD §7: 0.65 s).")]
         [SerializeField, Min(0f)] private float _rejectCooldown = 0.65f;
+        [Tooltip("Seconds a newly taken cost icon pulses in the 'Verdiklerin' strip.")]
+        [SerializeField, Min(0f)] private float _costPulseDuration = 1.6f;
+
+        [Header("Aim and cursor")]
+        [Tooltip("Sorting order of the aim reticle canvas (above hints and intro, below the Devil screen).")]
+        [SerializeField] private int _reticleSortingOrder = 90;
+        [Tooltip("Hide the OS cursor and confine it to the window during play (released on Devil, ending and pause).")]
+        [SerializeField] private bool _manageCursor = true;
 
         private RectTransform _root;
+        private RectTransform _reticleRoot;
+        private RectTransform _reticle;
         private GameObject _portrait;
+        private DefnePortrait _portraitView;
         private RectTransform _hpBack;
         private RectTransform _hpFill;
+        private RectTransform _hpLost;
         private Text _hpText;
         private Text _timeText;
         private Text _scoreText;
@@ -59,19 +91,40 @@ namespace DanceWithTheDevil
         private Text _offerWhisper;
         private Text _offerPlus;
         private Text _offerMinus;
+        private GameObject _offerEquipped;
+        private RectTransform _offerTimer;
+        private readonly RectTransform[] _slotRect = new RectTransform[ModuleSlots];
+        private readonly Image[] _slotBorder = new Image[ModuleSlots];
         private readonly Image[] _slotFill = new Image[ModuleSlots];
         private readonly Text[] _slotLabel = new Text[ModuleSlots];
-        private readonly bool[] _slotState = new bool[ModuleSlots];
-        private Pips _rocketPips, _dodgePips, _rejectPips;
+        private readonly int[] _slotShown = new int[ModuleSlots];
+        private readonly bool[] _offered = new bool[ModuleSlots];
+        private readonly string[] _moduleHex = new string[ModuleSlots];
+        private readonly string[] _ejectStrings = new string[ModuleSlots];
+        private Text _ejectLabel;
+        private Text _smallNosText;
+        private GameObject _costStrip;
+        private readonly RectTransform[] _costIcons = new RectTransform[MaxCostIcons];
+        private readonly Image[] _costIconBorder = new Image[MaxCostIcons];
+        private readonly Image[] _costIconFill = new Image[MaxCostIcons];
+        private Pips _rocketPips, _machetePips, _dodgePips, _rejectPips;
+        private PauseOverlay _pause;
 
-        private string[] _timeStrings;
+        private readonly string[] _timeStrings = new string[TimeCacheSeconds];
         private int _shownSeconds = -1;
         private int _shownScore = -1;
         private int _shownHp = -1;
         private int _shownMaxHp = -1;
+        private int _shownSmallNos = -1;
+        private int _shownTaken;
+        private int _ejectShown = -2;
+        private int _pulseIndex = -1;
+        private float _pulseTime;
         private float _rejectReadyTime;
         private bool _offerOpen;
         private bool _subscribed;
+        private bool _cursorCaptured;
+        private bool _reticleShown;
         private Action<ModuleType> _onOfferAppeared;
         private Action<ModuleType> _onOfferClosed;
 
@@ -87,13 +140,30 @@ namespace DanceWithTheDevil
             _onOfferAppeared = OnOfferAppeared;
             _onOfferClosed = OnOfferClosed;
             ResolveReferences();
-            _timeStrings = new string[Mathf.CeilToInt(_runLength) + 1];
+            for (int i = 0; i < ModuleSlots; i++)
+            {
+                var type = (ModuleType)i;
+                _moduleHex[i] = ColorUtility.ToHtmlStringRGB(ModuleCatalog.ColorOf(type));
+                _ejectStrings[i] = GameTexts.ModuleName(type) + GameTexts.Separator + GameTexts.HudEjectHint;
+                _slotShown[i] = -1;
+            }
             Build();
-            for (int i = 0; i < ModuleSlots; i++) ApplySlot(i, false, true);
+            UpdateSlots();
+
+            _pause = GetComponent<PauseOverlay>();
+            if (_pause == null) _pause = gameObject.AddComponent<PauseOverlay>();
+            _pause.Configure(_devil, _ending, _input);
         }
 
         private void OnEnable() => Subscribe(true);
-        private void OnDisable() => Subscribe(false);
+
+        private void OnDisable()
+        {
+            Subscribe(false);
+            ReleaseCursor();
+        }
+
+        private void OnDestroy() => ReleaseCursor();
 
         /// <summary>Code-built setups: sets the player and resolves its components.</summary>
         public void Configure(Health playerHealth, WaveDirector waves, ScoreKeeper score)
@@ -106,7 +176,9 @@ namespace DanceWithTheDevil
             _rocket = null;
             _input = null;
             _modules = null;
+            _machete = null;
             ResolveReferences();
+            if (_pause != null) _pause.Configure(_devil, _ending, _input);
             if (isActiveAndEnabled) Subscribe(true);
         }
 
@@ -128,6 +200,7 @@ namespace DanceWithTheDevil
             if (_rocket == null) _rocket = p.GetComponentInChildren<RocketLauncher>(true);
             if (_input == null) _input = p.GetComponentInChildren<PlayerInputReader>(true);
             if (_modules == null) _modules = p.GetComponentInChildren<PlayerModules>(true);
+            if (_machete == null) _machete = p.GetComponentInChildren<Machete>(true);
         }
 
         private void Subscribe(bool on)
@@ -152,9 +225,13 @@ namespace DanceWithTheDevil
 
         private void OnOfferAppeared(ModuleType type)
         {
-            _offerWhisper.text = "<b>" + GameTexts.ModuleName(type) + "</b>  <i>" + GameTexts.ModuleWhisper(type) + "</i>";
+            int i = (int)type;
+            _offered[i] = true;
+            _offerWhisper.text = "<color=#" + _moduleHex[i] + "><b>" + GameTexts.ModuleName(type) + "</b></color>  "
+                + GameTexts.ModuleWhisper(type);
             _offerPlus.text = "+ " + GameTexts.ModuleAdvantage(type);
             _offerMinus.text = "− " + GameTexts.ModuleCost(type);
+            _offerEquipped.SetActive(false);
             _offerOpen = true;
             UpdateVisibility();
         }
@@ -167,25 +244,31 @@ namespace DanceWithTheDevil
 
         private void Update()
         {
-            UpdateVisibility();
+            bool hudVisible = UpdateVisibility();
+            bool playing = _devil == null || _devil.State == DevilState.Playing;
             UpdateHealth();
             UpdateTime();
             UpdateScore();
             UpdateSlots();
             UpdatePips();
+            UpdateOffer();
+            UpdateCosts();
+            UpdateSmallNos();
+            UpdateAim(hudVisible && playing && !RunPause.IsPaused);
         }
 
         /// <summary>
-        /// The whole HUD hides behind the ending screen (its small score sat on the module slots); the offer banner
-        /// hides while the Devil is up so it never shows behind his line.
+        /// The whole HUD hides behind the ending screen; the offer banner hides while the Devil is up so it never
+        /// shows behind his line. Returns whether the HUD is visible.
         /// </summary>
-        private void UpdateVisibility()
+        private bool UpdateVisibility()
         {
             bool hudVisible = _ending == null || !_ending.IsVisible;
             if (_root.gameObject.activeSelf != hudVisible) _root.gameObject.SetActive(hudVisible);
             bool playing = _devil == null || _devil.State == DevilState.Playing;
             bool offerVisible = _offerOpen && playing;
             if (_offer.activeSelf != offerVisible) _offer.SetActive(offerVisible);
+            return hudVisible;
         }
 
         private void UpdateHealth()
@@ -195,18 +278,26 @@ namespace DanceWithTheDevil
             int hp = Mathf.CeilToInt(_playerHealth.Current);
             if (max == _shownMaxHp && hp == _shownHp) return;
             if (max != _shownMaxHp)
-                _hpBack.sizeDelta = new Vector2(max * _unitsPerHealth + 4f, _hpBack.sizeDelta.y);
+            {
+                // The bar keeps its base length; what contracts took stays visible as a dark "lost" segment.
+                float baseMax = Mathf.Max(DealEffects.BaseMaxHealth, max);
+                _hpBack.sizeDelta = new Vector2(baseMax * _unitsPerHealth + 4f, _hpBack.sizeDelta.y);
+                float lost = Mathf.Max(0f, baseMax - max);
+                _hpLost.anchoredPosition = new Vector2(2f + max * _unitsPerHealth, 0f);
+                _hpLost.sizeDelta = new Vector2(lost * _unitsPerHealth, _hpLost.sizeDelta.y);
+                _hpLost.gameObject.SetActive(lost > 0f);
+            }
             _shownMaxHp = max;
             _shownHp = hp;
             _hpFill.sizeDelta = new Vector2(Mathf.Max(0f, hp) * _unitsPerHealth, _hpFill.sizeDelta.y);
             _hpText.text = hp + "/" + max;
         }
 
+        /// <summary>Elapsed run time, m:ss (D2: the run has no end time; the waves never stop).</summary>
         private void UpdateTime()
         {
-            float length = _waves != null ? _waves.SpawnEndTime : _runLength;
-            float elapsed = _waves != null ? _waves.Elapsed : 0f;
-            int seconds = Mathf.Clamp(Mathf.CeilToInt(length - elapsed), 0, _timeStrings.Length - 1);
+            float elapsed = _waves != null ? _waves.Elapsed : Time.timeSinceLevelLoad;
+            int seconds = Mathf.Clamp(Mathf.FloorToInt(elapsed), 0, TimeCacheSeconds - 1);
             if (seconds == _shownSeconds) return;
             _shownSeconds = seconds;
             if (_timeStrings[seconds] == null) _timeStrings[seconds] = (seconds / 60) + ":" + (seconds % 60).ToString("00");
@@ -221,27 +312,100 @@ namespace DanceWithTheDevil
             _scoreText.text = string.Format(GameTexts.HudScoreFormat, score);
         }
 
-        private void UpdateSlots()
+        private void UpdateSmallNos()
         {
-            if (_modules == null) return;
-            for (int i = 0; i < ModuleSlots; i++) ApplySlot(i, _modules.IsEquipped((ModuleType)i), false);
+            int count = _modules != null ? _modules.SmallNoCount : 0;
+            if (count == _shownSmallNos) return;
+            _shownSmallNos = count;
+            _smallNosText.text = string.Format(GameTexts.HudSmallNosFormat, count);
         }
 
-        private void ApplySlot(int i, bool equipped, bool force)
+        // ------------------------------------------------------------ module slots
+
+        private void UpdateSlots()
         {
-            if (!force && _slotState[i] == equipped) return;
-            _slotState[i] = equipped;
-            _slotFill[i].color = equipped ? UiKit.Turquoise : UiKit.Ink;
-            _slotLabel[i].color = equipped ? UiKit.Ink : UiKit.Dim;
-            _slotLabel[i].fontStyle = equipped ? FontStyle.Bold : FontStyle.Normal;
+            int highlighted = -1;
+            bool selecting = _modules != null && _modules.SelectionOpen;
+            if (selecting)
+            {
+                ModuleType? h = _modules.Highlighted;
+                if (h.HasValue) highlighted = (int)h.Value;
+            }
+
+            for (int i = 0; i < ModuleSlots; i++)
+            {
+                bool equipped = _modules != null && _modules.IsEquipped((ModuleType)i);
+                int state = equipped ? 2 : _offered[i] ? 1 : 0;
+                bool lit = equipped && highlighted == i;
+                int code = state * 2 + (lit ? 1 : 0);
+                if (code != _slotShown[i]) ApplySlot(i, state, lit, code);
+            }
+
+            int eject = selecting ? highlighted : -2;
+            if (eject == _ejectShown) return;
+            _ejectShown = eject;
+            bool show = eject >= 0;
+            if (_ejectLabel.gameObject.activeSelf != show) _ejectLabel.gameObject.SetActive(show);
+            if (!show) return;
+            _ejectLabel.text = _ejectStrings[eject];
+            _ejectLabel.rectTransform.anchoredPosition = new Vector2((eject - 1) * SlotSpacing, 32f);
         }
+
+        /// <summary>0 = empty, never offered (no name); 1 = empty, offered before; 2 = equipped (module colour).</summary>
+        private void ApplySlot(int i, int state, bool highlighted, int code)
+        {
+            _slotShown[i] = code;
+            var type = (ModuleType)i;
+            Color border, fill, labelColor;
+            string label;
+            FontStyle style = FontStyle.Normal;
+            switch (state)
+            {
+                case 2:
+                    border = highlighted ? UiKit.Gold : UiKit.Cream;
+                    fill = ModuleCatalog.ColorOf(type);
+                    label = GameTexts.ModuleName(type);
+                    labelColor = UiKit.Ink;
+                    style = FontStyle.Bold;
+                    break;
+                case 1:
+                    border = SlotEmptyBorder;
+                    fill = SlotEmptyFill;
+                    label = GameTexts.ModuleName(type);
+                    labelColor = UiKit.Dim;
+                    break;
+                default:
+                    border = SlotEmptyBorder;
+                    fill = SlotEmptyFill;
+                    label = GameTexts.HudEmptySlot;
+                    labelColor = SlotEmptyBorder;
+                    break;
+            }
+            _slotBorder[i].color = border;
+            _slotFill[i].color = fill;
+            _slotLabel[i].text = label;
+            _slotLabel[i].color = labelColor;
+            _slotLabel[i].fontStyle = style;
+            Vector2 size = highlighted ? SlotSizeHighlighted : SlotSize;
+            float thickness = highlighted ? 2f : 1f;
+            _slotRect[i].sizeDelta = size;
+            _slotFill[i].rectTransform.sizeDelta = size - new Vector2(thickness * 2f, thickness * 2f);
+        }
+
+        // ------------------------------------------------------------ pips
 
         private void UpdatePips()
         {
             if (_rocket != null) SetPips(ref _rocketPips, _rocket.MaxCharges, _rocket.Charges);
+            if (_machete != null) SetPips(ref _machetePips, 1, _machete.IsReady ? 1 : 0);
             if (_controller != null) SetPips(ref _dodgePips, _controller.MaxDodgeCharges, _controller.DodgeCharges);
 
-            // Approximation: the module system owns the real cooldown; replace with its readiness when exposed.
+            if (_modules != null)
+            {
+                SetPips(ref _rejectPips, 1, _modules.RejectReady ? 1 : 0);
+                return;
+            }
+            // No module system: approximate with the GDD cooldown.
             float now = Time.time;
             bool ready = now >= _rejectReadyTime;
             if (ready && _input != null && _input.RejectPressed) _rejectReadyTime = now + _rejectCooldown;
@@ -262,6 +426,139 @@ namespace DanceWithTheDevil
             }
         }
 
+        // ------------------------------------------------------------ offer banner
+
+        private void UpdateOffer()
+        {
+            if (!_offerOpen || _modules == null) return;
+            ModuleOffer offer = _modules.Current;
+            if (offer == null) return;
+            bool duplicate = offer.IsEquippedDuplicate;
+            if (_offerEquipped.activeSelf != duplicate) _offerEquipped.SetActive(duplicate);
+            float t = offer.Lifetime > 0f ? Mathf.Clamp01(offer.TimeLeft / offer.Lifetime) : 0f;
+            float w = Mathf.Round(t * OfferTimerWidth);
+            if (!Mathf.Approximately(_offerTimer.sizeDelta.x, w)) _offerTimer.sizeDelta = new Vector2(w, _offerTimer.sizeDelta.y);
+        }
+
+        // ------------------------------------------------------------ costs ("Verdiklerin")
+
+        private void UpdateCosts()
+        {
+            int taken = _devil != null ? _devil.DealsTaken : 0;
+            if (taken != _shownTaken)
+            {
+                if (taken < _shownTaken)
+                {
+                    for (int i = 0; i < MaxCostIcons; i++) _costIcons[i].gameObject.SetActive(false);
+                    _shownTaken = 0;
+                }
+                int end = Mathf.Min(taken, MaxCostIcons);
+                for (int i = _shownTaken; i < end; i++)
+                {
+                    DealDefinition deal = i < _devil.TakenDeals.Count ? _devil.TakenDeals[i] : null;
+                    ShowCostIcon(i, deal != null ? deal.Number : i + 1);
+                    _pulseIndex = i;
+                    _pulseTime = 0f;
+                }
+                _shownTaken = taken;
+                if (_costStrip.activeSelf != taken > 0) _costStrip.SetActive(taken > 0);
+                if (_portraitView != null) _portraitView.ApplyCosts(taken);
+            }
+
+            if (_pulseIndex < 0) return;
+            _pulseTime += Time.unscaledDeltaTime;
+            float k = _costPulseDuration > 0f ? Mathf.Clamp01(_pulseTime / _costPulseDuration) : 1f;
+            float s = UiKit.ReduceMotion ? 1f : 1f + 1.5f * (1f - k) * (1f - k);
+            _costIcons[_pulseIndex].localScale = new Vector3(s, s, 1f);
+            bool flash = !UiKit.ReduceMotion && k < 1f && Mathf.Repeat(_pulseTime, 0.24f) < 0.12f;
+            _costIconBorder[_pulseIndex].color = flash ? Color.white : CostIconBorder;
+            if (k >= 1f)
+            {
+                _costIcons[_pulseIndex].localScale = Vector3.one;
+                _costIconBorder[_pulseIndex].color = CostIconBorder;
+                _pulseIndex = -1;
+            }
+        }
+
+        /// <summary>Builds the block icon of contract <paramref name="number"/>'s cost into slot <paramref name="index"/>.</summary>
+        private void ShowCostIcon(int index, int number)
+        {
+            RectTransform icon = _costIcons[index];
+            icon.gameObject.SetActive(true);
+            Transform f = _costIconFill[index].transform;
+            for (int c = f.childCount - 1; c >= 0; c--) Destroy(f.GetChild(c).gameObject);
+
+            Vector2 m = new Vector2(0.5f, 0.5f);
+            Color cream = UiKit.Cream;
+            switch (number)
+            {
+                case 1: // Rengi: grey hair over a face
+                    UiKit.Box(f, "Hair", IconGrey, m, m, new Vector2(0f, 3f), new Vector2(10f, 5f));
+                    UiKit.Box(f, "Face", new Color(0.95f, 0.78f, 0.62f, 1f), m, m, new Vector2(0f, -2f), new Vector2(6f, 6f));
+                    break;
+                case 2: // Sesi: a speaker, struck through
+                    UiKit.Box(f, "Box", cream, m, m, new Vector2(-4f, 0f), new Vector2(3f, 4f));
+                    UiKit.Box(f, "Cone", cream, m, m, new Vector2(-1f, 0f), new Vector2(3f, 8f));
+                    UiKit.Box(f, "Slash", UiKit.HealthRed, m, m, new Vector2(1f, 0f), new Vector2(2f, 14f))
+                        .rectTransform.localRotation = Quaternion.Euler(0f, 0f, 45f);
+                    break;
+                case 3: // Arkadaşları: two faded figures
+                    UiKit.Box(f, "Head_L", IconGrey, m, m, new Vector2(-3f, 2f), new Vector2(3f, 3f));
+                    UiKit.Box(f, "Body_L", IconGrey, m, m, new Vector2(-3f, -3f), new Vector2(4f, 5f));
+                    UiKit.Box(f, "Head_R", IconGrey, m, m, new Vector2(3f, 2f), new Vector2(3f, 3f));
+                    UiKit.Box(f, "Body_R", IconGrey, m, m, new Vector2(3f, -3f), new Vector2(4f, 5f));
+                    break;
+                case 4: // Yüzü: the glasses that fell off
+                    UiKit.Box(f, "Lens_L", cream, m, m, new Vector2(-3f, 0f), new Vector2(4f, 3f));
+                    UiKit.Box(f, "Lens_R", cream, m, m, new Vector2(3f, 0f), new Vector2(4f, 3f));
+                    UiKit.Box(f, "Bridge", cream, m, m, Vector2.zero, new Vector2(2f, 1f));
+                    break;
+                case 5: // Zamanı: an hourglass
+                    UiKit.Box(f, "Top", cream, m, m, new Vector2(0f, 5f), new Vector2(8f, 2f));
+                    UiKit.Box(f, "Upper", cream, m, m, new Vector2(0f, 3f), new Vector2(6f, 2f));
+                    UiKit.Box(f, "Neck", cream, m, m, Vector2.zero, new Vector2(2f, 4f));
+                    UiKit.Box(f, "Lower", cream, m, m, new Vector2(0f, -3f), new Vector2(6f, 2f));
+                    UiKit.Box(f, "Bottom", cream, m, m, new Vector2(0f, -5f), new Vector2(8f, 2f));
+                    break;
+                default: // Kendisi: a grey figure
+                    UiKit.Box(f, "Head", IconGrey, m, m, new Vector2(0f, 3f), new Vector2(4f, 4f));
+                    UiKit.Box(f, "Body", IconGrey, m, m, new Vector2(0f, -3f), new Vector2(6f, 6f));
+                    break;
+            }
+        }
+
+        // ------------------------------------------------------------ aim reticle and cursor
+
+        private void UpdateAim(bool gameplay)
+        {
+            if (_manageCursor && gameplay != _cursorCaptured)
+            {
+                _cursorCaptured = gameplay;
+                Cursor.visible = !gameplay;
+                Cursor.lockState = gameplay ? CursorLockMode.Confined : CursorLockMode.None;
+            }
+
+            Mouse mouse = Mouse.current;
+            bool show = gameplay && mouse != null;
+            if (show != _reticleShown)
+            {
+                _reticleShown = show;
+                _reticleRoot.gameObject.SetActive(show);
+            }
+            if (!show) return;
+            Vector2 screen = mouse.position.ReadValue();
+            if (RectTransformUtility.ScreenPointToLocalPointInRectangle(_reticleRoot, screen, null, out Vector2 local))
+                _reticle.anchoredPosition = new Vector2(Mathf.Floor(local.x) + 0.5f, Mathf.Floor(local.y) + 0.5f);
+        }
+
+        private void ReleaseCursor()
+        {
+            if (!_cursorCaptured) return;
+            _cursorCaptured = false;
+            Cursor.visible = true;
+            Cursor.lockState = CursorLockMode.None;
+        }
+
         // ------------------------------------------------------------ build
 
         private void Build()
@@ -270,6 +567,10 @@ namespace DanceWithTheDevil
             _root = UiKit.CreateCanvas(transform, "HudCanvas", _sortingOrder, false);
             Vector2 tl = new Vector2(0f, 1f);
             Vector2 mid = new Vector2(0.5f, 0.5f);
+            Vector2 top = new Vector2(0.5f, 1f);
+            Vector2 tr = new Vector2(1f, 1f);
+            Vector2 bottom = new Vector2(0.5f, 0f);
+            Vector2 left = new Vector2(0f, 0.5f);
 
             // Portrait (top-left).
             Image portrait = UiKit.Framed(_root, "Portrait", UiKit.Cream, new Color(0.12f, 0.24f, 0.28f, 1f), tl, tl,
@@ -284,71 +585,106 @@ namespace DanceWithTheDevil
             }
             else
             {
-                Transform f = portrait.transform;
-                Color hair = new Color(0.45f, 0.18f, 0.4f, 1f);
-                UiKit.Box(f, "Face", new Color(0.95f, 0.78f, 0.62f, 1f), mid, mid, new Vector2(0f, -4f), new Vector2(20f, 20f));
-                UiKit.Box(f, "Hair_Top", hair, mid, mid, new Vector2(0f, 9f), new Vector2(28f, 10f));
-                UiKit.Box(f, "Hair_L", hair, mid, mid, new Vector2(-12f, 0f), new Vector2(6f, 18f));
-                UiKit.Box(f, "Hair_R", hair, mid, mid, new Vector2(12f, 0f), new Vector2(6f, 18f));
-                UiKit.Box(f, "Glasses_L", UiKit.Ink, mid, mid, new Vector2(-5f, -3f), new Vector2(7f, 5f));
-                UiKit.Box(f, "Glasses_R", UiKit.Ink, mid, mid, new Vector2(5f, -3f), new Vector2(7f, 5f));
-                UiKit.Box(f, "Overalls", new Color(0.1f, 0.35f, 0.4f, 1f), mid, mid, new Vector2(0f, -16f), new Vector2(26f, 4f));
+                _portraitView = new DefnePortrait(portrait.transform, 1f);
             }
 
-            // HP bar.
-            Image hpBack = UiKit.Box(_root, "HpBar", UiKit.Ink, tl, tl, new Vector2(52f, -8f), new Vector2(204f, 14f));
+            // HP bar: base length; fill = current HP; dark segment = max HP lost to contracts; a tick every 20 HP.
+            float baseWidth = DealEffects.BaseMaxHealth * _unitsPerHealth;
+            Image hpBack = UiKit.Box(_root, "HpBar", UiKit.Ink, tl, tl, new Vector2(52f, -8f), new Vector2(baseWidth + 4f, 14f));
             _hpBack = hpBack.rectTransform;
-            _hpFill = UiKit.Box(_hpBack, "Fill", UiKit.HealthRed, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f),
-                new Vector2(2f, 0f), new Vector2(200f, 10f)).rectTransform;
+            _hpFill = UiKit.Box(_hpBack, "Fill", UiKit.HealthRed, left, left, new Vector2(2f, 0f),
+                new Vector2(baseWidth, 10f)).rectTransform;
+            _hpLost = UiKit.Box(_hpBack, "Lost", LostHealth, left, left, new Vector2(2f + baseWidth, 0f),
+                new Vector2(0f, 10f)).rectTransform;
+            UiKit.Box(_hpLost, "Edge", UiKit.DevilRed, left, left, Vector2.zero, new Vector2(1f, 10f));
+            _hpLost.gameObject.SetActive(false);
+            for (int k = 1; k < 5; k++)
+            {
+                UiKit.Box(_hpBack, "Tick", new Color(0f, 0f, 0f, 0.45f), left, mid,
+                    new Vector2(2f + 20f * k * _unitsPerHealth, 0f), new Vector2(1f, 10f));
+            }
             // Numbers sit inside the bar's right end so they never reach the centred timer.
-            _hpText = UiKit.Label(_hpBack, "Numbers", font, 11, Color.white, TextAnchor.MiddleRight,
+            _hpText = UiKit.Label(_hpBack, "Numbers", font, 10, Color.white, TextAnchor.MiddleRight,
                 new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-4f, 0f), new Vector2(70f, 14f), FontStyle.Bold);
             UiKit.AddShadow(_hpText);
 
-            // Time (top centre) and score (top right).
-            Vector2 top = new Vector2(0.5f, 1f);
-            _timeText = UiKit.Label(_root, "Time", font, 18, Color.white, TextAnchor.MiddleCenter, top, top,
-                new Vector2(0f, -4f), new Vector2(90f, 22f), FontStyle.Bold);
+            // Costs taken ("Verdiklerin"), under the HP bar; hidden until the first contract.
+            RectTransform strip = UiKit.Rect(_root, "Given", tl, tl, Vector2.zero, Vector2.zero);
+            _costStrip = strip.gameObject;
+            Text given = UiKit.Label(strip, "Label", font, 10, UiKit.CostRed, TextAnchor.MiddleLeft, tl, left,
+                new Vector2(52f, -32f), new Vector2(68f, 14f), FontStyle.Bold);
+            given.text = GameTexts.HudGiven;
+            UiKit.AddShadow(given);
+            for (int i = 0; i < MaxCostIcons; i++)
+            {
+                Image fill = UiKit.Framed(strip, "Cost_" + i, CostIconBorder, UiKit.Ink, tl, mid,
+                    new Vector2(128f + i * 18f, -32f), new Vector2(16f, 16f), 1f);
+                _costIconFill[i] = fill;
+                _costIconBorder[i] = fill.transform.parent.GetComponent<Image>();
+                _costIcons[i] = _costIconBorder[i].rectTransform;
+                _costIcons[i].gameObject.SetActive(false);
+            }
+            _costStrip.SetActive(false);
+
+            // Elapsed time (top centre) and score (top right).
+            _timeText = UiKit.Label(_root, "Time", font, 16, Color.white, TextAnchor.MiddleCenter, top, top,
+                new Vector2(0f, -5f), new Vector2(90f, 20f), FontStyle.Bold);
             UiKit.AddShadow(_timeText);
-            Vector2 tr = new Vector2(1f, 1f);
             _scoreText = UiKit.Label(_root, "Score", font, 12, UiKit.Cream, TextAnchor.MiddleRight, tr, tr,
                 new Vector2(-8f, -8f), new Vector2(160f, 16f), FontStyle.Bold);
             UiKit.AddShadow(_scoreText);
 
             // Offer whisper (near the top, only while an offer exists).
-            Image offer = UiKit.Box(_root, "Offer", new Color(0.25f, 0.03f, 0.06f, 0.8f), top, top,
+            Image offer = UiKit.Box(_root, "Offer", new Color(0.25f, 0.03f, 0.06f, 0.85f), top, top,
                 new Vector2(0f, -30f), new Vector2(460f, 46f));
             _offer = offer.gameObject;
-            _offerWhisper = UiKit.Label(offer.transform, "Whisper", font, 11, UiKit.Cream, TextAnchor.UpperCenter,
-                top, top, new Vector2(0f, -3f), new Vector2(450f, 14f));
+            _offerWhisper = UiKit.Label(offer.transform, "Whisper", font, 12, UiKit.Cream, TextAnchor.UpperCenter,
+                top, top, new Vector2(0f, -2f), new Vector2(380f, 14f));
             _offerPlus = UiKit.Label(offer.transform, "Plus", font, 10, new Color(0.55f, 1f, 0.6f, 1f),
                 TextAnchor.UpperCenter, top, top, new Vector2(0f, -17f), new Vector2(450f, 13f));
             _offerMinus = UiKit.Label(offer.transform, "Minus", font, 10, new Color(1f, 0.55f, 0.55f, 1f),
-                TextAnchor.UpperCenter, top, top, new Vector2(0f, -30f), new Vector2(450f, 13f));
+                TextAnchor.UpperCenter, top, top, new Vector2(0f, -29f), new Vector2(450f, 13f));
+            Text equipped = UiKit.Label(offer.transform, "Equipped", font, 10, UiKit.Gold, TextAnchor.UpperRight,
+                tr, tr, new Vector2(-6f, -3f), new Vector2(60f, 12f), FontStyle.Bold);
+            equipped.text = GameTexts.HudEquippedDuplicate;
+            _offerEquipped = equipped.gameObject;
+            _offerEquipped.SetActive(false);
+            _offerTimer = UiKit.Box(offer.transform, "Lifetime", new Color(0.93f, 0.88f, 0.74f, 0.7f), Vector2.zero,
+                Vector2.zero, new Vector2(2f, 1f), new Vector2(OfferTimerWidth, 2f)).rectTransform;
             _offer.SetActive(false);
 
             // Module slots (bottom centre, fixed order = ModuleType).
-            Vector2 bottom = new Vector2(0.5f, 0f);
             for (int i = 0; i < ModuleSlots; i++)
             {
-                Image fill = UiKit.Framed(_root, "Slot_" + (ModuleType)i, UiKit.Cream, UiKit.Ink, bottom, bottom,
-                    new Vector2((i - 1) * 84f, 8f), new Vector2(78f, 20f));
+                Image fill = UiKit.Framed(_root, "Slot_" + (ModuleType)i, SlotEmptyBorder, SlotEmptyFill, bottom, bottom,
+                    new Vector2((i - 1) * SlotSpacing, 8f), SlotSize, 1f);
                 _slotFill[i] = fill;
+                _slotBorder[i] = fill.transform.parent.GetComponent<Image>();
+                _slotRect[i] = _slotBorder[i].rectTransform;
                 _slotLabel[i] = UiKit.Label(fill.transform, "Name", font, 10, UiKit.Dim, TextAnchor.MiddleCenter,
-                    mid, mid, Vector2.zero, new Vector2(74f, 16f));
-                _slotLabel[i].text = GameTexts.ModuleName((ModuleType)i);
+                    mid, mid, Vector2.zero, new Vector2(80f, 16f));
             }
+            _ejectLabel = UiKit.Label(_root, "EjectHint", font, 10, UiKit.Gold, TextAnchor.MiddleCenter, bottom, bottom,
+                new Vector2(0f, 32f), new Vector2(170f, 12f), FontStyle.Bold);
+            UiKit.AddShadow(_ejectLabel);
+            _ejectLabel.gameObject.SetActive(false);
+            _smallNosText = UiKit.Label(_root, "SmallNos", font, 10, UiKit.Turquoise, TextAnchor.MiddleLeft, bottom,
+                left, new Vector2(1.5f * SlotSpacing + 8f, 18f), new Vector2(150f, 14f));
+            UiKit.AddShadow(_smallNosText);
 
             // Charges (bottom left).
-            _rocketPips = BuildPipRow(font, GameTexts.HudRocket, 44f);
+            _rocketPips = BuildPipRow(font, GameTexts.HudRocket, 62f);
+            _machetePips = BuildPipRow(font, GameTexts.HudMachete, 44f);
             _dodgePips = BuildPipRow(font, GameTexts.HudDodge, 26f);
             _rejectPips = BuildPipRow(font, GameTexts.HudReject, 8f);
+
+            BuildReticle();
         }
 
         private Pips BuildPipRow(Font font, string label, float y)
         {
             Vector2 bl = Vector2.zero;
-            Text text = UiKit.Label(_root, "Label_" + label, font, 9, UiKit.Cream, TextAnchor.MiddleLeft, bl, bl,
+            Text text = UiKit.Label(_root, "Label_" + label, font, 10, UiKit.Cream, TextAnchor.MiddleLeft, bl, bl,
                 new Vector2(8f, y), new Vector2(84f, 12f));
             text.text = label;
             UiKit.AddShadow(text);
@@ -360,7 +696,35 @@ namespace DanceWithTheDevil
                 pips.Frames[i] = fill.transform.parent.gameObject;
                 pips.Fills[i] = fill;
             }
+            SetPips(ref pips, 0, 0); // shown once its source reports
             return pips;
+        }
+
+        /// <summary>Chunky pixel crosshair (1-texel cream lines with an ink outline) on its own canvas.</summary>
+        private void BuildReticle()
+        {
+            _reticleRoot = UiKit.CreateCanvas(transform, "ReticleCanvas", _reticleSortingOrder, false);
+            Vector2 mid = new Vector2(0.5f, 0.5f);
+            _reticle = UiKit.Rect(_reticleRoot, "Reticle", Vector2.zero, mid, Vector2.zero, Vector2.one);
+            // Outline first, then the lines on top.
+            ReticleBlock(UiKit.Ink, new Vector2(0f, 3.5f), new Vector2(3f, 5f));
+            ReticleBlock(UiKit.Ink, new Vector2(0f, -3.5f), new Vector2(3f, 5f));
+            ReticleBlock(UiKit.Ink, new Vector2(-3.5f, 0f), new Vector2(5f, 3f));
+            ReticleBlock(UiKit.Ink, new Vector2(3.5f, 0f), new Vector2(5f, 3f));
+            ReticleBlock(UiKit.Ink, Vector2.zero, new Vector2(3f, 3f));
+            ReticleBlock(UiKit.Cream, new Vector2(0f, 3.5f), new Vector2(1f, 3f));
+            ReticleBlock(UiKit.Cream, new Vector2(0f, -3.5f), new Vector2(1f, 3f));
+            ReticleBlock(UiKit.Cream, new Vector2(-3.5f, 0f), new Vector2(3f, 1f));
+            ReticleBlock(UiKit.Cream, new Vector2(3.5f, 0f), new Vector2(3f, 1f));
+            ReticleBlock(UiKit.HealthRed, Vector2.zero, new Vector2(1f, 1f));
+            _reticleRoot.gameObject.SetActive(false);
+            _reticleShown = false;
+        }
+
+        private void ReticleBlock(Color color, Vector2 position, Vector2 size)
+        {
+            Vector2 mid = new Vector2(0.5f, 0.5f);
+            UiKit.Box(_reticle, "Block", color, mid, mid, position, size);
         }
     }
 }

@@ -5,13 +5,15 @@ namespace DanceWithTheDevil
     /// <summary>
     /// Pool of one enemy prefab. Instances live under a scene-root container. <see cref="Get"/> spawns an instance at a
     /// position; a dead enemy returns itself one frame after death (<see cref="Enemy.Despawn"/>).
+    /// The prewarm runs in Start (scene load), not on the first spawn, so the packs of the later windows (up to ~12
+    /// of one type alive) do not instantiate a batch of enemies mid-fight.
     /// </summary>
     public sealed class EnemyPool : MonoBehaviour
     {
         [Tooltip("Enemy prefab (root has Enemy, Health, NavMeshAgent, a brain and colliders).")]
         [SerializeField] private Enemy _prefab;
-        [Tooltip("Instances created up front on first use.")]
-        [SerializeField, Min(0)] private int _prewarm = 6;
+        [Tooltip("Instances created up front when the scene starts (packs and higher active caps need more than 6).")]
+        [SerializeField, Min(0)] private int _prewarmCount = 10;
         [Tooltip("Maximum pooled (inactive) instances kept.")]
         [SerializeField, Min(1)] private int _maxSize = 32;
 
@@ -27,7 +29,12 @@ namespace DanceWithTheDevil
         {
             if (_pool != null) return;
             _prefab = prefab;
-            _prewarm = Mathf.Max(0, prewarm);
+            _prewarmCount = Mathf.Max(0, prewarm);
+        }
+
+        private void Start()
+        {
+            if (_prefab != null) EnsurePool();
         }
 
         /// <summary>Takes an instance and spawns it at <paramref name="position"/> facing <paramref name="rotation"/>.</summary>
@@ -72,10 +79,10 @@ namespace DanceWithTheDevil
 
             _container = new GameObject(name + "_Enemies").transform;
             _pool = new UnityEngine.Pool.ObjectPool<Enemy>(Create, OnGet, OnRelease, OnDestroyItem,
-                collectionCheck: false, defaultCapacity: Mathf.Max(1, _prewarm), maxSize: _maxSize);
+                collectionCheck: false, defaultCapacity: Mathf.Max(1, _prewarmCount), maxSize: _maxSize);
 
-            if (_prewarm <= 0) return;
-            var warm = new Enemy[_prewarm];
+            if (_prewarmCount <= 0) return;
+            var warm = new Enemy[_prewarmCount];
             for (int i = 0; i < warm.Length; i++) warm[i] = _pool.Get();
             for (int i = 0; i < warm.Length; i++) _pool.Release(warm[i]);
         }

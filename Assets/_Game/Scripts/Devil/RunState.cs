@@ -70,6 +70,62 @@ namespace DanceWithTheDevil
         }
     }
 
+    /// <summary>
+    /// Mid-run pause (Esc overlay, jam safety net so a build can always be left): freezes time, pauses gameplay
+    /// sounds (music keeps playing) and disables the player's input actions so no click fires behind the overlay.
+    /// Only the caller decides when pausing is allowed (normal play, never on the Devil or ending screens).
+    /// </summary>
+    public static class RunPause
+    {
+        private static float _savedTimeScale = 1f;
+        private static PlayerInputReader _input;
+        private static bool _inputWasEnabled;
+
+        public static bool IsPaused { get; private set; }
+
+        public static void Pause(PlayerInputReader input)
+        {
+            if (IsPaused) return;
+            if (HitStop.Instance != null) HitStop.Instance.CancelAll();
+            _savedTimeScale = Time.timeScale > 0f ? Time.timeScale : 1f;
+            Time.timeScale = 0f;
+            AudioListener.pause = true;
+            _input = input;
+            _inputWasEnabled = input != null && input.enabled;
+            if (input != null) input.enabled = false;
+            IsPaused = true;
+        }
+
+        public static void Resume()
+        {
+            if (!IsPaused) return;
+            IsPaused = false;
+            Time.timeScale = _savedTimeScale;
+            AudioListener.pause = false;
+            if (_input != null && _inputWasEnabled) _input.enabled = true;
+            _input = null;
+        }
+
+        /// <summary>Leaves the game (stops play mode in the Editor).</summary>
+        public static void Quit()
+        {
+            Resume();
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
+            Application.Quit();
+#endif
+        }
+
+        /// <summary>Clears the pause without touching time (scene reload, overlay destroyed).</summary>
+        public static void Reset()
+        {
+            if (IsPaused) Resume();
+            IsPaused = false;
+            _input = null;
+        }
+    }
+
     /// <summary>Starts a fresh run: resets run-wide statics and reloads the active scene.</summary>
     public static class RunRestart
     {
@@ -79,6 +135,7 @@ namespace DanceWithTheDevil
             if (HitStop.Instance != null) HitStop.Instance.CancelAll();
             Enemy.SpeedMultiplier = 1f;
             AudioCosts.Reset();
+            RunPause.Reset();
             Time.timeScale = 1f;
         }
 

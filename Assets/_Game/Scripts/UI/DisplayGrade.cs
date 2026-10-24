@@ -4,7 +4,8 @@ namespace DanceWithTheDevil
 {
     /// <summary>
     /// Owns the display grade material (shader DanceWithTheDevil/UI/DisplayGrade) on the pixel camera's RawImage and
-    /// tweens saturation (death freeze, contract 1) and vignette (contract 5) on unscaled time.
+    /// tweens saturation (death freeze, contract 1) and vignette (contract 5) on unscaled time. Also registers the rig
+    /// as <see cref="UiKit.DisplayRig"/> so the UI canvases follow its game image.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class DisplayGrade : MonoBehaviour
@@ -49,6 +50,8 @@ namespace DanceWithTheDevil
 
         private void Awake()
         {
+            // The UI canvases fit themselves to this rig's game image (UiKit.CreateCanvas / UiCanvasFit).
+            if (_rig != null) UiKit.DisplayRig = _rig;
             if (_shader == null || !_shader.isSupported)
             {
                 Debug.LogWarning($"{nameof(DisplayGrade)}: grade shader missing or unsupported; no desaturation/vignette.", this);
@@ -61,6 +64,7 @@ namespace DanceWithTheDevil
 
         private void OnDestroy()
         {
+            if (_rig != null && UiKit.DisplayRig == _rig) UiKit.DisplayRig = null;
             if (_material == null) return;
             if (_rig != null && _rig.DisplayMaterial == _material) _rig.DisplayMaterial = null;
             Destroy(_material);

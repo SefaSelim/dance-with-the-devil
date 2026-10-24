@@ -134,6 +134,7 @@ namespace DanceWithTheDevil
                 normal = normal,
                 direction = projectile.Direction,
                 intensity = _explosionIntensity,
+                radius = _explosionRadius, // the blast ring shows the real 1.8 m reach
                 surface = SurfaceType.Default,
                 instigator = source,
                 instigatorIsLocalPlayer = _owner != null,

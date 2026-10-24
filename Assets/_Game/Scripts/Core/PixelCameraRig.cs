@@ -7,7 +7,9 @@ namespace DanceWithTheDevil
     /// <summary>
     /// Renders an orthographic isometric game camera into a low-res RenderTexture and shows it full screen,
     /// point-upscaled (integer scale when possible, letterboxed). Follows a target with texel snapping and a
-    /// sub-texel display offset so static geometry does not shimmer while panning.
+    /// sub-texel display offset so static geometry does not shimmer while panning; with a player target it leans a
+    /// little toward the aim point, and the focus point is clamped to a world XZ box so the view never drifts far
+    /// outside the arena (provisional decision D1).
     /// Use <see cref="ScreenPointToWorldRay"/> for mouse aiming (never Camera.main).
     /// </summary>
     [DefaultExecutionOrder(1000)] // after gameplay LateUpdates, so the follow uses the final target position
@@ -15,6 +17,11 @@ namespace DanceWithTheDevil
     public sealed class PixelCameraRig : MonoBehaviour
     {
         private const int Border = 4; // extra texels on each side for the sub-texel shift and shake
+        private const float AimLeadFraction = 0.3f;      // lead = 30% of the flat distance to the aim, capped at _aimLead
+        private const float AimLeadSmoothTime = 0.15f;   // the lead eases on its own so mouse jitter never shakes the view
+        private const float TraumaFullDistance = 10f;    // positional trauma: full within this flat distance of the focus
+        private const float TraumaFarDistance = 25f;     // ...down to TraumaFarScale at this distance and beyond
+        private const float TraumaFarScale = 0.25f;
 
         [Header("Cameras")]
         [Tooltip("Orthographic game camera. Its targetTexture is created and owned by this rig.")]
@@ -51,6 +58,12 @@ namespace DanceWithTheDevil
         [SerializeField, Min(0f)] private float _smoothTime = 0.08f;
         [Tooltip("Shift the displayed image by the snapped-away remainder (smooth sub-texel panning).")]
         [SerializeField] private bool _subTexelOffset = true;
+        [Tooltip("Metres the view leans toward the aim point when the target has a PlayerController (0 = none).")]
+        [SerializeField, Min(0f)] private float _aimLead = 2f;
+        [Tooltip("World minimum (x, z) of the followed focus point. The clamp is off on an axis whose max is not above its min.")]
+        [SerializeField] private Vector2 _boundsMin = new Vector2(-10f, -9f);
+        [Tooltip("World maximum (x, z) of the followed focus point.")]
+        [SerializeField] private Vector2 _boundsMax = new Vector2(10f, 9f);
 
         [Header("Shake (trauma model, shown as an image offset so the snapped camera never moves)")]
         [Tooltip("Largest shake offset in low-res texels at full trauma. Must stay below the border.")]
@@ -77,6 +90,9 @@ namespace DanceWithTheDevil
         private Vector2 _remainderTexels;    // snapped-away remainder, |r| <= 0.5
         private Vector3 _focus;
         private Vector3 _focusVelocity;
+        private PlayerController _targetPlayer;
+        private Vector3 _lead;
+        private Vector3 _leadVelocity;
         private int _lastScreenWidth = -1;
         private int _lastScreenHeight = -1;
 
@@ -87,6 +103,10 @@ namespace DanceWithTheDevil
         /// <summary>Screen-pixel rect where the visible low-res window is drawn.</summary>
         public Rect DisplayRect => _displayRect;
         public Quaternion ViewRotation => Quaternion.Euler(_pitch, _yaw, 0f);
+        /// <summary>The followed transform (null = fixed focus).</summary>
+        public Transform Target => _target;
+        /// <summary>Current world focus point (the centre of the view).</summary>
+        public Vector3 Focus => _focus;
 
         /// <summary>
         /// Material of the full-screen display RawImage (e.g. the saturation/vignette grade). Null = default UI
@@ -118,7 +138,8 @@ namespace DanceWithTheDevil
             ConfigureGameCamera();
             CreateDisplay();
 
-            _focus = _target != null ? _target.position + _focusOffset : _focusOffset;
+            _targetPlayer = _target != null ? _target.GetComponentInParent<PlayerController>() : null;
+            _focus = _target != null ? ClampFocus(_target.position + _focusOffset) : _focusOffset;
             UpdateLayout(force: true);
             UpdateCamera(snapImmediately: true);
         }
@@ -149,23 +170,41 @@ namespace DanceWithTheDevil
         public void SetTarget(Transform target, bool snap = true)
         {
             _target = target;
+            _targetPlayer = target != null ? target.GetComponentInParent<PlayerController>() : null;
             if (snap && target != null)
             {
-                _focus = target.position + _focusOffset;
+                _lead = Vector3.zero;
+                _leadVelocity = Vector3.zero;
+                _focus = ClampFocus(target.position + _focusOffset);
                 _focusVelocity = Vector3.zero;
             }
+        }
+
+        /// <summary>
+        /// Adds camera trauma (0..1). Shake = trauma^1.5 × max texels (0.5 trauma ≈ 1 texel, 0.8 ≈ 2 texels), so
+        /// small hits stay subtle but still move the image.
+        /// </summary>
+        public void AddTrauma(float amount)
+        {
+            _trauma = Mathf.Clamp01(_trauma + Mathf.Max(0f, amount));
+        }
+
+        /// <summary>
+        /// Adds trauma for an event at <paramref name="worldPosition"/>: full within 10 m (flat) of the view centre,
+        /// falling to a quarter at 25 m and beyond, so blasts far off screen barely shake the followed view.
+        /// </summary>
+        public void AddTrauma(float amount, Vector3 worldPosition)
+        {
+            Vector3 delta = worldPosition - _focus;
+            delta.y = 0f;
+            float t = Mathf.InverseLerp(TraumaFullDistance, TraumaFarDistance, delta.magnitude);
+            AddTrauma(amount * Mathf.Lerp(1f, TraumaFarScale, t));
         }
 
         /// <summary>
         /// Converts a screen position (pixels, bottom-left origin, e.g. Mouse.current.position) into a world
         /// ray from the low-res game camera, accounting for letterbox, scale, border and sub-texel offset.
         /// </summary>
-        /// <summary>Adds camera trauma (0..1). Shake = trauma² so small hits stay subtle.</summary>
-        public void AddTrauma(float amount)
-        {
-            _trauma = Mathf.Clamp01(_trauma + Mathf.Max(0f, amount));
-        }
-
         public Ray ScreenPointToWorldRay(Vector2 screenPos)
         {
             Vector2 viewport = ScreenToGameViewport(screenPos);
@@ -296,7 +335,7 @@ namespace DanceWithTheDevil
         {
             _trauma = Mathf.Max(0f, _trauma - _traumaDecay * Time.unscaledDeltaTime);
             // Clamped so remainder (≤0.5) + shake always stays inside the border.
-            float shake = Mathf.Min(_trauma * _trauma * _maxShakeTexels * GlobalShakeScale, Border - 0.6f);
+            float shake = Mathf.Min(_trauma * Mathf.Sqrt(_trauma) * _maxShakeTexels * GlobalShakeScale, Border - 0.6f);
             if (shake <= 0f)
             {
                 _shakeTexels = Vector2.zero;
@@ -313,7 +352,7 @@ namespace DanceWithTheDevil
         {
             if (_target != null)
             {
-                Vector3 goal = _target.position + _focusOffset;
+                Vector3 goal = ClampFocus(_target.position + _focusOffset + UpdateLead(snapImmediately));
                 _focus = (snapImmediately || _smoothTime <= 0f)
                     ? goal
                     : Vector3.SmoothDamp(_focus, goal, ref _focusVelocity, _smoothTime);
@@ -344,6 +383,36 @@ namespace DanceWithTheDevil
                 (Border + _remainderTexels.y + _shakeTexels.y) / RtHeight,
                 (float)_width / RtWidth,
                 (float)_height / RtHeight);
+        }
+
+        // Flat look-ahead toward the player's aim point, eased on its own (scaled time: it waits through hitstop).
+        private Vector3 UpdateLead(bool snap)
+        {
+            Vector3 desired = Vector3.zero;
+            if (_aimLead > 0f && _targetPlayer != null)
+            {
+                Vector3 toAim = _targetPlayer.AimPoint - _target.position;
+                toAim.y = 0f;
+                desired = Vector3.ClampMagnitude(toAim * AimLeadFraction, _aimLead);
+            }
+
+            if (snap)
+            {
+                _lead = desired;
+                _leadVelocity = Vector3.zero;
+            }
+            else
+            {
+                _lead = Vector3.SmoothDamp(_lead, desired, ref _leadVelocity, AimLeadSmoothTime);
+            }
+            return _lead;
+        }
+
+        private Vector3 ClampFocus(Vector3 focus)
+        {
+            if (_boundsMax.x > _boundsMin.x) focus.x = Mathf.Clamp(focus.x, _boundsMin.x, _boundsMax.x);
+            if (_boundsMax.y > _boundsMin.y) focus.z = Mathf.Clamp(focus.z, _boundsMin.y, _boundsMax.y);
+            return focus;
         }
     }
 }

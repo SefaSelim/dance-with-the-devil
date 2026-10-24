@@ -36,6 +36,12 @@ public class LightFlash : MonoBehaviour
         lightComp.enabled = false;
     }
 
+    /// <summary>Sets the range the next flashes start from (Flash() varies it by randomRange).</summary>
+    public void SetRange(float range)
+    {
+        baseRange = Mathf.Max(0.01f, range);
+    }
+
     public void Flash(float intensityScale = 1f)
     {
         currentPeak = peakIntensity * intensityScale * GlobalScale * (1f + Random.Range(-randomIntensity, randomIntensity));

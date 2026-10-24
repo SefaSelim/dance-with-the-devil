@@ -5,8 +5,9 @@ using UnityEngine.AI;
 namespace DanceWithTheDevil
 {
     /// <summary>
-    /// Shared enemy body (GDD §6): stats, NavMeshAgent setup, target, white hit flash, rocket knockback, death and the
-    /// pooled spawn path. Behaviour lives in a brain on the same object (<see cref="ChaserBrain"/>,
+    /// Shared enemy body (GDD §6): stats, NavMeshAgent setup, target, hit reaction (white flash, a visual knock and
+    /// squash of the model; the agent itself is not moved; CharacterAnimator adds its own flinch), rocket knockback,
+    /// death and the pooled spawn path. Behaviour lives in a brain on the same object (<see cref="ChaserBrain"/>,
     /// <see cref="ShooterBrain"/>), which listens to <see cref="Spawned"/> and <see cref="Died"/>.
     /// On death: renderers and colliders hide, the agent stops, <see cref="Died"/> fires, and next frame the enemy
     /// returns to its <see cref="EnemyPool"/> (or deactivates). <see cref="ShatterOnDeath"/> on the same object does
@@ -32,10 +33,16 @@ namespace DanceWithTheDevil
         [Header("Visuals")]
         [Tooltip("Root of the cube model (hit flash, hide on death). Empty = child named \"Model\", else this object.")]
         [SerializeField] private Transform _model;
-        [Tooltip("Hit flash duration in seconds.")]
-        [SerializeField, Min(0f)] private float _flashDuration = 0.08f;
+        [Tooltip("Hit flash duration in seconds (0.12 = about 7 frames: readable at the pixel camera).")]
+        [SerializeField, Min(0f)] private float _flashDuration = 0.12f;
         [Tooltip("Hit flash colour.")]
         [SerializeField] private Color _flashColor = Color.white;
+
+        [Header("Hit reaction (visual only, every damaging hit)")]
+        [Tooltip("Knock of the model along the hit, metres. The NavMeshAgent does not move (no rule change).")]
+        [SerializeField, Min(0f)] private float _hitPunchDistance = 0.12f;
+        [Tooltip("Squash of the model on a hit (0.16 = 16% wider and shorter); springs back in about 0.12 s.")]
+        [SerializeField, Range(0f, 0.4f)] private float _hitSquash = 0.16f;
 
         [Header("Knockback")]
         [Tooltip("Seconds over which a knockback push (rocket, GDD §5) is spent.")]
@@ -46,6 +53,8 @@ namespace DanceWithTheDevil
         private Renderer[] _renderers;
         private Collider[] _colliders;
         private MaterialPropertyBlock _block;
+        private ModelPunch _punch;
+        private CharacterAnimator _animator;
         private EnemyPool _pool;
         private Transform _target;
         private IDamageable _targetDamageable;
@@ -105,6 +114,10 @@ namespace DanceWithTheDevil
             _renderers = Model.GetComponentsInChildren<Renderer>(true);
             _colliders = GetComponentsInChildren<Collider>(true);
             _block = new MaterialPropertyBlock();
+            if (!TryGetComponent(out _punch)) _punch = gameObject.AddComponent<ModelPunch>();
+            if (Model != transform) _punch.Bind(Model, false); // never the root: that would fight the agent
+            // The procedural animator does not subscribe to Health itself; OnDamaged calls its Flinch.
+            TryGetComponent(out _animator);
 
             _health.InvulnerabilityAfterHit = 0f;
             _health.SetMaxHealth(_stats.MaxHealth, true);
@@ -152,6 +165,7 @@ namespace DanceWithTheDevil
             _health.SetMaxHealth(_stats.MaxHealth, true);
             _health.Revive();
             SetFlash(false);
+            _punch.ResetPose();
             SetVisible(true);
             _alive = true;
 
@@ -253,9 +267,31 @@ namespace DanceWithTheDevil
 
         private void OnDamaged(DamageInfo info, float remaining)
         {
-            if (!_alive || _flashDuration <= 0f || remaining <= 0f) return;
-            _flashEndTime = Time.time + _flashDuration;
-            SetFlash(true);
+            if (!_alive || remaining <= 0f) return;
+            if (_flashDuration > 0f)
+            {
+                _flashEndTime = Time.time + _flashDuration;
+                SetFlash(true);
+            }
+
+            Vector3 push = info.Direction;
+            push.y = 0f;
+            if (push.sqrMagnitude < 1e-6f)
+            {
+                push = transform.position - info.Point;
+                push.y = 0f;
+            }
+            if (push.sqrMagnitude > 1e-6f)
+            {
+                push.Normalize();
+                _punch.Punch(push * _hitPunchDistance, _hitSquash);
+            }
+            else
+            {
+                _punch.Punch(Vector3.zero, _hitSquash);
+            }
+            // Flinch takes the direction the hit came from (toward the attacker); zero rocks straight back.
+            if (_animator != null) _animator.Flinch(-push);
         }
 
         private void OnHealthDied(DamageInfo info)

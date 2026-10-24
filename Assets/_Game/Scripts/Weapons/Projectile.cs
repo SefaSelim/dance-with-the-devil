@@ -210,8 +210,15 @@ namespace DanceWithTheDevil
                 // Overlaps at the cast start report distance 0 and no usable point/normal.
                 bool initialOverlap = hit.distance <= 0f;
                 if (initialOverlap && collider == _lastBounceCollider) continue; // still touching the wall it left
-                Vector3 point = initialOverlap ? origin : hit.point;
-                Vector3 normal = initialOverlap ? -_direction : hit.normal;
+                IDamageable target = collider.GetComponentInParent<IDamageable>();
+                Vector3 point = hit.point;
+                Vector3 normal = hit.normal;
+                if (initialOverlap)
+                {
+                    OverlapContact(collider, origin, out point, out normal);
+                    // A wall only grazed at the start while already moving away from (or along) it does not stop the shot.
+                    if (target == null && Vector3.Dot(normal, _direction) >= 0f) continue;
+                }
                 Vector3 centerAtHit = origin + _direction * hit.distance;
 
                 if (_launch.OnDetonate != null)
@@ -221,7 +228,6 @@ namespace DanceWithTheDevil
                     return SweepResult.Ended;
                 }
 
-                IDamageable target = collider.GetComponentInParent<IDamageable>();
                 if (target == null)
                 {
                     RaiseImpact(collider, point, normal, _launch.WallHitIntensity);
@@ -258,6 +264,25 @@ namespace DanceWithTheDevil
                 _pierceLeft--;
             }
             return SweepResult.Continue;
+        }
+
+        /// <summary>
+        /// Contact for a cast that starts overlapped (the cast gives no usable point or normal): the closest surface
+        /// point and the direction from it to the centre, so a wall touched at the start reflects off its real face
+        /// instead of straight back. Falls back to the reversed travel direction when the centre is inside the collider
+        /// or the shape has no closest point (non-convex mesh).
+        /// </summary>
+        private void OverlapContact(Collider collider, Vector3 origin, out Vector3 point, out Vector3 normal)
+        {
+            point = origin;
+            normal = -_direction;
+            if (collider is MeshCollider meshCollider && !meshCollider.convex) return;
+
+            Vector3 closest = collider.ClosestPoint(origin);
+            Vector3 away = origin - closest;
+            if (away.sqrMagnitude < 1e-8f) return; // centre inside the collider
+            point = closest;
+            normal = away.normalized;
         }
 
         private bool BounceSwitchOn => _launch.BounceToken == null || _launch.BounceToken.Active;

@@ -9,6 +9,9 @@ namespace DanceWithTheDevil
     {
         // §2
         public const string Intro = "Defne bu gece de her şeye evet dedi. \"Bir şey olmaz.\"";
+        // One-line goal under the intro (provisional wording, D2/K-4: waves never stop, death is certain).
+        // TODO(Burak): confirm the goal line wording.
+        public const string IntroGoal = "Dayanabildiğin kadar dayan. Dalgalar durmaz.";
 
         // §8 Devil lines
         public const string DevilFirstAppearance = "Psst. Sen. Evet, ekrandaki sen.";
@@ -19,12 +22,18 @@ namespace DanceWithTheDevil
         // §8 contract card (K-2, K-3; "Bedel: görünür / mekanik" columns)
         public const string CardGive = "Sana:";
         public const string CardTake = "Ondan:";
-        public const string CardCostVisible = "Görünür:";
-        public const string CardCostMechanical = "Mekanik:";
+        public const string CardCostVisible = "Görürsün:";
+        public const string CardCostMechanical = "Oyunda:";
         public const string Yes = "EVET";
         public const string No = "HAYIR";
-        public const string YesKeys = "[E]";
+        // EVET needs a deliberate hold (never E, which is the rocket); HAYIR is H or a click.
+        public const string YesKeys = "[Enter] basılı tut";
         public const string NoKeys = "[H]";
+        // The stakes, stated plainly under each choice.
+        public const string YesStakes = "dirilirsin · bedeli kalıcı";
+        public const string NoStakes = "koşu biter";
+        // Devil speech bubble: how to go on.
+        public const string LineContinue = "[Enter] devam";
 
         // §11 endings
         public const string KeptTitle = "Kaybettin ama kendin kaldın.";
@@ -50,8 +59,24 @@ namespace DanceWithTheDevil
         // §12 HUD (labels use the GDD §4 names of the actions)
         public const string HudScoreFormat = "Skor {0}";
         public const string HudRocket = "Roket [E]";
+        public const string HudMachete = "Pala [F]";
         public const string HudDodge = "Kaçınma [Space]";
+        // TODO(Burak): call the reject "hayır" during play (F15)? The GDD §12 wording is kept until decided.
         public const string HudReject = "Ret [Sağ tık]";
+        // Costs taken so far (same word as the results ledger, GDD §11).
+        public const string HudGiven = "Verdiklerin";
+        public const string HudSmallNosFormat = "Küçük hayırlar: {0}";
+        // Empty module slot (the module has never been offered yet).
+        public const string HudEmptySlot = "—";
+        // GDD §7: a duplicate offer shows "TAKILI".
+        public const string HudEquippedDuplicate = "TAKILI";
+        // Q held: the highlighted slot.
+        public const string HudEjectHint = "Sağ tık: sök";
+
+        // Pause (Esc).
+        public const string PauseTitle = "Duraklatıldı";
+        public const string PauseResume = "Devam [Esc]";
+        public const string PauseQuit = "Çık";
 
         // §12 first-minute hints (first GDD §11 "İlk dakika önerisi"), one at a time.
         public const string HintMoveFire = "WASD: yürü · Fare: nişan · Sol tık: ateş";

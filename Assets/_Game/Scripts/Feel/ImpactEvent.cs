@@ -16,6 +16,7 @@ public struct ImpactEvent
     public Vector3 normal;      // surface normal at the hit (or fire direction for MuzzleFire)
     public Vector3 direction;   // incoming travel direction of the projectile/blade
     [Range(0f, 1f)] public float intensity; // weight 0..1 — scales size, shake, hitstop, rumble
+    public float radius;        // Explosion: blast radius in metres for the ring and burst size (0 = feedback default)
     public SurfaceType surface;
     public Transform hitTransform;  // for parenting decals to movers / target flash
     public GameObject instigator;

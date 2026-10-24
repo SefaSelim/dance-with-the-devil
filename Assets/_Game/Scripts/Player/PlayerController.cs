@@ -4,8 +4,12 @@ namespace DanceWithTheDevil
 {
     /// <summary>
     /// Player movement, mouse aim and dodge (GDD §4 Kontroller / Kaçınma).
-    /// Movement is camera-relative (W = screen up, using the camera rig's yaw). Aim: the rig's mouse ray against a
-    /// horizontal plane at muzzle height; the body turns (yaw only) instantly toward the aim point.
+    /// Movement is camera-relative (W = screen up, using the camera rig's yaw), with a very short ramp up and down
+    /// (about 0.06 s to full speed, 0.05 s to a stop) so it stays tight without sliding like a chess piece.
+    /// Aim (GDD §4 "imleç noktasına nişan"): the rig's mouse ray. If it first touches a damageable (an enemy), the aim
+    /// point is that target's centre; otherwise it is the ray's crossing with a horizontal plane at about an enemy's
+    /// body height. Weapons fire from their muzzle toward this point, so shots converge on the cursor. The body turns
+    /// (yaw only) quickly and smoothly toward the aim point.
     /// Dodge: fixed distance over a fixed time, invulnerable for its duration, charges refill one at a time.
     /// Expects the root pivot at the feet (set the CharacterController center to about half its height).
     /// External velocity (Triple Shot recoil, GDD §7): added on top of running, capped, decays, and the part blocked
@@ -18,6 +22,7 @@ namespace DanceWithTheDevil
     public sealed class PlayerController : MonoBehaviour
     {
         private const float MinDirectionSqr = 1e-4f;
+        private const int MaxAimHits = 16;
 
         [Header("References")]
         [Tooltip("Camera rig used for aiming and camera-relative movement. Without it: world-relative movement, no mouse aim.")]
@@ -34,10 +39,24 @@ namespace DanceWithTheDevil
         [SerializeField, Min(0f)] private float _gravity = 25f;
         [Tooltip("Downward speed kept while grounded so the controller stays on slopes and steps.")]
         [SerializeField, Min(0f)] private float _groundedStickSpeed = 2f;
+        [Tooltip("Seconds to reach full run speed from a stop (0 = instant).")]
+        [SerializeField, Min(0f)] private float _accelerationTime = 0.06f;
+        [Tooltip("Seconds to stop from full run speed once the keys are released (0 = instant).")]
+        [SerializeField, Min(0f)] private float _decelerationTime = 0.05f;
 
         [Header("Aim")]
-        [Tooltip("Height of the aim plane above the player's feet (muzzle height, GDD: 1.0 m).")]
-        [SerializeField] private float _aimHeight = 1f;
+        [Tooltip("Height above the feet of the plane the cursor ray is crossed with when no target is under the cursor (about an enemy's body centre, so a click on an enemy's body lands on it).")]
+        [SerializeField] private float _aimPlaneHeight = 0.7f;
+        // TODO(design): the audit skeptic called picking the enemy under the cursor borderline aim help; the owner should
+        // confirm it. Turning this off leaves the plain aim plane (still fixes the misses together with the converging shots).
+        [Tooltip("If the cursor ray first touches a damageable (an enemy), aim at its centre: the shot goes where the cursor is.")]
+        [SerializeField] private bool _aimAtTargetUnderCursor = true;
+        [Tooltip("Layers the cursor ray checks for a target under the cursor.")]
+        [SerializeField] private LayerMask _aimPickMask = ~0;
+        [Tooltip("Longest cursor ray, metres.")]
+        [SerializeField, Min(1f)] private float _aimPickDistance = 500f;
+        [Tooltip("How fast the body turns toward the aim (1/s; higher is snappier, 0 = instant).")]
+        [SerializeField, Min(0f)] private float _turnSharpness = 30f;
 
         [Header("Dodge")]
         [Tooltip("Dodge distance in metres (GDD §4: ~3).")]
@@ -55,6 +74,7 @@ namespace DanceWithTheDevil
         [Tooltip("External speed lost per second, m/s².")]
         [SerializeField, Min(0f)] private float _externalDecay = 8f;
 
+        private readonly RaycastHit[] _aimHits = new RaycastHit[MaxAimHits];
         private CharacterController _characterController;
         private Health _health;
 
@@ -62,6 +82,8 @@ namespace DanceWithTheDevil
         private Vector3 _moveDirection;
         private Vector3 _aimPoint;
         private Vector3 _aimDirection = Vector3.forward;
+        private bool _hasCursorAim;
+        private Vector3 _runVelocity;
 
         private Vector3 _dodgeVelocity;
         private float _dodgeTimeRemaining;
@@ -89,10 +111,14 @@ namespace DanceWithTheDevil
             set => _input = value;
         }
 
-        /// <summary>World aim point on the aim plane.</summary>
+        /// <summary>World aim point: the centre of the target under the cursor, else the cursor on the aim plane.</summary>
         public Vector3 AimPoint => _aimPoint;
         /// <summary>Flat (y = 0), normalised aim direction from the body.</summary>
         public Vector3 AimDirection => _aimDirection;
+        /// <summary>True once the aim point has come from the mouse cursor (false for bots and tests without a mouse).</summary>
+        public bool HasCursorAim => _hasCursorAim;
+        /// <summary>Current flat run velocity from input (m/s), without dodge or external push.</summary>
+        public Vector3 RunVelocity => _runVelocity;
         /// <summary>Flat world move direction from input this frame (length 0..1).</summary>
         public Vector3 MoveDirection => _moveDirection;
 
@@ -160,7 +186,7 @@ namespace DanceWithTheDevil
 
             _dodgeChargesAvailable = _dodgeCharges;
             _aimDirection = Flatten(transform.forward, Vector3.forward);
-            _aimPoint = transform.position + Vector3.up * _aimHeight + _aimDirection;
+            _aimPoint = transform.position + Vector3.up * _aimPlaneHeight + _aimDirection;
         }
 
         /// <summary>Sets the max dodge charges (min 1). Available charges are clamped; refill continues.</summary>
@@ -216,6 +242,7 @@ namespace DanceWithTheDevil
             float dt = Time.deltaTime;
             TickDodgeRefill(dt);
             UpdateAim();
+            UpdateFacing(dt);
 
             _moveDirection = ReadMoveDirection();
 
@@ -223,6 +250,7 @@ namespace DanceWithTheDevil
             if (_input != null && !IsDodging && _input.DodgePressed)
                 TryDodge(_moveDirection);
 
+            Vector3 targetRun = _moveDirection * (_moveSpeed * _moveSpeedMultiplier);
             Vector3 horizontal;
             if (IsDodging)
             {
@@ -230,10 +258,12 @@ namespace DanceWithTheDevil
                 float dodgeDt = Mathf.Min(dt, _dodgeTimeRemaining);
                 horizontal = dt > 0f ? _dodgeVelocity * (dodgeDt / dt) : Vector3.zero;
                 _dodgeTimeRemaining -= dt;
+                _runVelocity = targetRun; // running goes on at full speed after the dodge, no ramp-up stall
             }
             else
             {
-                horizontal = _moveDirection * (_moveSpeed * _moveSpeedMultiplier) + _externalVelocity;
+                TickRunVelocity(targetRun, dt);
+                horizontal = _runVelocity + _externalVelocity;
             }
 
             if (_characterController.isGrounded && _verticalVelocity <= 0f)
@@ -247,6 +277,23 @@ namespace DanceWithTheDevil
             CollisionFlags flags = CollisionFlags.None;
             if (_characterController.enabled) flags = _characterController.Move(velocity * dt);
             TickExternalVelocity(dt, flags, transform.position - before);
+        }
+
+        /// <summary>
+        /// Ramps the run velocity toward the input target: <see cref="_accelerationTime"/> to full speed while a key is
+        /// held (also when turning), <see cref="_decelerationTime"/> to a stop once released.
+        /// </summary>
+        private void TickRunVelocity(Vector3 target, float dt)
+        {
+            bool hasInput = target.sqrMagnitude > MinDirectionSqr;
+            float rampTime = hasInput ? _accelerationTime : _decelerationTime;
+            if (rampTime <= 0f)
+            {
+                _runVelocity = target;
+                return;
+            }
+            float referenceSpeed = Mathf.Max(1f, _moveSpeed * _moveSpeedMultiplier);
+            _runVelocity = Vector3.MoveTowards(_runVelocity, target, referenceSpeed / rampTime * dt);
         }
 
         /// <summary>
@@ -318,16 +365,58 @@ namespace DanceWithTheDevil
 
             Vector3 position = transform.position;
             Ray ray = _cameraRig.ScreenPointToWorldRay(_input.AimScreenPosition);
-            var plane = new Plane(Vector3.up, new Vector3(0f, position.y + _aimHeight, 0f));
-            if (!plane.Raycast(ray, out float enter)) return;
+            if (!TryPickTarget(ray, out Vector3 point))
+            {
+                var plane = new Plane(Vector3.up, new Vector3(0f, position.y + _aimPlaneHeight, 0f));
+                if (!plane.Raycast(ray, out float enter)) return;
+                point = ray.GetPoint(enter);
+            }
 
-            _aimPoint = ray.GetPoint(enter);
+            _aimPoint = point;
+            _hasCursorAim = true;
             Vector3 toAim = _aimPoint - position;
             toAim.y = 0f;
             if (toAim.sqrMagnitude < MinDirectionSqr) return;
 
             _aimDirection = toAim.normalized;
-            transform.rotation = Quaternion.LookRotation(_aimDirection, Vector3.up);
+        }
+
+        /// <summary>
+        /// The orthographic cursor ray covers every height along one line, so a click on an enemy's body would otherwise
+        /// land on the aim plane in front of or behind it. If the nearest thing the ray touches (not the player) is a
+        /// damageable, its collider centre is the aim point.
+        /// </summary>
+        private bool TryPickTarget(Ray ray, out Vector3 point)
+        {
+            point = default;
+            if (!_aimAtTargetUnderCursor) return false;
+
+            int count = Physics.RaycastNonAlloc(ray, _aimHits, _aimPickDistance, _aimPickMask,
+                QueryTriggerInteraction.Ignore);
+            Collider nearest = null;
+            float nearestDistance = float.PositiveInfinity;
+            for (int i = 0; i < count; i++)
+            {
+                Collider collider = _aimHits[i].collider;
+                if (collider == null || collider.transform.IsChildOf(transform)) continue;
+                if (_aimHits[i].distance >= nearestDistance) continue;
+                nearestDistance = _aimHits[i].distance;
+                nearest = collider;
+            }
+            if (nearest == null || nearest.GetComponentInParent<IDamageable>() == null) return false;
+
+            point = nearest.bounds.center;
+            return true;
+        }
+
+        /// <summary>Turns the body (yaw only) toward the aim: fast exponential approach, frozen while time is stopped.</summary>
+        private void UpdateFacing(float dt)
+        {
+            if (!_hasCursorAim) return; // bots and tests set the facing themselves
+            Quaternion look = Quaternion.LookRotation(_aimDirection, Vector3.up);
+            transform.rotation = _turnSharpness <= 0f
+                ? look
+                : Quaternion.Slerp(transform.rotation, look, 1f - Mathf.Exp(-_turnSharpness * dt));
         }
 
         private static Vector3 Flatten(Vector3 direction, Vector3 fallback)

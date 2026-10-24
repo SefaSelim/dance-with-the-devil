@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -5,9 +6,13 @@ namespace DanceWithTheDevil
 {
     /// <summary>
     /// Ranged brain for the Shooter (GDD §6): keeps 7–11 m from the player with a clear line of sight (walls block it;
-    /// the player and other enemies do not), never fires through walls. Tell: 0.8 s orange aim line that tracks the
-    /// player, the last 0.25 s locked (the line thickens); then one orb (12 m/s, 12 damage) that damages only the
-    /// player and stops on walls; then 1.6 s recovery standing still.
+    /// the player and other enemies do not), never fires through walls. Tell: 0.8 s orange aim line, the last 0.25 s
+    /// locked (the line thickens); then one orb (14 m/s, 12 damage) that damages only the player and stops on walls.
+    /// Lead (F2): while the line tracks, it points a modest lead ahead of a moving player (part of where they will be
+    /// when the orb arrives if they keep going, capped at a few metres). The line always shows the real shot, so
+    /// turning, stopping or dodging once it thickens escapes, while strafing in a straight line does not.
+    /// Flanking (F2): during the 1.6 s recovery after each shot the shooter walks to a new spot on the ring around the
+    /// player, preferring bearings away from other shooters (crossfire) and along the player's line of travel.
     /// </summary>
     [RequireComponent(typeof(Enemy))]
     [DisallowMultipleComponent]
@@ -15,7 +20,8 @@ namespace DanceWithTheDevil
     {
         private const int MaxHits = 16;
 
-        private static readonly float[] CandidateAngles = { 0f, 35f, -35f, 70f, -70f, 110f, -110f };
+        private static readonly float[] CandidateAngles = { 0f, 25f, -25f, 50f, -50f, 75f, -75f, 110f, -110f };
+        private static readonly List<ShooterBrain> ActiveShooters = new List<ShooterBrain>(8);
 
         private enum State
         {
@@ -40,8 +46,14 @@ namespace DanceWithTheDevil
         [SerializeField, Min(0f)] private float _targetHeight = 1f;
         [Tooltip("Layers that can block sight and shots (walls). Player and enemy colliders are ignored.")]
         [SerializeField] private LayerMask _obstacleMask = ~0;
-        [Tooltip("Turn speed toward the player, degrees per second.")]
+        [Tooltip("Turn speed toward the aim, degrees per second.")]
         [SerializeField, Min(0f)] private float _turnSpeed = 360f;
+
+        [Header("Lead (F2)")]
+        [Tooltip("Share of the player's motion until the orb arrives that the aim leads by (0 = aim at the player).")]
+        [SerializeField, Range(0f, 1f)] private float _aimLead = 0.85f;
+        [Tooltip("Largest aim lead ahead of the player, metres.")]
+        [SerializeField, Min(0f)] private float _maxAimLead = 3.5f;
 
         [Header("Positioning")]
         [Tooltip("Seconds between positioning decisions.")]
@@ -50,6 +62,18 @@ namespace DanceWithTheDevil
         [SerializeField, Min(0f)] private float _preferredDistance = 9f;
         [Tooltip("NavMesh sample radius for candidate spots, metres.")]
         [SerializeField, Min(0.1f)] private float _sampleRadius = 2f;
+
+        [Header("Flanking (F2)")]
+        [Tooltip("Walk to a new spot on the ring during the recovery after each shot.")]
+        [SerializeField] private bool _flankAfterShot = true;
+        [Tooltip("Smallest bearing change of a flank move, degrees.")]
+        [SerializeField, Range(0f, 90f)] private float _minFlankAngle = 25f;
+        [Tooltip("Score weight for bearing separation from other shooters (crossfire, full at 90°).")]
+        [SerializeField, Min(0f)] private float _separationWeight = 1f;
+        [Tooltip("Score weight for standing along the player's line of travel (their motion then runs along the shot).")]
+        [SerializeField, Min(0f)] private float _travelLineWeight = 0.5f;
+        [Tooltip("Score cost per metre walked to a spot.")]
+        [SerializeField, Min(0f)] private float _walkCost = 0.08f;
 
         [Header("Projectile")]
         [Tooltip("Orb hit radius, metres.")]
@@ -86,6 +110,12 @@ namespace DanceWithTheDevil
 
         public bool IsTelling => _state == State.Tell;
         public bool IsLocked => _state == State.Tell && _locked;
+        /// <summary>Flat direction of the aim line (valid while telling).</summary>
+        public Vector3 AimDirection => _aimDirection;
+        /// <summary>Where the orb leaves the body.</summary>
+        public Vector3 MuzzlePoint => MuzzlePosition();
+        /// <summary>Seconds left in the current tell (0 when not telling).</summary>
+        public float TellRemaining => _state == State.Tell ? Mathf.Max(0f, _enemy.Stats.TellDuration - (Time.time - _stateStart)) : 0f;
 
         /// <summary>Raised when the 0.8 s aim tell starts (audio).</summary>
         public static event System.Action<Enemy> TellStarted;
@@ -109,19 +139,25 @@ namespace DanceWithTheDevil
         {
             _enemy.Spawned += OnSpawned;
             _enemy.Died += OnDied;
-            if (_enemy.IsAlive) Enter(State.Reposition);
+            if (_enemy.IsAlive)
+            {
+                Register(true);
+                Enter(State.Reposition);
+            }
         }
 
         private void OnDisable()
         {
             _enemy.Spawned -= OnSpawned;
             _enemy.Died -= OnDied;
+            Register(false);
             HideLine();
         }
 
         private void OnSpawned(Enemy enemy)
         {
             HideLine();
+            Register(true);
             Enter(State.Reposition);
             _nextThink = Time.time + Random.Range(0f, _thinkInterval);
         }
@@ -129,8 +165,16 @@ namespace DanceWithTheDevil
         private void OnDied(Enemy enemy)
         {
             if (_state == State.Tell) TellCancelled?.Invoke(_enemy);
+            Register(false);
             HideLine();
             _state = State.Idle;
+        }
+
+        private void Register(bool on)
+        {
+            int index = ActiveShooters.IndexOf(this);
+            if (on && index < 0) ActiveShooters.Add(this);
+            else if (!on && index >= 0) ActiveShooters.RemoveAt(index);
         }
 
         private void Update()
@@ -181,32 +225,75 @@ namespace DanceWithTheDevil
                 return;
             }
 
-            if (TryFindSpot(position, out Vector3 spot)) _enemy.MoveTo(spot);
+            if (TryFindSpot(false, out Vector3 spot)) _enemy.MoveTo(spot);
             else _enemy.MoveTo(_enemy.Target.position); // no good spot: close in until one appears
         }
 
-        /// <summary>Candidate spots on a ring around the player, nearest bearing first; first with sight wins.</summary>
-        private bool TryFindSpot(Vector3 position, out Vector3 spot)
+        /// <summary>
+        /// Best spot on a ring around the player (preferred distance) with sight of the player: candidates around the
+        /// current bearing, scored by separation from other shooters, by lying along the player's line of travel and
+        /// by the walk. <paramref name="mustMove"/>: skip bearings closer than the minimum flank angle.
+        /// </summary>
+        private bool TryFindSpot(bool mustMove, out Vector3 spot)
         {
-            Vector3 targetPosition = _enemy.Target.position;
+            Transform target = _enemy.Target;
+            Vector3 targetPosition = target.position;
+            Vector3 position = transform.position;
             Vector3 away = position - targetPosition;
             away.y = 0f;
-            if (away.sqrMagnitude < 1e-4f) away = -transform.forward;
+            if (away.sqrMagnitude < 1e-4f)
+            {
+                away = -transform.forward;
+                away.y = 0f;
+            }
+            if (away.sqrMagnitude < 1e-6f) away = Vector3.back;
             away.Normalize();
 
             EnemyStats stats = _enemy.Stats;
             float radius = Mathf.Clamp(_preferredDistance, stats.PreferredRange.x, Mathf.Max(stats.PreferredRange.x, stats.PreferredRange.y));
 
+            Vector3 velocity = TargetMotion.Velocity(target);
+            float speed = velocity.magnitude;
+            Vector3 travel = speed > 0.5f ? velocity / speed : Vector3.zero;
+            float moving = Mathf.Clamp01(speed / 6f);
+
+            bool found = false;
+            float bestScore = float.NegativeInfinity;
+            spot = default;
             for (int i = 0; i < CandidateAngles.Length; i++)
             {
-                Vector3 candidate = targetPosition + Quaternion.AngleAxis(CandidateAngles[i], Vector3.up) * away * radius;
+                if (mustMove && Mathf.Abs(CandidateAngles[i]) < _minFlankAngle) continue;
+                Vector3 bearing = Quaternion.AngleAxis(CandidateAngles[i], Vector3.up) * away;
+                Vector3 candidate = targetPosition + bearing * radius;
                 if (!NavMesh.SamplePosition(candidate, out NavMeshHit hit, _sampleRadius, NavMesh.AllAreas)) continue;
                 if (!HasLineOfSight(hit.position)) continue;
+
+                float score = _separationWeight * Separation(bearing, targetPosition)
+                              + _travelLineWeight * moving * Mathf.Abs(Vector3.Dot(bearing, travel))
+                              - _walkCost * Vector3.Distance(position, hit.position);
+                if (score <= bestScore) continue;
+                bestScore = score;
                 spot = hit.position;
-                return true;
+                found = true;
             }
-            spot = default;
-            return false;
+            return found;
+        }
+
+        /// <summary>Smallest bearing difference to another living shooter, 0..1 (1 = 90° or more, or alone).</summary>
+        private float Separation(Vector3 bearing, Vector3 targetPosition)
+        {
+            float smallest = 90f;
+            for (int i = 0; i < ActiveShooters.Count; i++)
+            {
+                ShooterBrain other = ActiveShooters[i];
+                if (other == null || other == this) continue;
+                Vector3 otherBearing = other.transform.position - targetPosition;
+                otherBearing.y = 0f;
+                if (otherBearing.sqrMagnitude < 1e-4f) continue;
+                float angle = Vector3.Angle(bearing, otherBearing);
+                if (angle < smallest) smallest = angle;
+            }
+            return smallest / 90f;
         }
 
         private void TickTell(float elapsed, in EnemyStats stats)
@@ -216,11 +303,12 @@ namespace DanceWithTheDevil
 
             if (elapsed < lockAt)
             {
-                _enemy.FaceDirection(_enemy.FlatToTarget(), _turnSpeed);
-                _aimDirection = AimPoint() - muzzle;
+                _aimDirection = LeadAimPoint(muzzle, stats, elapsed) - muzzle;
                 _aimDirection.y = 0f;
                 if (_aimDirection.sqrMagnitude < 1e-6f) _aimDirection = transform.forward;
-                _aimDirection.Normalize();
+                _aimDirection.y = 0f;
+                _aimDirection = _aimDirection.sqrMagnitude > 1e-6f ? _aimDirection.normalized : Vector3.forward;
+                _enemy.FaceDirection(_aimDirection, _turnSpeed);
             }
             else if (!_locked)
             {
@@ -241,6 +329,24 @@ namespace DanceWithTheDevil
                 Fire(muzzle, stats);
                 Enter(State.Recover);
             }
+        }
+
+        /// <summary>
+        /// The player's aim point plus a share of their motion until the orb would reach them (rest of the tell +
+        /// flight time at the current distance), at most <see cref="_maxAimLead"/> ahead. At 9 m the lock-to-impact
+        /// time is T = 0.25 + 9 / 14 = 0.89 s. A player crossing the line at u m/s travels T × u and the lead covers
+        /// min(0.85 × T × u, 3.5 m); the orb hits within 0.2 (orb) + 0.35 (player) = 0.55 m, so anyone crossing
+        /// slower than 0.55 / (0.15 × 0.89) = 4.1 m/s is hit, and a full 6 m/s sprint straight across misses by
+        /// 6 × 0.89 − 3.5 = 1.9 m. Without lead the limit was 0.55 / 1.0 = 0.55 m/s (F2).
+        /// </summary>
+        private Vector3 LeadAimPoint(Vector3 muzzle, in EnemyStats stats, float elapsed)
+        {
+            Transform target = _enemy.Target;
+            Vector3 toTarget = target.position - muzzle;
+            toTarget.y = 0f;
+            float flight = stats.ProjectileSpeed > 0.01f ? toTarget.magnitude / stats.ProjectileSpeed : 0f;
+            float untilFire = Mathf.Max(0f, stats.TellDuration - elapsed);
+            return TargetMotion.Predict(target, untilFire + flight, _aimLead, _maxAimLead) + Vector3.up * _targetHeight;
         }
 
         private void Fire(Vector3 muzzle, in EnemyStats stats)
@@ -297,6 +403,8 @@ namespace DanceWithTheDevil
                     _locked = false;
                     TellStarted?.Invoke(_enemy);
                     _aimDirection = transform.forward;
+                    _aimDirection.y = 0f;
+                    _aimDirection = _aimDirection.sqrMagnitude > 1e-6f ? _aimDirection.normalized : Vector3.forward;
                     if (_aimLine != null)
                     {
                         _aimLine.widthMultiplier = _aimLineWidth;
@@ -307,6 +415,9 @@ namespace DanceWithTheDevil
                 case State.Recover:
                     HideLine();
                     _enemy.StopMoving();
+                    // Flank during the recovery: the next tell starts from a new bearing.
+                    if (_flankAfterShot && _enemy.Target != null && TryFindSpot(true, out Vector3 spot))
+                        _enemy.MoveTo(spot);
                     break;
             }
         }

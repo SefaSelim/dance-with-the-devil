@@ -7,6 +7,9 @@ namespace DanceWithTheDevil
     /// Rocket (GDD §5 Silahlar): 2 charges, 6.0 s refill per charge (one at a time), 18 m/s, explodes on first contact
     /// or after 20 m; flat 40 damage within 2.5 m to every damageable once, ~2 m knockback, never hurts the player.
     /// Blocked while the owner dodges. Not done yet: breaking inner walls/props (needs the voxel arena).
+    /// Aiming (GDD §4) works like the rifle's: <see cref="TryFireAt"/> fires from the muzzle toward the aim point, from a
+    /// spawn point pulled back out of walls; the muzzle is the gun in Defne's hand when there is one, and a launch
+    /// kicks it hard.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class RocketLauncher : MonoBehaviour
@@ -18,12 +21,24 @@ namespace DanceWithTheDevil
         [SerializeField] private ProjectilePool _pool;
         [Tooltip("Material for the runtime rocket cubes when the pool is created automatically.")]
         [SerializeField] private Material _projectileMaterial;
-        [Tooltip("Rocket spawn point. If empty: this transform + muzzle height.")]
+        [Tooltip("Rocket spawn point when the character has no animated gun (CharacterAnimator.Muzzle wins). If empty: this transform + muzzle height.")]
         [SerializeField] private Transform _muzzle;
         [Tooltip("Fallback muzzle height above this transform when no muzzle is set.")]
         [SerializeField] private float _fallbackMuzzleHeight = 1f;
         [Tooltip("Owner, for the dodge block and the no-self-damage rule. If empty, found in parents.")]
         [SerializeField] private PlayerController _owner;
+        [Tooltip("Character animator holding the gun (muzzle and recoil kick). If empty, found in parents.")]
+        [SerializeField] private CharacterAnimator _animator;
+
+        [Header("Aim (GDD §4)")]
+        [Tooltip("With an owner, rockets leave at this height above the owner's feet (GDD: muzzle height 1.0 m). 0 = the muzzle's own height.")]
+        [SerializeField, Min(0f)] private float _shotHeight = 1f;
+        [Tooltip("If the aim point is closer than this to the muzzle (flat metres), fire along the body aim direction instead.")]
+        [SerializeField, Min(0f)] private float _minConvergeDistance = 1f;
+        [Tooltip("If the muzzle-to-aim direction differs from the body aim direction by more than this (degrees), fire along the body aim direction.")]
+        [SerializeField, Range(0f, 180f)] private float _maxConvergeAngle = 60f;
+        [Tooltip("Visual recoil kick passed to CharacterAnimator.Kick per launch (0..2).")]
+        [SerializeField, Range(0f, 2f)] private float _recoilKick = 1.4f;
 
         [Header("Charges (GDD §5)")]
         [Tooltip("Maximum charges.")]
@@ -74,9 +89,38 @@ namespace DanceWithTheDevil
         public float RefillProgress => _charges >= _maxCharges ? 0f : Mathf.Clamp01(_refillTimer / CurrentRefillTime);
         public float Damage => _damage * _damageMultiplier;
         public float ExplosionRadius => _explosionRadius * _radiusMultiplier;
-        public Transform Muzzle => _muzzle;
-        public Vector3 MuzzlePosition =>
-            _muzzle != null ? _muzzle.position : transform.position + Vector3.up * _fallbackMuzzleHeight;
+
+        /// <summary>The muzzle in use: the animated gun's (<see cref="CharacterAnimator.Muzzle"/>), else the assigned one.</summary>
+        public Transform Muzzle
+        {
+            get
+            {
+                if (_animator != null)
+                {
+                    Transform gunMuzzle = _animator.Muzzle;
+                    if (gunMuzzle != null) return gunMuzzle;
+                }
+                return _muzzle;
+            }
+        }
+
+        /// <summary>
+        /// Where a rocket starts: the muzzle (at the shot height above the owner's feet), pulled back toward the body
+        /// until it is clear of walls. Without an owner: the raw muzzle.
+        /// </summary>
+        public Vector3 MuzzlePosition
+        {
+            get
+            {
+                Transform muzzle = Muzzle;
+                Vector3 raw = muzzle != null ? muzzle.position : transform.position + Vector3.up * _fallbackMuzzleHeight;
+                if (_owner == null) return raw;
+                Vector3 feet = _owner.transform.position;
+                if (_shotHeight > 0f) raw.y = feet.y + _shotHeight;
+                return WeaponAim.ClearSpawnPoint(feet, raw, _projectileRadius, _hitMask, _ownerRoot);
+            }
+        }
+
         public bool IsBlocked => _owner != null && _owner.IsDodging;
 
         /// <summary>Raised when a rocket is launched (audio).</summary>
@@ -110,6 +154,7 @@ namespace DanceWithTheDevil
         private void Awake()
         {
             if (_owner == null) _owner = GetComponentInParent<PlayerController>();
+            if (_animator == null) _animator = GetComponentInParent<CharacterAnimator>();
             _ownerRoot = _owner != null ? _owner.transform : transform.root;
             _onDetonate = Explode; // cached: no delegate allocation per shot
             _charges = _maxCharges;
@@ -147,6 +192,21 @@ namespace DanceWithTheDevil
             if (_charges >= _maxCharges) _refillTimer = 0f;
         }
 
+        /// <summary>
+        /// Launches a rocket from <see cref="MuzzlePosition"/> toward <paramref name="aimPoint"/> (flat, at muzzle
+        /// height), so it flies to the cursor (GDD §4). Uses <paramref name="fallbackDirection"/> (the body aim direction)
+        /// when the aim point is too close to the muzzle or far off to its side, and launches from the body axis when the
+        /// aim point is point-blank (see <see cref="WeaponAim.ResolveShot"/>). Uses one charge.
+        /// </summary>
+        public bool TryFireAt(Vector3 aimPoint, Vector3 fallbackDirection)
+        {
+            if (!isActiveAndEnabled || IsBlocked || _charges <= 0) return false;
+            Vector3 body = _owner != null ? _owner.transform.position : transform.position;
+            WeaponAim.ResolveShot(body, MuzzlePosition, aimPoint, fallbackDirection, _minConvergeDistance,
+                _maxConvergeAngle, out Vector3 origin, out Vector3 direction);
+            return TryFire(origin, direction);
+        }
+
         /// <summary>Launches a rocket if a charge is available and nothing blocks it. Uses one charge.</summary>
         public bool TryFire(Vector3 origin, Vector3 direction)
         {
@@ -175,6 +235,7 @@ namespace DanceWithTheDevil
                 OnDetonate = _onDetonate,
             });
 
+            if (_animator != null) _animator.Kick(_recoilKick);
             Launched?.Invoke(this);
             ImpactBus.Raise(new ImpactEvent
             {
@@ -184,7 +245,7 @@ namespace DanceWithTheDevil
                 direction = direction,
                 intensity = _launchIntensity,
                 surface = SurfaceType.Default,
-                hitTransform = _muzzle,
+                hitTransform = Muzzle,
                 instigator = source,
                 instigatorIsLocalPlayer = isPlayer,
             });
