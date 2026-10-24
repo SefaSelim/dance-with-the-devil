@@ -8,13 +8,15 @@ namespace DanceWithTheDevil
         TripleShot,
         Echo,
         Density,
+        /// <summary>Hız (user decision 2026-10-24, production/design/combo-haste.md §3): rifle fire rate ×1.4, each bullet strays ±6°.</summary>
+        Haste,
     }
 
     /// <summary>Fixed per-type data shared by gameplay and UI (MAIN_GDD §7 / first GDD §7 colours).</summary>
     public static class ModuleCatalog
     {
         /// <summary>Number of module types (and fixed slots).</summary>
-        public const int Count = 3;
+        public const int Count = 4;
 
         /// <summary>Triple Shot turquoise #3FE0D0.</summary>
         public static readonly Color TripleShotColor = new Color(0x3F / 255f, 0xE0 / 255f, 0xD0 / 255f, 1f);
@@ -22,6 +24,8 @@ namespace DanceWithTheDevil
         public static readonly Color EchoColor = new Color(0x9B / 255f, 0x5C / 255f, 0xFF / 255f, 1f);
         /// <summary>Density amber #FFB23F.</summary>
         public static readonly Color DensityColor = new Color(0xFF / 255f, 0xB2 / 255f, 0x3F / 255f, 1f);
+        /// <summary>Haste lime #B8FF3F (placeholder; clear of the other three, of health red and of the Devil's red).</summary>
+        public static readonly Color HasteColor = new Color(0xB8 / 255f, 0xFF / 255f, 0x3F / 255f, 1f);
 
         public static Color ColorOf(ModuleType type)
         {
@@ -29,6 +33,7 @@ namespace DanceWithTheDevil
             {
                 case ModuleType.TripleShot: return TripleShotColor;
                 case ModuleType.Echo: return EchoColor;
+                case ModuleType.Haste: return HasteColor;
                 default: return DensityColor;
             }
         }

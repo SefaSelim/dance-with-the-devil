@@ -7,8 +7,10 @@ namespace DanceWithTheDevil
     /// Blocked while the owner dodges or the machete swings (GDD §4, §5).
     /// Contracts (GDD §8) use <see cref="DamageMultiplier"/> and <see cref="PierceCount"/>. Whisper modules (GDD §7,
     /// decision K-7: only the rifle) are switched by <see cref="PlayerModules"/> through <see cref="TripleShot"/>,
-    /// <see cref="RecoilSpeed"/>, <see cref="EchoEnabled"/> and <see cref="ModuleDamageMultiplier"/>; the two damage
-    /// multipliers stack by product (GDD §8 Birikme kuralları).
+    /// <see cref="RecoilSpeed"/>, <see cref="EchoEnabled"/>, <see cref="ModuleDamageMultiplier"/>,
+    /// <see cref="ModuleFireRateMultiplier"/> and <see cref="ModuleSpreadDegrees"/> (Hız); the two damage multipliers
+    /// stack by product (GDD §8 Birikme kuralları), and so do the two fire-rate multipliers (contract
+    /// <see cref="AttackSpeedMultiplier"/> × module; production/design/combo-haste.md §3).
     /// Aiming (GDD §4): <see cref="TryFireAt"/> fires from the muzzle toward the aim point, so shots converge on the
     /// cursor; the spawn point is pulled back out of walls (<see cref="WeaponAim.ClearSpawnPoint"/>). The muzzle is the
     /// gun in Defne's hand (<see cref="CharacterAnimator.Muzzle"/>) when there is one; each salvo kicks that gun.
@@ -77,6 +79,9 @@ namespace DanceWithTheDevil
         private float _nextFireTime = float.NegativeInfinity;
         private float _damageMultiplier = 1f;
         private float _moduleDamageMultiplier = 1f;
+        private float _attackSpeedMultiplier = 1f;
+        private float _moduleFireRateMultiplier = 1f;
+        private float _moduleSpreadDegrees;
         private bool _tripleShot;
         private float _tripleSpreadDegrees = 12f;
         private float _recoilSpeed;
@@ -95,6 +100,30 @@ namespace DanceWithTheDevil
         {
             get => _moduleDamageMultiplier;
             set => _moduleDamageMultiplier = Mathf.Max(0f, value);
+        }
+
+        /// <summary>Fire-rate multiplier from contracts (Contract 4: ×1.25). Min 0.01. Stacks by product with the module one.</summary>
+        public float AttackSpeedMultiplier
+        {
+            get => _attackSpeedMultiplier;
+            set => _attackSpeedMultiplier = Mathf.Max(0.01f, value);
+        }
+
+        /// <summary>Fire-rate multiplier owned by the module system (Hız ×1.4). Min 0.01. Set only by <see cref="PlayerModules"/>.</summary>
+        public float ModuleFireRateMultiplier
+        {
+            get => _moduleFireRateMultiplier;
+            set => _moduleFireRateMultiplier = Mathf.Max(0.01f, value);
+        }
+
+        /// <summary>
+        /// Random yaw of every bullet, uniform in ±this many degrees around its own direction (Hız cost: 6; with Triple
+        /// Shot each bullet rolls its own on top of its ±12°). 0 = none. Set only by <see cref="PlayerModules"/>.
+        /// </summary>
+        public float ModuleSpreadDegrees
+        {
+            get => _moduleSpreadDegrees;
+            set => _moduleSpreadDegrees = Mathf.Clamp(value, 0f, 45f);
         }
 
         /// <summary>Extra enemies a bullet passes through (contracts). Min 0.</summary>
@@ -153,7 +182,12 @@ namespace DanceWithTheDevil
         public float BaseDamage => _damage;
         /// <summary>Damage per bullet with every multiplier (contracts × modules).</summary>
         public float Damage => _damage * _damageMultiplier * _moduleDamageMultiplier;
+        /// <summary>Base shots per second (GDD: 6), without multipliers.</summary>
         public float FireRate => _fireRate;
+        /// <summary>Shots per second with every multiplier (contracts × modules).</summary>
+        public float EffectiveFireRate => _fireRate * _attackSpeedMultiplier * _moduleFireRateMultiplier;
+        /// <summary>Seconds between salvos while Fire is held.</summary>
+        public float FireInterval => 1f / EffectiveFireRate;
 
         /// <summary>The muzzle in use: the animated gun's (<see cref="CharacterAnimator.Muzzle"/>), else the assigned one.</summary>
         public Transform Muzzle
@@ -238,7 +272,7 @@ namespace DanceWithTheDevil
             if (now < _nextFireTime) return false;
 
             // Held fire keeps an exact cadence; a fresh press starts a new one.
-            float interval = 1f / _fireRate;
+            float interval = FireInterval;
             _nextFireTime = now - _nextFireTime < interval ? _nextFireTime + interval : now + interval;
 
             direction.Normalize();
@@ -249,7 +283,7 @@ namespace DanceWithTheDevil
             var launch = new ProjectileLaunch
             {
                 Origin = origin,
-                Direction = direction,
+                Direction = Stray(direction),
                 Speed = _projectileSpeed,
                 MaxRange = _range,
                 Radius = _projectileRadius,
@@ -272,9 +306,9 @@ namespace DanceWithTheDevil
 
             if (_tripleShot)
             {
-                launch.Direction = Quaternion.AngleAxis(-_tripleSpreadDegrees, Vector3.up) * direction;
+                launch.Direction = Stray(Quaternion.AngleAxis(-_tripleSpreadDegrees, Vector3.up) * direction);
                 _pool.Get().Launch(launch);
-                launch.Direction = Quaternion.AngleAxis(_tripleSpreadDegrees, Vector3.up) * direction;
+                launch.Direction = Stray(Quaternion.AngleAxis(_tripleSpreadDegrees, Vector3.up) * direction);
                 _pool.Get().Launch(launch);
             }
 
@@ -296,6 +330,14 @@ namespace DanceWithTheDevil
                 instigatorIsLocalPlayer = isPlayer,
             });
             return true;
+        }
+
+        // Hız cost: each bullet leaves up to ±_moduleSpreadDegrees off its direction (flat yaw). Recoil, muzzle flash
+        // and the Triple Shot fan stay on the true aim.
+        private Vector3 Stray(Vector3 direction)
+        {
+            if (_moduleSpreadDegrees <= 0f) return direction;
+            return Quaternion.AngleAxis(Random.Range(-_moduleSpreadDegrees, _moduleSpreadDegrees), Vector3.up) * direction;
         }
     }
 }

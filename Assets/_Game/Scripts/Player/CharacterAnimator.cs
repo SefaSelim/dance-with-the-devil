@@ -416,7 +416,8 @@ namespace DanceWithTheDevil
             _muzzle = FindDeep(_rifle, "Muzzle");
             _launcherMuzzle = FindDeep(_launcher, "Muzzle");
             _launcherWarhead = FindDeep(_launcher, "Rocket");
-            if (_rifle == null) Debug.LogWarning($"{nameof(CharacterAnimator)}: humanoid model has no WeaponSocket/Rifle.", this);
+            // Enemies' humanoid bodies carry no weapons (their shots come from the brain).
+            if (_rifle == null && _isPlayer) Debug.LogWarning($"{nameof(CharacterAnimator)}: humanoid model has no WeaponSocket/Rifle.", this);
             SetHeld(_rifle);
         }
 

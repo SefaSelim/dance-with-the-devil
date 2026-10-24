@@ -101,6 +101,8 @@ namespace DanceWithTheDevil
         private readonly RaycastHit[] _hits = new RaycastHit[MaxHits];
 
         private Enemy _enemy;
+        // Humanoid body: Tell clip while aiming, Attack clip on the shot, when the controller has them (null for cubes).
+        private EnemyBodyAnimator _body;
         private LineRenderer _aimLine;
         private State _state;
         private float _stateStart;
@@ -125,6 +127,7 @@ namespace DanceWithTheDevil
         private void Awake()
         {
             _enemy = GetComponent<Enemy>();
+            _body = EnemyBodyAnimator.Find(_enemy.Model);
             _aimLine = EnemyTelegraphs.CreateLine(name + "_AimLine", _aimLineMaterial, _aimLineColor, _aimLineWidth);
             if (_pool == null)
             {
@@ -167,6 +170,7 @@ namespace DanceWithTheDevil
             if (_state == State.Tell) TellCancelled?.Invoke(_enemy);
             Register(false);
             HideLine();
+            if (_body != null) _body.SetTell(false);
             _state = State.Idle;
         }
 
@@ -351,6 +355,7 @@ namespace DanceWithTheDevil
 
         private void Fire(Vector3 muzzle, in EnemyStats stats)
         {
+            if (_body != null) _body.TriggerAttack();
             Projectile projectile = _pool.Get();
             projectile.Launch(new ProjectileLaunch
             {
@@ -388,6 +393,7 @@ namespace DanceWithTheDevil
             if (_state == State.Tell && state != State.Recover) TellCancelled?.Invoke(_enemy);
             _state = state;
             _stateStart = Time.time;
+            if (_body != null) _body.SetTell(state == State.Tell);
             var agent = _enemy.Agent;
             if (agent.enabled) agent.updateRotation = false; // the shooter always faces the player, even backing off
 

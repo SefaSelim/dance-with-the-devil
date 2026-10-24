@@ -14,6 +14,9 @@ namespace DanceWithTheDevil.Tests
     public sealed class MuzzleFlashTests
     {
         private const string ArenaPath = "Assets/_Game/Scenes/Arena.unity";
+
+        [UnityTearDown]
+        public IEnumerator UnloadArena() => TestScenes.LeaveLoadedScenes();
         private const float MaxFlashOffset = 0.06f;
 
         [UnityTest]
@@ -67,7 +70,7 @@ namespace DanceWithTheDevil.Tests
                 float best = float.MaxValue;
                 foreach (ParticleSystem ps in RealisticVfx.Instance.GetComponentsInChildren<ParticleSystem>())
                 {
-                    if (!ps.name.StartsWith("vfx_muzzle_rifle") || !ps.isPlaying) continue;
+                    if (!ps.name.StartsWith("vfx_muzzle_rifle") || !ps.IsAlive(true)) continue; // alive incl. the smoke child: the core lives only ~3 frames
                     best = Mathf.Min(best, Vector3.Distance(ps.transform.position, muzzle.position));
                 }
                 Assert.That(best, Is.LessThan(MaxFlashOffset), $"flash distance from the muzzle, frame {f} ({label})");

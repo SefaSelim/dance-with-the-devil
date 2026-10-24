@@ -514,6 +514,8 @@ namespace DanceWithTheDevil.Editor
 
             // Gothic ruin dressing, lights and particles (visual only; colliders and NavMesh unchanged).
             GothicArenaBuilder.Dress(scene);
+            // Combo counter, HUD, feel and the post-processing Volume (production/design/combo-haste.md).
+            ComboSetup.Install(scene);
 
             EditorSceneManager.SaveScene(scene, ArenaScenePath);
             if (!reopenArena && previousActive.IsValid() && previousActive.isLoaded)
@@ -526,14 +528,28 @@ namespace DanceWithTheDevil.Editor
             Debug.Log($"PlaceholderBuilder: arena scene saved to {ArenaScenePath}.");
         }
 
+        /// <summary>Rebuilds only the three enemy prefabs (EnemyModelBuilder's menu: Dance/Enemies/Build Enemy Models).</summary>
+        public static void BuildEnemyPrefabs()
+        {
+            EnsureFolder(PrefabsFolder);
+            SaveEnemyPrefab("enemy_chaser", ChaserParts, EnemyType.Chaser, 1.42f);
+            SaveEnemyPrefab("enemy_runner", RunnerParts, EnemyType.Runner, 1.1f);
+            SaveEnemyPrefab("enemy_shooter", ShooterParts, EnemyType.Shooter, 1.65f);
+            AssetDatabase.SaveAssets();
+        }
+
         // Enemy = art model + Enemy/Health/NavMeshAgent/ShatterOnDeath + a brain (GDD §6, minimum scope K-11).
+        // Art model: the Synty Dark Fantasy character when the pack is imported (EnemyModelBuilder), else the cubes.
         private static void SaveEnemyPrefab(string name, Part[] parts, EnemyType type, float height)
         {
             var root = new GameObject(name);
             var model = new GameObject("Model");
             model.transform.SetParent(root.transform, false);
-            foreach (Part part in parts) CreateBlock(part, model.transform, keepCollider: false, outline: true);
+            bool synty = EnemyModelBuilder.HasModel(type);
+            if (!synty)
+                foreach (Part part in parts) CreateBlock(part, model.transform, keepCollider: false, outline: true);
             model.transform.localScale = Vector3.one * EnemyScale;
+            if (synty) EnemyModelBuilder.BuildBody(model.transform, type, height);
             height *= EnemyScale;
 
             // Procedural walk bob, limb swing and lean (PLAYER lane component); enemies carry no gun.
@@ -590,6 +606,7 @@ namespace DanceWithTheDevil.Editor
                 }
                 bso.ApplyModifiedPropertiesWithoutUndo();
             }
+            if (synty) EnemyModelBuilder.ConfigureRoot(root, type);
 
             PrefabUtility.SaveAsPrefabAsset(root, $"{PrefabsFolder}/{name}.prefab");
             Object.DestroyImmediate(root);

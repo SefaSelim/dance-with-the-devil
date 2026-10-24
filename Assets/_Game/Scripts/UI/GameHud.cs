@@ -10,7 +10,7 @@ namespace DanceWithTheDevil
     /// Top: HP bar drawn for the base 100 HP, with the part lost to contracts shown as a dark "lost" segment; the
     /// elapsed run time (the run has no end time: D2, K-4); score. Top-left: Defne's small block portrait (hair
     /// greys after contract 1, hidden by contract 3) and the "Verdiklerin" strip, one icon per cost taken (the
-    /// newest one pulses). Bottom: three fixed module slots (empty = a dim socket with no name until that module has
+    /// newest one pulses). Bottom: four fixed module slots (empty = a dim socket with no name until that module has
     /// been offered once; equipped = the module's own colour; while Q is held the highlighted slot grows, turns gold
     /// and "Sağ tık: sök" shows above it), "Küçük hayırlar: N", rocket / machete / dodge / reject pips (reject reads
     /// PlayerModules' real cooldown). While a whisper offer exists (and the Devil is not up): its name in the module's
@@ -28,8 +28,10 @@ namespace DanceWithTheDevil
         private const int ModuleSlots = ModuleCatalog.Count;
         private const int MaxCostIcons = 6;
         private const int TimeCacheSeconds = 3600;
-        private const float SlotSpacing = 84f;
-        private static readonly Vector2 SlotSize = new Vector2(78f, 20f);
+        // Four slots at 640×360: centres ±40/±120, extents ±157 (rocket/machete/dodge/reject pips end at −180;
+        // "Küçük hayırlar" starts at +165 and ends at +315 inside the 320 half-width).
+        private const float SlotSpacing = 80f;
+        private static readonly Vector2 SlotSize = new Vector2(74f, 20f);
         private static readonly Vector2 SlotSizeHighlighted = new Vector2(86f, 26f);
         private const float OfferTimerWidth = 456f;
 
@@ -348,8 +350,11 @@ namespace DanceWithTheDevil
             if (_ejectLabel.gameObject.activeSelf != show) _ejectLabel.gameObject.SetActive(show);
             if (!show) return;
             _ejectLabel.text = _ejectStrings[eject];
-            _ejectLabel.rectTransform.anchoredPosition = new Vector2((eject - 1) * SlotSpacing, 32f);
+            _ejectLabel.rectTransform.anchoredPosition = new Vector2(SlotX(eject), 32f);
         }
+
+        /// <summary>Centre x of slot <paramref name="i"/>, slots centred on the bottom middle.</summary>
+        private static float SlotX(int i) => (i - (ModuleSlots - 1) * 0.5f) * SlotSpacing;
 
         /// <summary>0 = empty, never offered (no name); 1 = empty, offered before; 2 = equipped (module colour).</summary>
         private void ApplySlot(int i, int state, bool highlighted, int code)
@@ -657,7 +662,7 @@ namespace DanceWithTheDevil
             for (int i = 0; i < ModuleSlots; i++)
             {
                 Image fill = UiKit.Framed(_root, "Slot_" + (ModuleType)i, SlotEmptyBorder, SlotEmptyFill, bottom, bottom,
-                    new Vector2((i - 1) * SlotSpacing, 8f), SlotSize, 1f);
+                    new Vector2(SlotX(i), 8f), SlotSize, 1f);
                 _slotFill[i] = fill;
                 _slotBorder[i] = fill.transform.parent.GetComponent<Image>();
                 _slotRect[i] = _slotBorder[i].rectTransform;
@@ -669,7 +674,7 @@ namespace DanceWithTheDevil
             UiKit.AddShadow(_ejectLabel);
             _ejectLabel.gameObject.SetActive(false);
             _smallNosText = UiKit.Label(_root, "SmallNos", font, 10, UiKit.Turquoise, TextAnchor.MiddleLeft, bottom,
-                left, new Vector2(1.5f * SlotSpacing + 8f, 18f), new Vector2(150f, 14f));
+                left, new Vector2(SlotX(ModuleSlots - 1) + SlotSize.x * 0.5f + 8f, 18f), new Vector2(150f, 14f));
             UiKit.AddShadow(_smallNosText);
 
             // Charges (bottom left).

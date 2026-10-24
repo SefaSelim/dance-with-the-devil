@@ -1,3 +1,4 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
@@ -26,7 +27,7 @@ namespace DanceWithTheDevil
         private Button _creditsButton;
         private Selectable _firstSetting;
         private Button _creditsBack;
-        private Text _fullscreenValue;
+        private TMP_Text _fullscreenValue;
         private Image _fade;
         private CanvasGroup _mainGroup;
         private GameObject _returnTo;
@@ -180,15 +181,18 @@ namespace DanceWithTheDevil
                 divider.preserveAspect = true;
             }
 
+            // Synty DialogueResponse prefab (selected = lit plate, hover selects through UiSelectNudge).
+            GameObject prefab = UiKit.ButtonPrefab;
             Vector2 buttonSize = new Vector2(150f, 30f);
-            _startButton = UiKit.ThemedButton(column, "Start", GameTexts.MenuStart, tl, tl, new Vector2(36f, -134f),
-                buttonSize, 16, out _);
-            _settingsButton = UiKit.ThemedButton(column, "Settings", GameTexts.MenuSettings, tl, tl,
-                new Vector2(36f, -170f), buttonSize, 16, out _);
-            _creditsButton = UiKit.ThemedButton(column, "Credits", GameTexts.MenuCredits, tl, tl,
-                new Vector2(36f, -206f), buttonSize, 16, out _);
-            Button quit = UiKit.ThemedButton(column, "Quit", GameTexts.MenuQuit, tl, tl, new Vector2(36f, -242f),
-                buttonSize, 16, out _);
+            const float buttonFont = 16f;
+            _startButton = UiKit.PrefabButton(column, prefab, GameTexts.MenuStart, tl, tl, new Vector2(36f, -134f),
+                buttonSize, out _, buttonFont, "Start");
+            _settingsButton = UiKit.PrefabButton(column, prefab, GameTexts.MenuSettings, tl, tl,
+                new Vector2(36f, -170f), buttonSize, out _, buttonFont, "Settings");
+            _creditsButton = UiKit.PrefabButton(column, prefab, GameTexts.MenuCredits, tl, tl,
+                new Vector2(36f, -206f), buttonSize, out _, buttonFont, "Credits");
+            Button quit = UiKit.PrefabButton(column, prefab, GameTexts.MenuQuit, tl, tl, new Vector2(36f, -242f),
+                buttonSize, out _, buttonFont, "Quit");
             _startButton.onClick.AddListener(OnStart);
             _settingsButton.onClick.AddListener(OpenSettings);
             _creditsButton.onClick.AddListener(OpenCredits);
@@ -237,17 +241,13 @@ namespace DanceWithTheDevil
             Text fsLabel = UiKit.Label(p, "FullscreenLabel", body, 12, UiKit.Cream, TextAnchor.MiddleLeft, top,
                 new Vector2(0f, 0.5f), new Vector2(-122f, -162f), new Vector2(110f, 18f));
             fsLabel.text = GameTexts.SettingsFullscreen;
-            Image fsBlock = UiKit.Box(p, "Fullscreen", new Color(0.18f, 0.13f, 0.15f, 1f), top, mid,
-                new Vector2(48f, -162f), new Vector2(120f, 20f));
-            Button fs = UiKit.MakeButton(fsBlock, new Color(1.6f, 1.1f, 1.1f, 1f));
-            fs.navigation = new Navigation { mode = Navigation.Mode.Automatic };
-            _fullscreenValue = UiKit.Label(fsBlock.transform, "Value", body, 12, UiKit.Cream, TextAnchor.MiddleCenter,
-                mid, mid, Vector2.zero, new Vector2(116f, 18f));
-            _fullscreenValue.text = GameSettings.Fullscreen ? GameTexts.SettingsOn : GameTexts.SettingsOff;
+            Button fs = UiKit.PrefabButton(p, UiKit.SmallButtonPrefab,
+                GameSettings.Fullscreen ? GameTexts.SettingsOn : GameTexts.SettingsOff, top, mid,
+                new Vector2(48f, -162f), new Vector2(120f, 20f), out _fullscreenValue, 12f, "Fullscreen");
             fs.onClick.AddListener(ToggleFullscreen);
 
-            Button back = UiKit.ThemedButton(p, "Back", GameTexts.MenuBack, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
-                new Vector2(0f, 12f), new Vector2(120f, 26f), 14, out _);
+            Button back = UiKit.PrefabButton(p, UiKit.SmallButtonPrefab, GameTexts.MenuBack, new Vector2(0.5f, 0f),
+                new Vector2(0.5f, 0f), new Vector2(0f, 12f), new Vector2(120f, 26f), out _, 14f, "Back");
             back.onClick.AddListener(ClosePanels);
             LinkVertical(master, music, sfx, shake, fs, back);
             _settingsPanel.SetActive(false);
@@ -268,8 +268,8 @@ namespace DanceWithTheDevil
             Text text = UiKit.Label(p, "Body", body, 10, UiKit.Light, TextAnchor.UpperCenter, top, top,
                 new Vector2(0f, -44f), new Vector2(300f, 140f));
             text.text = GameTexts.CreditsBody;
-            _creditsBack = UiKit.ThemedButton(p, "Back", GameTexts.MenuBack, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
-                new Vector2(0f, 12f), new Vector2(120f, 26f), 14, out _);
+            _creditsBack = UiKit.PrefabButton(p, UiKit.SmallButtonPrefab, GameTexts.MenuBack, new Vector2(0.5f, 0f),
+                new Vector2(0.5f, 0f), new Vector2(0f, 12f), new Vector2(120f, 26f), out _, 14f, "Back");
             _creditsBack.onClick.AddListener(ClosePanels);
             _creditsPanel.SetActive(false);
         }

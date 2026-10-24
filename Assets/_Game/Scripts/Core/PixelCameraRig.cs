@@ -39,6 +39,13 @@ namespace DanceWithTheDevil
         [Tooltip("Sorting order of the display canvas. HUD canvases must use a higher value.")]
         [SerializeField] private int _displaySortingOrder = -1000;
 
+        [Header("Post-processing (game camera only)")]
+        [Tooltip("URP post-processing on the game camera (combo Volume pulse, base bloom). The display camera never has it.")]
+        [SerializeField] private bool _postProcessing = true;
+        [Tooltip("HDR intermediate buffer on the game camera so HDR VFX colours (> 1) reach Bloom; the result is still " +
+                 "written to the LDR 8-bit pixel RenderTexture. Off = bloom only from near-white pixels.")]
+        [SerializeField] private bool _hdr = true;
+
         [Header("Framing")]
         [Tooltip("Half of the visible world height (orthographic size) in metres.")]
         [SerializeField, Min(0.1f)] private float _orthographicSize = 9f;
@@ -253,7 +260,9 @@ namespace DanceWithTheDevil
             // Keep one texel = 2*size/height world units although the RT is taller by the border.
             _gameCamera.orthographicSize = _orthographicSize * RtHeight / _height;
             _gameCamera.allowMSAA = false;
-            _gameCamera.allowHDR = false;
+            // HDR only feeds Bloom: tonemapping is None in ArenaVolumeProfile, so the image above 1.0 clips as before
+            // and the 8-bit point-filtered RT keeps the crisp pixel look (bloom halos are texel-sized and upscale with it).
+            _gameCamera.allowHDR = _hdr;
             _gameCamera.allowDynamicResolution = false;
             _gameCamera.depth = -10f; // render before the display camera
             _gameCamera.targetTexture = _renderTexture;
@@ -261,8 +270,10 @@ namespace DanceWithTheDevil
 
             var data = _gameCamera.GetUniversalAdditionalCameraData();
             data.renderType = CameraRenderType.Base;
-            data.renderPostProcessing = false;
-            data.antialiasing = AntialiasingMode.None;
+            data.renderPostProcessing = _postProcessing;
+            data.antialiasing = AntialiasingMode.None; // no FXAA/SMAA smearing of texel edges
+            data.dithering = false;                    // no dither noise at 960×540
+            data.stopNaN = false;
         }
 
         private void CreateDisplay()

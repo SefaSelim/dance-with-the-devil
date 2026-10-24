@@ -7,7 +7,7 @@ namespace DanceWithTheDevil
     /// <summary>
     /// Offer director (MAIN_GDD §7 Sıklık; first GDD §11-12): offers at ~8, ~25 and ~42 s of run time, then every
     /// 14-20 s after the previous one; never while an offer is unresolved (it waits). Types come from a shuffled bag
-    /// of the three, no repeat before the bag empties. The offer appears ≥4 m from the player on free floor that the
+    /// of every <see cref="ModuleType"/> (four with Hız), no repeat before the bag empties. The offer appears ≥4 m from the player on free floor that the
     /// camera sees and the player has line of sight to. Scaled time: stops during hitstop and the contract screen.
     /// </summary>
     [DisallowMultipleComponent]

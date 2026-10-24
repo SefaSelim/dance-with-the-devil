@@ -1,4 +1,5 @@
 using System;
+using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -57,8 +58,9 @@ namespace DanceWithTheDevil
         private static readonly Vector2 DevilOutPosition = new Vector2(280f, -20f);
         private static readonly Color YesColor = new Color(0.95f, 0.22f, 0.15f, 1f);
         private static readonly Color YesHover = new Color(1f, 0.42f, 0.3f, 1f);
-        private static readonly Color NoColor = new Color(0.2f, 0.18f, 0.2f, 1f);
-        private static readonly Color NoHover = new Color(0.32f, 0.3f, 0.32f, 1f);
+        // HAYIR is a text button: dim label, brighter on hover.
+        private static readonly Color NoColor = UiKit.Light;
+        private static readonly Color NoHover = Color.white;
         private const string TransparentOpen = "<color=#00000000>";
         private const string TransparentClose = "</color>";
 
@@ -76,7 +78,8 @@ namespace DanceWithTheDevil
         private Text _takeText;
         private GameObject _choices;
         private CanvasGroup _choicesGroup;
-        private Image _yesBlock, _noBlock;
+        private Image[] _yesPlates;
+        private TMP_Text _noLabel;
         private UiHoldButton _yesButton, _noButton;
         private RectTransform _yesFill;
         private float _yesFillWidth;
@@ -269,8 +272,9 @@ namespace DanceWithTheDevil
                 : Mathf.Max(0f, _yesProgress - dt * 4f);
             ApplyYesProgress();
 
-            SetColor(_yesBlock, _yesButton.IsHovered || holding ? YesHover : YesColor);
-            SetColor(_noBlock, _noButton.IsHovered ? NoHover : NoColor);
+            Color yesTint = _yesButton.IsHovered || holding ? YesHover : YesColor;
+            for (int i = 0; i < _yesPlates.Length; i++) SetColor(_yesPlates[i], yesTint);
+            if (_noLabel != null) SetColor(_noLabel, _noButton.IsHovered ? NoHover : NoColor);
 
             if (_yesProgress >= 1f)
             {
@@ -510,30 +514,31 @@ namespace DanceWithTheDevil
             _choices = choices.gameObject;
             _choicesGroup = _choices.AddComponent<CanvasGroup>();
 
-            // EVET: big and bright (K-2), hold to sign; a bar fills along its bottom.
-            _yesBlock = UiKit.Box(choices, "Yes", YesColor, bottom, bottom, new Vector2(-70f, 24f), new Vector2(180f, 44f));
-            _yesButton = UiKit.MakeHoldButton(_yesBlock);
-            _yesFillWidth = 176f;
-            _yesFill = UiKit.Box(_yesBlock.transform, "HoldFill", UiKit.Gold, Vector2.zero, Vector2.zero,
-                new Vector2(2f, 2f), new Vector2(0f, 4f)).rectTransform;
-            Text yesLabel = UiKit.Label(_yesBlock.transform, "Label", font, 20, Color.white, TextAnchor.MiddleCenter,
-                mid, mid, new Vector2(0f, 6f), new Vector2(176f, 24f), FontStyle.Bold);
-            yesLabel.text = GameTexts.Yes;
-            UiKit.AddShadow(yesLabel);
-            Text yesKeys = UiKit.Label(_yesBlock.transform, "Keys", font, 10, UiKit.Cream, TextAnchor.MiddleCenter,
-                mid, mid, new Vector2(0f, -11f), new Vector2(176f, 12f));
-            yesKeys.text = GameTexts.YesKeys;
-            UiKit.AddShadow(yesKeys);
+            // EVET: big and bright (K-2), hold to sign; a bar fills along its bottom. Synty main button prefab (its
+            // plates tinted red) driven by UiHoldButton; the keys line sits under the word, smaller.
+            RectTransform yes = (RectTransform)UiKit.PrefabHoldButton(choices, UiKit.ButtonPrefab,
+                GameTexts.Yes + "\n<size=55%><color=#EDE0BD>" + GameTexts.YesKeys + "</color></size>", bottom, bottom,
+                new Vector2(-70f, 24f), new Vector2(180f, 44f), out TMP_Text yesLabel, 18f, "Yes").transform;
+            _yesButton = yes.GetComponent<UiHoldButton>();
+            if (yesLabel != null) yesLabel.color = Color.white;
+            _yesPlates = UiKit.PlateImages(yes.gameObject);
+            for (int i = 0; i < _yesPlates.Length; i++) _yesPlates[i].color = YesColor;
+            // The fill lives under the (scaled) button root: sizes in its local units, outside its layout group.
+            float s = Mathf.Max(0.001f, yes.localScale.x);
+            float inset = 2f / s;
+            _yesFillWidth = yes.sizeDelta.x - inset * 2f;
+            Image yesFill = UiKit.Box(yes, "HoldFill", UiKit.Gold, Vector2.zero, Vector2.zero,
+                new Vector2(inset, inset), new Vector2(0f, 4f / s));
+            yesFill.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+            _yesFill = yesFill.rectTransform;
             Text yesStakes = UiKit.Label(choices, "YesStakes", font, 10, UiKit.Cream, TextAnchor.MiddleCenter,
                 bottom, bottom, new Vector2(-70f, 6f), new Vector2(220f, 14f));
             yesStakes.text = GameTexts.YesStakes;
 
-            // HAYIR: small and dim, but readable and always selectable (K-2).
-            _noBlock = UiKit.Box(choices, "No", NoColor, bottom, bottom, new Vector2(110f, 36f), new Vector2(84f, 20f));
-            _noButton = UiKit.MakeHoldButton(_noBlock);
-            Text noLabel = UiKit.Label(_noBlock.transform, "Label", font, 10, UiKit.Light, TextAnchor.MiddleCenter,
-                mid, mid, Vector2.zero, new Vector2(82f, 16f));
-            noLabel.text = GameTexts.No + " " + GameTexts.NoKeys;
+            // HAYIR: small and dim, but readable and always selectable (K-2). Synty small text button prefab.
+            _noButton = UiKit.PrefabHoldButton(choices, UiKit.SmallButtonPrefab, GameTexts.No + " " + GameTexts.NoKeys,
+                bottom, bottom, new Vector2(110f, 36f), new Vector2(84f, 20f), out _noLabel, 10f, "No");
+            if (_noLabel != null) _noLabel.color = NoColor;
             Text noStakes = UiKit.Label(choices, "NoStakes", font, 10, UiKit.Light, TextAnchor.MiddleCenter,
                 bottom, bottom, new Vector2(110f, 18f), new Vector2(130f, 14f));
             noStakes.text = GameTexts.NoStakes;

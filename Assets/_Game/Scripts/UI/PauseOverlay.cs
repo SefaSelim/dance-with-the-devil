@@ -1,3 +1,4 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -115,19 +116,19 @@ namespace DanceWithTheDevil
             title.text = GameTexts.PauseTitle;
             UiKit.AddShadow(title);
 
-            Image resume = UiKit.Box(panel.transform, "Resume", UiKit.Cream, mid, mid, new Vector2(0f, -4f),
-                new Vector2(160f, 26f));
-            UiKit.MakeButton(resume, new Color(1f, 0.85f, 0.6f, 1f)).onClick.AddListener(ResumeFromButton);
-            Text resumeLabel = UiKit.Label(resume.transform, "Label", font, 14, UiKit.Ink, TextAnchor.MiddleCenter,
-                mid, mid, Vector2.zero, new Vector2(156f, 22f), FontStyle.Bold);
-            resumeLabel.text = GameTexts.PauseResume;
+            // Synty prefabs: Devam on the main button, Ana menü on the small dim one. Navigation None: the keys stay
+            // as documented above (Enter resumes even if the mouse last touched Ana menü).
+            var noNavigation = new Navigation { mode = Navigation.Mode.None };
+            Button resume = UiKit.PrefabButton(panel.transform, UiKit.ButtonPrefab, GameTexts.PauseResume, mid, mid,
+                new Vector2(0f, -4f), new Vector2(160f, 26f), out _, 14f, "Resume");
+            resume.navigation = noNavigation;
+            resume.onClick.AddListener(ResumeFromButton);
 
-            Image quit = UiKit.Box(panel.transform, "Quit", new Color(0.2f, 0.18f, 0.2f, 1f), mid, mid,
-                new Vector2(0f, -36f), new Vector2(160f, 22f));
-            UiKit.MakeButton(quit, new Color(1.4f, 1.4f, 1.4f, 1f)).onClick.AddListener(QuitFromButton);
-            Text quitLabel = UiKit.Label(quit.transform, "Label", font, 12, UiKit.Light, TextAnchor.MiddleCenter,
-                mid, mid, Vector2.zero, new Vector2(156f, 18f));
-            quitLabel.text = GameTexts.PauseQuit;
+            Button quit = UiKit.PrefabButton(panel.transform, UiKit.SmallButtonPrefab, GameTexts.PauseQuit, mid, mid,
+                new Vector2(0f, -36f), new Vector2(160f, 22f), out TMP_Text quitLabel, 12f, "Quit");
+            if (quitLabel != null) quitLabel.color = UiKit.Light;
+            quit.navigation = noNavigation;
+            quit.onClick.AddListener(QuitFromButton);
 
             _root.gameObject.SetActive(false);
         }

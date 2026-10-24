@@ -1,5 +1,6 @@
 using System;
 using System.Text;
+using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -226,11 +227,12 @@ namespace DanceWithTheDevil
             _smallNos = UiKit.Label(_root, "SmallNos", font, 12, UiKit.Turquoise, TextAnchor.MiddleCenter, top, top,
                 new Vector2(0f, -270f), new Vector2(400f, 16f));
 
-            Image retry = UiKit.Box(_root, "Retry", UiKit.Cream, top, top, new Vector2(0f, -292f), new Vector2(160f, 28f));
-            UiKit.MakeButton(retry, new Color(1f, 0.85f, 0.6f, 1f)).onClick.AddListener(RaiseRestart);
-            Text retryLabel = UiKit.Label(retry.transform, "Label", font, 14, UiKit.Ink, TextAnchor.MiddleCenter,
-                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(156f, 26f), FontStyle.Bold);
-            retryLabel.text = GameTexts.Retry + "  " + GameTexts.RetryKeys;
+            // Synty main button prefab. Navigation None: R / pad Start stay the only keys (a click must not make
+            // Enter restart).
+            Button retry = UiKit.PrefabButton(_root, UiKit.ButtonPrefab, GameTexts.Retry + "  " + GameTexts.RetryKeys,
+                top, top, new Vector2(0f, -292f), new Vector2(160f, 28f), out _, 14f, "Retry");
+            retry.navigation = new Navigation { mode = Navigation.Mode.None };
+            retry.onClick.AddListener(RaiseRestart);
 
             Vector2 bottom = new Vector2(0.5f, 0f);
             _score = UiKit.Label(_root, "Score", font, 10, UiKit.Light, TextAnchor.MiddleCenter, bottom, bottom,

@@ -107,6 +107,20 @@ namespace DanceWithTheDevil
             Transform density = NewShape(ModuleType.Density);
             ModuleVisuals.CreatePart("Body", PrimitiveType.Cube, density, Vector3.zero, Vector3.one * 0.5f, Mat(ModuleType.Density));
 
+            // Haste: a double chevron ">>" (speed), thin bars.
+            Transform haste = NewShape(ModuleType.Haste);
+            m = Mat(ModuleType.Haste);
+            for (int c = 0; c < 2; c++)
+            {
+                float tip = 0.2f - c * 0.24f;
+                Transform upper = ModuleVisuals.CreatePart("Chevron" + c + "_Up", PrimitiveType.Cube, haste,
+                    new Vector3(tip - 0.09f, 0.09f, 0f), new Vector3(0.28f, 0.08f, 0.08f), m);
+                upper.localRotation = Quaternion.Euler(0f, 0f, -45f);
+                Transform lower = ModuleVisuals.CreatePart("Chevron" + c + "_Down", PrimitiveType.Cube, haste,
+                    new Vector3(tip - 0.09f, -0.09f, 0f), new Vector3(0.28f, 0.08f, 0.08f), m);
+                lower.localRotation = Quaternion.Euler(0f, 0f, 45f);
+            }
+
             Material ringBase = materials != null && materials.Length > ModuleCatalog.Count ? materials[ModuleCatalog.Count] : null;
             _ringBase = ModuleVisuals.CreatePart("RingBase", PrimitiveType.Cylinder, transform, new Vector3(0f, 0.02f, 0f),
                 new Vector3(_ringDiameter, 0.01f, _ringDiameter), ringBase);

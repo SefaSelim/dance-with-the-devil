@@ -42,6 +42,12 @@ namespace DanceWithTheDevil
         [Tooltip("Edge tendrils (menu vignette).")]
         public Sprite VignetteSprite;
 
+        [Header("Button prefabs (Synty, TextMesh Pro labels; used as-is by UiKit.PrefabButton)")]
+        [Tooltip("Main text button: menu entries, Devam, Tekrar dene, EVET (HUD_DarkFantasy_Button_DialogueResponse_01).")]
+        public GameObject ButtonPrefab;
+        [Tooltip("Small text button: Geri, Tam ekran, Ana menü, HAYIR (HUD_DarkFantasy_Button_Simple_01).")]
+        public GameObject SmallButtonPrefab;
+
         [Tooltip("Panels smaller than this keep the flat frame (a 10-unit pip cannot carry an ornate border).")]
         public Vector2 MinFramedSize = new Vector2(40f, 30f);
     }

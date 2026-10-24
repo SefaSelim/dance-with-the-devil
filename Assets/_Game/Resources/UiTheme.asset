@@ -28,4 +28,6 @@ MonoBehaviour:
   GlowSprite: {fileID: 21300000, guid: e80c994a5babdce4f8b8735a0e558849, type: 3}
   SigilSprite: {fileID: 21300000, guid: d6c67e267c2038241911a511b746715c, type: 3}
   VignetteSprite: {fileID: 21300000, guid: 6e92494e1feb489478d22df207924903, type: 3}
+  ButtonPrefab: {fileID: 8831439545494177221, guid: 4b73e3b7d0d6c7344977dcbea2edc4f4, type: 3}
+  SmallButtonPrefab: {fileID: 947951030041700072, guid: db76fc6b947a4ad46aaa56360863caa9, type: 3}
   MinFramedSize: {x: 40, y: 30}

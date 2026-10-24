@@ -8,7 +8,9 @@ namespace DanceWithTheDevil
     /// (the rifle is silent meanwhile, <see cref="IsSwinging"/>), then a 0.5 s cooldown measured from the end of the
     /// swing. Damage is applied once, at swing start, to each target in the arc that is not behind a wall.
     /// Blocked while the owner dodges. Not done yet: the planar cut on the surface it hits (needs voxels).
-    /// Contract hooks (GDD §8): <see cref="DamageMultiplier"/> (blade and wave) and <see cref="WaveEnabled"/> (Contract 2):
+    /// Contract hooks (GDD §8): <see cref="DamageMultiplier"/> (blade and wave), <see cref="AttackSpeedMultiplier"/>
+    /// (Contract 4: divides only the post-swing cooldown, 0.5 → 0.4 s; the 0.2 s swing never changes) and
+    /// <see cref="WaveEnabled"/> (Contract 2):
     /// every swing also sends a forward wave (GDD §5: 20 damage, pierces, 8 m, 2.5 m wide, 20 m/s). The wave hits each
     /// damageable once and not through walls (line from the swing origin). Shielded fronts do not exist yet.
     /// Visual: on the frame the damage lands, a bright flat fan covering the real hit area (arc × reach) appears and
@@ -88,6 +90,7 @@ namespace DanceWithTheDevil
         private readonly RaycastHit[] _waveHits = new RaycastHit[MaxOverlaps];
         private WaveSlot[] _waves;
         private float _damageMultiplier = 1f;
+        private float _attackSpeedMultiplier = 1f;
         private bool _waveEnabled;
 
         private sealed class WaveSlot
@@ -128,6 +131,20 @@ namespace DanceWithTheDevil
             get => _damageMultiplier;
             set => _damageMultiplier = Mathf.Max(0f, value);
         }
+
+        /// <summary>
+        /// Attack speed (contracts, design combo-haste §3): the post-swing cooldown is divided by it; the swing
+        /// duration is not. Multipliers stack by product. Min 0.01.
+        /// </summary>
+        public float AttackSpeedMultiplier
+        {
+            get => _attackSpeedMultiplier;
+            set => _attackSpeedMultiplier = Mathf.Max(0.01f, value);
+        }
+
+        /// <summary>Cooldown after the swing ends, with attack speed applied (base 0.5 s).</summary>
+        public float Cooldown => _cooldown / _attackSpeedMultiplier;
+        public float SwingDuration => _swingDuration;
 
         /// <summary>Contract 2: every swing also sends the forward wave.</summary>
         public bool WaveEnabled
@@ -193,7 +210,7 @@ namespace DanceWithTheDevil
             float now = Time.time;
             _swingStartUnscaled = Time.unscaledTime;
             _swingEndTime = now + _swingDuration;
-            _readyTime = _swingEndTime + _cooldown;
+            _readyTime = _swingEndTime + Cooldown;
             _swingRotation = Quaternion.LookRotation(direction, Vector3.up);
 
             // The arc shows on the same frame the damage lands.

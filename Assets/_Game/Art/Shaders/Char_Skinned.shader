@@ -7,6 +7,8 @@
 //                _BaseColor when _FlashAmount > 0 (a white tint alone would not show on a texture).
 //   _FlashAmount 0..1, how far the colour is replaced by _BaseColor (hit flash).
 //   _Saturation  1 = full colour, 0 = grey (contract costs 1 and 6).
+// Identity tint (enemies, GDD §13): _TintStrength recolours the texture toward _TintColor, keeping its light/dark
+// detail, so a shared atlas reads in the type's colour. 0 (default) = untouched texture (Defne).
 // ShadowCaster / DepthOnly / DepthNormals come from URP Lit (UsePass), which skins and reads only _BaseMap/_Cutoff.
 Shader "Dance/Character Skinned"
 {
@@ -18,6 +20,9 @@ Shader "Dance/Character Skinned"
         [Header(Gameplay hooks)]
         _FlashAmount ("Flash Amount", Range(0, 1)) = 0
         _Saturation ("Saturation", Range(0, 1)) = 1
+        [Header(Identity tint)]
+        _TintColor ("Tint Color", Color) = (1, 1, 1, 1)
+        _TintStrength ("Tint Strength", Range(0, 1)) = 0
         [Header(Lighting)]
         _ShadowTint ("Shadow Tint", Color) = (0.55, 0.47, 0.62, 1)
         _LightSteps ("Light Bands", Range(1, 4)) = 2
@@ -64,6 +69,8 @@ Shader "Dance/Character Skinned"
                 half4 _BaseColor;
                 half _FlashAmount;
                 half _Saturation;
+                half4 _TintColor;
+                half _TintStrength;
                 half4 _ShadowTint;
                 half _LightSteps;
                 half _AmbientStrength;
@@ -113,6 +120,9 @@ Shader "Dance/Character Skinned"
                 // Rec. 601 luma for the grey of the saturation cost.
                 half grey = dot(albedo, half3(0.299h, 0.587h, 0.114h));
                 albedo = lerp(grey.xxx, albedo, _Saturation);
+                // Identity tint: the texture's brightness carried by the type colour (dark seams stay dark).
+                half3 tinted = _TintColor.rgb * saturate(grey * 1.6h + 0.15h);
+                albedo = lerp(albedo, tinted, _TintStrength);
                 albedo = lerp(albedo * _BaseColor.rgb, _BaseColor.rgb, _FlashAmount);
 
                 float3 normalWS = normalize(input.normalWS);

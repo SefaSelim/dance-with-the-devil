@@ -6,8 +6,9 @@ namespace DanceWithTheDevil
     /// <summary>
     /// The player's whisper modules (MAIN_GDD §7; first GDD §6-7): the single offer (approach, 14 s lifetime,
     /// 0.45 s intentional contact accept), capacity (one per type), right-click reject (60° cone, 3 m), Q selection
-    /// ring with fixed slots, Q + right-click eject, the shared 0.65 s cooldown, and applying/removing every module
-    /// effect on the Rifle and PlayerController in one place (<see cref="ApplyEffects"/>).
+    /// ring with fixed slots (one per <see cref="ModuleType"/>), Q + right-click eject, the shared 0.65 s cooldown,
+    /// and applying/removing every module effect on the Rifle and PlayerController in one place
+    /// (<see cref="ApplyEffects"/>). Hız (production/design/combo-haste.md §3) is rifle only (K-7).
     /// Offers are placed by <see cref="ModuleSpawner"/> through <see cref="PresentOffer"/>. Scaled time throughout.
     /// World-side feedback: every reject pulse flashes its cone on the floor (cream on a whiff, the module's colour
     /// when it throws an offer), and Defne's body feedback (<see cref="HurtFeedback"/>) is added here when the scene
@@ -49,13 +50,8 @@ namespace DanceWithTheDevil
         [SerializeField] private Color _rejectWhiffColor = new Color(0.96f, 0.9f, 0.74f);
 
         [Header("Selection ring (first GDD §6)")]
-        [Tooltip("Slot offsets in the camera-flat frame (x = screen right, z = screen up on the floor, y = height), index = ModuleType.")]
-        [SerializeField] private Vector3[] _slotOffsets =
-        {
-            new Vector3(-1.2f, 1.2f, 0f),
-            new Vector3(0f, 1.2f, 1.2f),
-            new Vector3(1.2f, 1.2f, 0f),
-        };
+        [Tooltip("Slot offsets in the camera-flat frame (x = screen right, z = screen up on the floor, y = height), index = ModuleType. Missing entries take the defaults.")]
+        [SerializeField] private Vector3[] _slotOffsets = (Vector3[])DefaultSlotOffsets.Clone();
         [Tooltip("While the cursor is within this flat distance of the player, the highlight follows it; outside it is kept.")]
         [SerializeField, Min(0.1f)] private float _selectionRadius = 2.2f;
         [Tooltip("A different slot must be this much closer to the cursor to take the highlight (no flicker on borders).")]
@@ -74,6 +70,19 @@ namespace DanceWithTheDevil
         [SerializeField, Min(0f)] private float _densityDamageMultiplier = 1.6f;
         [Tooltip("Density body and hit radius multiplier (GDD: 1.5).")]
         [SerializeField, Min(0.1f)] private float _densityBodyScale = 1.5f;
+        [Tooltip("Hız rifle fire-rate multiplier (design: 1.4, 6 → 8.4 shots/s).")]
+        [SerializeField, Min(0.01f)] private float _hasteFireRateMultiplier = 1.4f;
+        [Tooltip("Hız cost: each bullet strays randomly up to ± this many degrees (design: 6).")]
+        [SerializeField, Range(0f, 45f)] private float _hasteSpreadDegrees = 6f;
+
+        /// <summary>Left, up, right, down around the player (index = ModuleType).</summary>
+        private static readonly Vector3[] DefaultSlotOffsets =
+        {
+            new Vector3(-1.2f, 1.2f, 0f),
+            new Vector3(0f, 1.2f, 1.2f),
+            new Vector3(1.2f, 1.2f, 0f),
+            new Vector3(0f, 1.2f, -1.2f),
+        };
 
         private PlayerController _player;
         private PlayerInputReader _input;
@@ -147,6 +156,7 @@ namespace DanceWithTheDevil
             if (_rifle == null) _rifle = GetComponentInChildren<Rifle>();
             if (_thrower == null) _thrower = GetComponent<ModuleThrower>();
             if (_thrower == null) _thrower = gameObject.AddComponent<ModuleThrower>();
+            PadSlotOffsets();
 
             _materials = ModuleVisuals.CreateMaterials(_moduleMaterial);
             BuildSlots();
@@ -162,6 +172,17 @@ namespace DanceWithTheDevil
             if (_slotRoot != null) Destroy(_slotRoot.gameObject);
             if (_rejectFlash != null) _rejectFlash.Dispose();
             ModuleVisuals.DestroyMaterials(_materials);
+        }
+
+        // Scenes saved with fewer module types keep their offsets; new types take the default position.
+        private void PadSlotOffsets()
+        {
+            int have = _slotOffsets != null ? _slotOffsets.Length : 0;
+            if (have >= ModuleCatalog.Count) return;
+            var offsets = new Vector3[ModuleCatalog.Count];
+            for (int i = 0; i < offsets.Length; i++)
+                offsets[i] = i < have ? _slotOffsets[i] : DefaultSlotOffsets[i];
+            _slotOffsets = offsets;
         }
 
         private void BuildSlots()
@@ -379,6 +400,7 @@ namespace DanceWithTheDevil
             bool triple = _equipped[(int)ModuleType.TripleShot];
             bool echo = _equipped[(int)ModuleType.Echo];
             bool density = _equipped[(int)ModuleType.Density];
+            bool haste = _equipped[(int)ModuleType.Haste];
 
             if (_rifle != null)
             {
@@ -387,6 +409,8 @@ namespace DanceWithTheDevil
                 _rifle.RecoilSpeed = triple ? _tripleRecoilPerSalvo : 0f;
                 _rifle.EchoEnabled = echo;
                 _rifle.ModuleDamageMultiplier = density ? _densityDamageMultiplier : 1f;
+                _rifle.ModuleFireRateMultiplier = haste ? _hasteFireRateMultiplier : 1f;
+                _rifle.ModuleSpreadDegrees = haste ? _hasteSpreadDegrees : 0f;
             }
             if (_player != null)
             {

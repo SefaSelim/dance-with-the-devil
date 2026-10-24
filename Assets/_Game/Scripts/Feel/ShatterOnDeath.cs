@@ -6,6 +6,8 @@ namespace DanceWithTheDevil
     /// When the <see cref="Health"/> dies, bursts the model's cube parts into coloured cubes through
     /// <see cref="PixelImpactFeedback.Shatter"/> (GDD §13: everything that gets hit scatters into its pixels), with a
     /// short white pop at the body's centre. Hiding the model is left to the owner (enemy, training dummy).
+    /// A skinned model (Synty enemies) bursts its <see cref="ShatterProxy"/> boxes on the bones instead, in their
+    /// colours: its renderers have no cube scale or flat colour to read.
     /// </summary>
     [RequireComponent(typeof(Health))]
     [DisallowMultipleComponent]
@@ -21,7 +23,6 @@ namespace DanceWithTheDevil
         [SerializeField, Min(0f)] private float _explosionForce = 1.6f;
 
         private Health _health;
-        private MeshRenderer[] _renderers;
         private Transform[] _parts;
         private Transform[] _visibleParts;
         private Color[] _colors;
@@ -31,13 +32,26 @@ namespace DanceWithTheDevil
         {
             _health = GetComponent<Health>();
             Transform root = _model != null ? _model : transform;
-            _renderers = root.GetComponentsInChildren<MeshRenderer>(true);
-            _parts = new Transform[_renderers.Length];
-            _colors = new Color[_renderers.Length];
-            for (int i = 0; i < _renderers.Length; i++)
+            ShatterProxy[] proxies = root.GetComponentsInChildren<ShatterProxy>(true);
+            if (proxies.Length > 0)
             {
-                _parts[i] = _renderers[i].transform;
-                _colors[i] = PixelImpactFeedback.PartColor(_renderers[i]);
+                _parts = new Transform[proxies.Length];
+                _colors = new Color[proxies.Length];
+                for (int i = 0; i < proxies.Length; i++)
+                {
+                    _parts[i] = proxies[i].transform;
+                    _colors[i] = proxies[i].Color;
+                }
+                return;
+            }
+
+            MeshRenderer[] renderers = root.GetComponentsInChildren<MeshRenderer>(true);
+            _parts = new Transform[renderers.Length];
+            _colors = new Color[renderers.Length];
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                _parts[i] = renderers[i].transform;
+                _colors[i] = PixelImpactFeedback.PartColor(renderers[i]);
             }
         }
 
@@ -58,9 +72,9 @@ namespace DanceWithTheDevil
             // Only parts that are showing (e.g. not a hidden swing visual, not voxels already lost to a contract).
             int visible = 0;
             Vector3 center = Vector3.zero;
-            for (int i = 0; i < _renderers.Length; i++)
+            for (int i = 0; i < _parts.Length; i++)
             {
-                if (!_renderers[i].gameObject.activeInHierarchy) continue;
+                if (_parts[i] == null || !_parts[i].gameObject.activeInHierarchy) continue;
                 visible++;
                 center += _parts[i].position;
             }
@@ -69,9 +83,9 @@ namespace DanceWithTheDevil
                 _visibleParts = new Transform[visible];
                 _visibleColors = new Color[visible];
             }
-            for (int i = 0, j = 0; i < _renderers.Length; i++)
+            for (int i = 0, j = 0; i < _parts.Length; i++)
             {
-                if (!_renderers[i].gameObject.activeInHierarchy) continue;
+                if (_parts[i] == null || !_parts[i].gameObject.activeInHierarchy) continue;
                 _visibleParts[j] = _parts[i];
                 _visibleColors[j] = _colors[i];
                 j++;

@@ -31,8 +31,9 @@ namespace DanceWithTheDevil
     /// <summary>
     /// Mechanical upgrade + mechanical cost of each death contract (MAIN_GDD §8 table and stacking rules).
     /// Visible costs (colour, portrait, face parts, vignette) are presented by <see cref="DevilDirector"/>.
-    /// Stacking: damage multipliers multiply; max-health losses add up and are permanent; cooldown multipliers
-    /// multiply the base time and never change charge counts.
+    /// Stacking: damage multipliers multiply; attack-speed multipliers multiply (with each other and with the Hız
+    /// module's); max-health losses add up and are permanent; cooldown multipliers multiply the base time and never
+    /// change charge counts.
     /// </summary>
     public static class DealEffects
     {
@@ -49,6 +50,9 @@ namespace DanceWithTheDevil
         public const float EnemySpeedFactor = 1.15f;
         // Contract 4. A-10 is open (is +10% a deliberately empty promise?). Implemented as written: all weapons ×1.1.
         public const float AllDamageFactor = 1.1f;
+        // Contract 4 attack speed (user decision 2026-10-24, production/design/combo-haste.md §3): rifle 6 → 7.5
+        // shots/s, machete cooldown 0.5 → 0.4 s (the swing stays 0.2 s); rocket unchanged.
+        public const float AttackSpeedFactor = 1.25f;
         // Contract 5.
         public const int ExtraRocketCharges = 1;
         public const float DodgeCooldownFactor = 2f;
@@ -93,6 +97,8 @@ namespace DanceWithTheDevil
                     if (t.Rifle != null) t.Rifle.DamageMultiplier *= AllDamageFactor;
                     if (t.Rocket != null) t.Rocket.DamageMultiplier *= AllDamageFactor;
                     if (t.Machete != null) t.Machete.DamageMultiplier *= AllDamageFactor;
+                    if (t.Rifle != null) t.Rifle.AttackSpeedMultiplier *= AttackSpeedFactor;
+                    if (t.Machete != null) t.Machete.AttackSpeedMultiplier *= AttackSpeedFactor;
                     break;
 
                 case 5:

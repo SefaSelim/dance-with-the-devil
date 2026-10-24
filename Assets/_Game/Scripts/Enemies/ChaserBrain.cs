@@ -15,6 +15,10 @@ namespace DanceWithTheDevil
     /// sphere in front → recovery (the Runner backs off) → approach again.
     /// Counterplay (F2): running straight away or dodging through the lunge escapes; strafing across the marker
     /// without turning does not.
+    /// Skinned humanoid body (Synty enemies, <see cref="EnemyBodyAnimator"/>): the tell plays the controller's Tell
+    /// clip when it has one, else the upper arms are posed open in LateUpdate, after the Animator, so the tell still
+    /// reads; the Runner crouch squashes the Model as with cubes. The lunge fires the Attack trigger when there is an
+    /// Attack clip.
     /// </summary>
     [RequireComponent(typeof(Enemy))]
     [DisallowMultipleComponent]
@@ -42,7 +46,7 @@ namespace DanceWithTheDevil
         [Header("Tell")]
         [Tooltip("Chaser: ArmsAndWedge. Runner: CrouchAndLine.")]
         [SerializeField] private TellStyle _tellStyle = TellStyle.ArmsAndWedge;
-        [Tooltip("Arm rotation around Z at the end of the tell, degrees (cubes \"Arm_L\"/\"Arm_R\" anywhere under the model).")]
+        [Tooltip("Arm rotation around Z at the end of the tell, degrees (cubes \"Arm_L\"/\"Arm_R\" anywhere under the model; a humanoid body's arms open by the same angle from hanging).")]
         [SerializeField, Range(0f, 120f)] private float _armOpenAngle = 70f;
         [Tooltip("Model height scale at the bottom of the crouch (CrouchAndLine).")]
         [SerializeField, Range(0.3f, 1f)] private float _crouchScale = 0.75f;
@@ -111,6 +115,16 @@ namespace DanceWithTheDevil
         private Vector3 _modelBaseScale = Vector3.one;
         private MeshRenderer _marker;
 
+        // Humanoid body (null for cube models) and its arm bones for the procedural tell.
+        private EnemyBodyAnimator _body;
+        private Transform _upperArmL;
+        private Transform _upperArmR;
+        private Transform _lowerArmL;
+        private Transform _lowerArmR;
+        private Transform _handL;
+        private Transform _handR;
+        private float _bonePose;
+
         public bool IsTelling => _state == State.Tell;
         public bool IsLunging => _state == State.Lunge;
         /// <summary>Seconds left in the current tell (0 when not telling).</summary>
@@ -133,6 +147,7 @@ namespace DanceWithTheDevil
             _armR = FindDeep(model, "Arm_R");
             if (_armL != null) _armLBase = _armL.localRotation;
             if (_armR != null) _armRBase = _armR.localRotation;
+            _body = EnemyBodyAnimator.Find(model);
             _marker = EnemyTelegraphs.CreateWedge(name + "_Tell", _telegraphMaterial, _telegraphColor);
         }
 
@@ -347,6 +362,11 @@ namespace DanceWithTheDevil
                     _lungeTravelled = 0f;
                     _lungeHit = false;
                     HideMarker();
+                    if (_body != null)
+                    {
+                        _body.SetTell(false);
+                        _body.TriggerAttack();
+                    }
                     break;
 
                 case State.Recover:
@@ -414,8 +434,14 @@ namespace DanceWithTheDevil
             float pose = Mathf.Clamp01(t * 2.5f);
             pose = 1f - (1f - pose) * (1f - pose); // ease out
 
-            if (_tellStyle == TellStyle.ArmsAndWedge)
+            bool clipTell = _body != null && _body.HasTell;
+            if (clipTell)
             {
+                _body.SetTell(true);
+            }
+            else if (_tellStyle == TellStyle.ArmsAndWedge)
+            {
+                _bonePose = pose; // humanoid arms: applied in LateUpdate, after the Animator
                 if (_armL != null) _armL.localRotation = _armLBase * Quaternion.Euler(0f, 0f, -_armOpenAngle * pose);
                 if (_armR != null) _armR.localRotation = _armRBase * Quaternion.Euler(0f, 0f, _armOpenAngle * pose);
             }
@@ -437,9 +463,49 @@ namespace DanceWithTheDevil
         private void ResetPose()
         {
             HideMarker();
+            _bonePose = 0f;
+            if (_body != null) _body.SetTell(false);
             if (_armL != null) _armL.localRotation = _armLBase;
             if (_armR != null) _armR.localRotation = _armRBase;
             if (_enemy != null && _enemy.Model != null && _enemy.Model != transform) _enemy.Model.localScale = _modelBaseScale;
+        }
+
+        /// <summary>Procedural tell on a humanoid body without a Tell clip: both arms swing open over the animated pose.</summary>
+        private void LateUpdate()
+        {
+            if (_body == null || _bonePose <= 0f || _state != State.Tell) return;
+            if (_upperArmL == null)
+            {
+                _upperArmL = _body.Bone(HumanBodyBones.LeftUpperArm);
+                _upperArmR = _body.Bone(HumanBodyBones.RightUpperArm);
+                _lowerArmL = _body.Bone(HumanBodyBones.LeftLowerArm);
+                _lowerArmR = _body.Bone(HumanBodyBones.RightLowerArm);
+                _handL = _body.Bone(HumanBodyBones.LeftHand);
+                _handR = _body.Bone(HumanBodyBones.RightHand);
+                if (_upperArmL == null) return;
+            }
+            PoseArm(_upperArmL, _lowerArmL, _handL, -1f);
+            PoseArm(_upperArmR, _lowerArmR, _handR, 1f);
+        }
+
+        /// <summary>
+        /// Turns the upper arm, then the forearm, toward a straight arm opened <see cref="_armOpenAngle"/> from hanging
+        /// (out to <paramref name="side"/>, a little forward, like a grab), weighted by the tell pose. Measured from the
+        /// current pose each frame, so it never builds up when the Animator skips a frame (hitstop).
+        /// </summary>
+        private void PoseArm(Transform upper, Transform lower, Transform hand, float side)
+        {
+            if (upper == null || lower == null) return;
+            float angle = _armOpenAngle * Mathf.Deg2Rad;
+            Vector3 target = (transform.right * (side * Mathf.Sin(angle)) - transform.up * Mathf.Cos(angle)
+                              + transform.forward * 0.35f).normalized;
+            Vector3 current = lower.position - upper.position;
+            if (current.sqrMagnitude > 1e-8f)
+                upper.rotation = Quaternion.Slerp(Quaternion.identity, Quaternion.FromToRotation(current, target), _bonePose) * upper.rotation;
+            if (hand == null) return;
+            Vector3 forearm = hand.position - lower.position;
+            if (forearm.sqrMagnitude > 1e-8f)
+                lower.rotation = Quaternion.Slerp(Quaternion.identity, Quaternion.FromToRotation(forearm, target), _bonePose) * lower.rotation;
         }
 
         private static Transform FindDeep(Transform root, string childName)

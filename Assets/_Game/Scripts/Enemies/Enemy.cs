@@ -18,6 +18,8 @@ namespace DanceWithTheDevil
     public sealed class Enemy : MonoBehaviour, IKnockbackable
     {
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+        // Textured skinned bodies (Char_Skinned) replace the texture with _BaseColor only while this is up.
+        private static readonly int FlashAmountId = Shader.PropertyToID("_FlashAmount");
 
         /// <summary>Global enemy speed multiplier (Contract 3 sets 1.15, GDD §8). Applied to agent speed every frame.</summary>
         public static float SpeedMultiplier = 1f;
@@ -31,7 +33,7 @@ namespace DanceWithTheDevil
         [SerializeField] private EnemyStats _stats = EnemyStats.For(EnemyType.Chaser);
 
         [Header("Visuals")]
-        [Tooltip("Root of the cube model (hit flash, hide on death). Empty = child named \"Model\", else this object.")]
+        [Tooltip("Root of the model, cubes or a skinned body (hit flash, hide on death). Empty = child named \"Model\", else this object.")]
         [SerializeField] private Transform _model;
         [Tooltip("Hit flash duration in seconds (0.12 = about 7 frames: readable at the pixel camera).")]
         [SerializeField, Min(0f)] private float _flashDuration = 0.12f;
@@ -337,7 +339,11 @@ namespace DanceWithTheDevil
             _flashing = on;
 
             _block.Clear();
-            if (on) _block.SetColor(BaseColorId, _flashColor);
+            if (on)
+            {
+                _block.SetColor(BaseColorId, _flashColor);
+                _block.SetFloat(FlashAmountId, 1f); // ignored by the flat cube materials
+            }
             for (int i = 0; i < _renderers.Length; i++)
                 if (_renderers[i] != null) _renderers[i].SetPropertyBlock(_block);
         }

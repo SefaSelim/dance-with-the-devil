@@ -29,8 +29,8 @@ Wireframe (1920×1080 reference, scales):
 │                      "Hayır demeyi öğrenmelisin."  (footer)  │
 └──────────────────────────────────────────────────────────────┘
 ```
-- Left column: title, subtitle, 4 buttons (Synty button sprite, Markazi), keyboard/gamepad navigation, first button
-  selected; hover/select = highlight sprite + small slide right; click sound through `UiKit.NotifyClick`.
+- Left column: title, subtitle, 4 buttons (Synty button prefab, see §3b), keyboard/gamepad navigation, first button
+  selected; hover/select = prefab's selected state + small slide right; click sound through `UiKit.NotifyClick`.
 - Centre-right: Defne (`char_defne.prefab`) standing on a dark plinth, aiming idle, slow turntable sway (±8°), lit by a cold
   key light and a warm red back light; Devil engraving behind her on a world-space quad, multiplied red, slow breathing scale.
 - Background: dark gradient + Synty vignette + slow ash particles.
@@ -47,6 +47,22 @@ Wireframe (1920×1080 reference, scales):
 - Health: Synty bar frame + red fill; lost-max segment kept. Panels/cards: Synty frame. Slots: Synty slot sprite.
 - Fonts: body Markazi, headings and the Devil's lines Pirata One.
 - Readability: text ≥ 18 px at 1080p, every state still has a non-colour cue (icons/labels as today).
+
+## 3b. Buttons = Synty prefabs (2026-10-24, SefaSelim: prefabs used as-is, TextMesh Pro labels)
+- `UiTheme.ButtonPrefab` = `HUD_DarkFantasy_Button_DialogueResponse_01` (Animator states: selected = lit plate,
+  hover = arrow + highlight, press pop): menu Başla / Ayarlar / Emeği Geçenler / Çıkış, pause Devam, ending Tekrar dene,
+  Devil card EVET.
+- `UiTheme.SmallButtonPrefab` = `HUD_DarkFantasy_Button_Simple_01` (text only): Geri, Tam ekran value, pause Ana menü,
+  Devil card HAYIR.
+- Built by `UiKit.PrefabButton` / `PrefabHoldButton`: root scaled uniformly to the button height (1080p-authored prefab
+  in the 640×360 frame), label in canvas units (min 6 = ~18 px at 1080p), Animators on unscaled time (pause).
+  No theme/prefab = the code-built plate.
+- Small button: highlight/select tint raised to Gold (the prefab's 4% tint did not show keyboard focus); a transparent
+  hit area is added (its label does not raycast).
+- EVET (K-2): prefab plates tinted bright red, gold hold bar along the bottom, word + smaller key hint in one label;
+  hold logic unchanged (`UiHoldButton`, the prefab Button never clicks or takes focus). HAYIR: small text button, dim
+  label (brighter on hover).
+- Pause and ending buttons keep navigation None: their keys (Enter = Devam, R = Tekrar dene) stay as before.
 
 ## 4. Accessibility (minimum)
 Keyboard + mouse + gamepad navigation on the menu; screen shake slider (0 = off) feeds `PixelCameraRig.GlobalShakeScale`;

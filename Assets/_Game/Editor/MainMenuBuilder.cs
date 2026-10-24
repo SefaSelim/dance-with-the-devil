@@ -51,8 +51,14 @@ namespace DanceWithTheDevil.Editor
             theme.GlowSprite = AssetDatabase.LoadAssetAtPath<Sprite>(Synty + "/Sprites/FX/SPR_FX_DarkFantasy_Glow_01.png");
             theme.SigilSprite = AssetDatabase.LoadAssetAtPath<Sprite>(Synty + "/Sprites/HUD/SPR_FX_DarkFantasy_Sigil_Ring_Large_01.png");
             theme.VignetteSprite = AssetDatabase.LoadAssetAtPath<Sprite>(Synty + "/Sprites/FX/SPR_FX_DarkFantasy_Vignette_Damage_Tendrils_01.png");
+            theme.ButtonPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                Synty + "/Prefabs/Objectives_Story_Location/_Parts/HUD_DarkFantasy_Button_DialogueResponse_01.prefab");
+            theme.SmallButtonPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                Synty + "/Prefabs/Buttons/HUD_DarkFantasy_Button_Simple_01.prefab");
             EditorUtility.SetDirty(theme);
             AssetDatabase.SaveAssets();
+            if (theme.ButtonPrefab == null || theme.SmallButtonPrefab == null)
+                Debug.LogWarning("MainMenuBuilder: Synty button prefabs not found; buttons fall back to the code-built plates.");
             if (theme.TitleFont == null || theme.BodyFont == null || theme.PanelSprite == null || theme.ButtonSprite == null)
                 Debug.LogWarning("MainMenuBuilder: some theme fonts/sprites were not found; screens fall back to the flat look.");
             else

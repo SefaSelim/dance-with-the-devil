@@ -1,3 +1,4 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
@@ -11,9 +12,9 @@ namespace DanceWithTheDevil
     /// the pixel camera's game image (<see cref="UiCanvasFit"/>): one canvas unit = one low-res texel, the scale
     /// follows the integer scale of the image and the content lives in a 640×360 "Frame" over the image, so the HUD
     /// never lands on the letterbox bars and its blocks have the world's pixel size.
-    /// Text uses legacy uGUI Text: TextMesh Pro ships in com.unity.ugui 2.6 but its Essential Resources (default
-    /// SDF font) are not imported and Game.Runtime does not reference Unity.TextMeshPro. No synthesized italics
-    /// (the built-in font has one face); font sizes are even numbers (10, 12, 14, 16, 20, 24).
+    /// Text uses legacy uGUI Text, except the Synty button prefabs (<see cref="PrefabButton"/>), whose labels are
+    /// TextMesh Pro. No synthesized italics (the built-in font has one face); font sizes are even numbers
+    /// (10, 12, 14, 16, 20, 24).
     /// </summary>
     public static class UiKit
     {
@@ -66,6 +67,15 @@ namespace DanceWithTheDevil
                 return _theme;
             }
         }
+
+        /// <summary>The theme's main text button prefab (Synty DialogueResponse), or null = code-built button.</summary>
+        public static GameObject ButtonPrefab => Theme != null ? Theme.ButtonPrefab : null;
+
+        /// <summary>The theme's small text button prefab (Synty Button_Simple), or null = code-built button.</summary>
+        public static GameObject SmallButtonPrefab => Theme != null ? Theme.SmallButtonPrefab : null;
+
+        /// <summary>Smallest prefab label, canvas units (one unit is about 3 px at 1080p, so about 18 px).</summary>
+        public const float MinLabelUnits = 6f;
 
         /// <summary>The theme's heading font, else <see cref="ResolveFont"/>.</summary>
         public static Font TitleFont => Theme != null && Theme.TitleFont != null ? Theme.TitleFont : ResolveFont(null);
@@ -225,9 +235,21 @@ namespace DanceWithTheDevil
         public static Button ThemedButton(Transform parent, string name, string label, Vector2 anchor, Vector2 pivot,
             Vector2 position, Vector2 size, int fontSize, out Text text)
         {
+            Button button = ThemedPlate(parent, name, anchor, pivot, position, size, out Image plate);
+            text = Label(plate.transform, "Label", TitleFont, fontSize, Cream, TextAnchor.MiddleCenter,
+                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 1f), size, FontStyle.Bold);
+            text.text = label;
+            AddShadow(text);
+            return button;
+        }
+
+        /// <summary>The plate and Button of <see cref="ThemedButton"/>, without a label.</summary>
+        private static Button ThemedPlate(Transform parent, string name, Vector2 anchor, Vector2 pivot,
+            Vector2 position, Vector2 size, out Image plate)
+        {
             UiTheme theme = Theme;
             bool themed = theme != null && theme.ButtonSprite != null;
-            Image plate = Box(parent, name, themed ? Color.white : new Color(0.2f, 0.16f, 0.18f, 1f), anchor, pivot,
+            plate = Box(parent, name, themed ? Color.white : new Color(0.2f, 0.16f, 0.18f, 1f), anchor, pivot,
                 position, size);
             if (themed) SetSliced(plate, theme.ButtonSprite, theme.ButtonSpriteScale);
             Button button = MakeButton(plate, new Color(1f, 0.55f, 0.5f, 1f));
@@ -236,11 +258,186 @@ namespace DanceWithTheDevil
             colors.pressedColor = new Color(0.9f, 0.4f, 0.38f, 1f);
             button.colors = colors;
             button.navigation = new Navigation { mode = Navigation.Mode.Automatic };
-            text = Label(plate.transform, "Label", TitleFont, fontSize, Cream, TextAnchor.MiddleCenter,
-                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 1f), size, FontStyle.Bold);
-            text.text = label;
-            AddShadow(text);
             return button;
+        }
+
+        // ------------------------------------------------------------ Synty button prefabs (TextMesh Pro labels)
+
+        /// <summary>
+        /// A Synty button prefab used as-is: instantiated under <paramref name="parent"/> and fitted to
+        /// <paramref name="size"/> (canvas units) by scaling the root uniformly to the requested height; the root keeps
+        /// the prefab's own height and gets the matching width, so its layout groups and 9-slice borders stay as
+        /// authored. <paramref name="fontSize"/> is the label size in canvas units (0 = the prefab's own, scaled),
+        /// never below <see cref="MinLabelUnits"/>. Clicks raise <see cref="Clicked"/>; navigation is Automatic;
+        /// Animators run on unscaled time (the pause menu runs at timeScale 0). No prefab = the code-built themed
+        /// plate with a TextMesh Pro label (TMP's default font).
+        /// </summary>
+        public static Button PrefabButton(Transform parent, GameObject prefab, string label, Vector2 anchor,
+            Vector2 pivot, Vector2 position, Vector2 size, out TMP_Text text, float fontSize = 0f, string name = null)
+        {
+            Button button;
+            if (prefab == null)
+            {
+                button = ThemedPlate(parent, name ?? "Button", anchor, pivot, position, size, out Image plate);
+                text = FallbackLabel(plate.transform, label, size, fontSize);
+                return button;
+            }
+
+            GameObject go = InstantiateFitted(parent, prefab, name, anchor, pivot, position, size, out float scale);
+            AdaptPrefabLook(go);
+            button = go.GetComponent<Button>();
+            if (button == null) button = go.AddComponent<Button>();
+            if (button.targetGraphic == null) button.targetGraphic = go.GetComponent<Graphic>();
+            // Simple_01 tints its label by 4% on highlight/select: too faint to show keyboard focus.
+            if (button.transition == Selectable.Transition.ColorTint)
+            {
+                ColorBlock colors = button.colors;
+                colors.highlightedColor = Gold;
+                colors.selectedColor = Gold;
+                button.colors = colors;
+            }
+            button.onClick.AddListener(NotifyClick);
+            button.navigation = new Navigation { mode = Navigation.Mode.Automatic };
+            text = SetPrefabLabel(go, label, scale, fontSize);
+            return button;
+        }
+
+        /// <summary>
+        /// A Synty button prefab driven by <see cref="UiHoldButton"/> (the Devil card's EVET / HAYIR), fitted like
+        /// <see cref="PrefabButton"/>. The prefab's Button stays only for its hover/press visuals (Animator or tint):
+        /// no click listener and navigation None, so it never fires a click or takes keyboard focus; the screen reads
+        /// the pointer state from the returned component. No prefab = a plain block (tint it through
+        /// <see cref="PlateImages"/>).
+        /// </summary>
+        public static UiHoldButton PrefabHoldButton(Transform parent, GameObject prefab, string label, Vector2 anchor,
+            Vector2 pivot, Vector2 position, Vector2 size, out TMP_Text text, float fontSize = 0f, string name = null)
+        {
+            if (prefab == null)
+            {
+                Image block = Box(parent, name ?? "HoldButton", new Color(0.2f, 0.18f, 0.2f, 1f), anchor, pivot,
+                    position, size);
+                text = FallbackLabel(block.transform, label, size, fontSize);
+                return MakeHoldButton(block);
+            }
+
+            GameObject go = InstantiateFitted(parent, prefab, name, anchor, pivot, position, size, out float scale);
+            AdaptPrefabLook(go);
+            Button visuals = go.GetComponent<Button>();
+            if (visuals != null)
+            {
+                visuals.onClick.RemoveAllListeners();
+                visuals.navigation = new Navigation { mode = Navigation.Mode.None };
+            }
+            text = SetPrefabLabel(go, label, scale, fontSize);
+            return go.AddComponent<UiHoldButton>();
+        }
+
+        // The focus colour on the Synty plates (blue in the pack) as a deep ember red, the game's accent.
+        private static readonly Color FocusPlate = new Color(0.62f, 0.16f, 0.14f, 1f);
+
+        /// <summary>
+        /// Fits the Synty prefab to this game: hides its gamepad key glyph ("A" button prompt, wrong for keyboard and
+        /// mouse players) and recolours the blue highlight/selected plates to the ember red accent.
+        /// </summary>
+        private static void AdaptPrefabLook(GameObject root)
+        {
+            foreach (Transform t in root.GetComponentsInChildren<Transform>(true))
+            {
+                if (t.name == "Input_KeyButton" || t.name.StartsWith("Input_DarkFantasy_KeyButton"))
+                    t.gameObject.SetActive(false);
+            }
+            foreach (Image image in root.GetComponentsInChildren<Image>(true))
+            {
+                if (image.gameObject.name != "SPR_Background" || image.transform.parent == null) continue;
+                string state = image.transform.parent.name;
+                if (state == "Selected" || state == "Highlighted") image.color = FocusPlate;
+            }
+        }
+
+        /// <summary>
+        /// The tintable plates of a prefab button (its "SPR_Background" images, one per Animator state), else the
+        /// root's own image (the code-built fallback block).
+        /// </summary>
+        public static Image[] PlateImages(GameObject root)
+        {
+            var plates = new System.Collections.Generic.List<Image>();
+            foreach (Image image in root.GetComponentsInChildren<Image>(true))
+                if (image.gameObject.name == "SPR_Background") plates.Add(image);
+            if (plates.Count == 0 && root.TryGetComponent(out Image own)) plates.Add(own);
+            return plates.ToArray();
+        }
+
+        private static GameObject InstantiateFitted(Transform parent, GameObject prefab, string name, Vector2 anchor,
+            Vector2 pivot, Vector2 position, Vector2 size, out float scale)
+        {
+            GameObject go = Object.Instantiate(prefab, parent, false);
+            go.name = string.IsNullOrEmpty(name) ? prefab.name : name;
+            var rect = (RectTransform)go.transform;
+            float designHeight = Mathf.Max(1f, rect.sizeDelta.y);
+            scale = Mathf.Max(0.001f, size.y / designHeight);
+            rect.anchorMin = anchor;
+            rect.anchorMax = anchor;
+            rect.pivot = pivot;
+            rect.anchoredPosition = position;
+            rect.sizeDelta = new Vector2(size.x / scale, designHeight);
+            rect.localScale = new Vector3(scale, scale, 1f);
+
+            // Clicks and hover need a raycast target on the root (Simple_01 has none: its label does not raycast).
+            Graphic hit = go.GetComponent<Graphic>();
+            if (hit == null)
+            {
+                Image clear = go.AddComponent<Image>();
+                clear.color = new Color(0f, 0f, 0f, 0f);
+                hit = clear;
+            }
+            hit.raycastTarget = true;
+
+            foreach (Animator animator in go.GetComponentsInChildren<Animator>(true))
+                animator.updateMode = AnimatorUpdateMode.UnscaledTime;
+            return go;
+        }
+
+        /// <summary>Sets the prefab's label (the first TMP text not under an inactive child) and its size.</summary>
+        private static TMP_Text SetPrefabLabel(GameObject root, string label, float scale, float fontSize)
+        {
+            TMP_Text text = null;
+            foreach (TMP_Text candidate in root.GetComponentsInChildren<TMP_Text>(true))
+            {
+                if (text == null) text = candidate;
+                if (ActiveUnder(candidate.transform, root.transform))
+                {
+                    text = candidate;
+                    break;
+                }
+            }
+            if (text == null) return null;
+            float units = fontSize > 0f ? fontSize : text.fontSize * scale;
+            units = Mathf.Max(MinLabelUnits, units) * TextScale;
+            text.enableAutoSizing = false;
+            text.fontSize = units / scale;
+            text.text = label;
+            return text;
+        }
+
+        private static bool ActiveUnder(Transform t, Transform root)
+        {
+            for (; t != null && t != root; t = t.parent)
+                if (!t.gameObject.activeSelf) return false;
+            return true;
+        }
+
+        /// <summary>Centred TMP label for the code-built fallback buttons (TMP's default font).</summary>
+        private static TMP_Text FallbackLabel(Transform parent, string label, Vector2 size, float fontSize)
+        {
+            RectTransform rect = Stretch(parent, "Label");
+            var text = rect.gameObject.AddComponent<TextMeshProUGUI>();
+            text.fontSize = Mathf.Max(MinLabelUnits, fontSize > 0f ? fontSize : size.y * 0.5f) * TextScale;
+            text.color = Cream;
+            text.alignment = TextAlignmentOptions.Center;
+            text.textWrappingMode = TextWrappingModes.NoWrap;
+            text.raycastTarget = false;
+            text.text = label;
+            return text;
         }
 
         public static Text Label(Transform parent, string name, Font font, int size, Color color, TextAnchor alignment,
