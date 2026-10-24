@@ -26,7 +26,7 @@ Shader "Dance/Character Skinned"
         [Header(Readability)]
         _Brightness ("Brightness", Range(0.5, 3)) = 1.45
         _RimColor ("Rim Color", Color) = (1, 0.82, 0.6, 1)
-        _RimStrength ("Rim Strength", Range(0, 2)) = 0.7
+        _RimStrength ("Rim Strength", Range(0, 2)) = 0
         _RimThreshold ("Rim Threshold (1 - N.V)", Range(0, 1)) = 0.55
         [HideInInspector] _Cutoff ("Alpha Cutoff", Range(0, 1)) = 0.5
     }

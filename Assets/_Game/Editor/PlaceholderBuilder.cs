@@ -38,16 +38,22 @@ namespace DanceWithTheDevil.Editor
         // Flat details (eyes, glasses, bib) thinner than this get no outline, or the outline would swallow them.
         private const float OutlineMinPartSize = 0.05f;
 
-        // D1 (provisional 🧪): the camera follows Defne at size 9 (360 px over 18 m = 20 px per metre).
-        private const float CameraOrthoSize = 9f;
+        // D1 (provisional 🧪): the camera follows Defne. SefaSelim 2026-10-24: closer (size 9 → 6.5) and a finer
+        // render target (640×360 → 960×540, 42 px per metre instead of 20) so the characters read bigger and less blocky.
+        private const float CameraOrthoSize = 6.5f;
+        private const int RenderWidth = 960;
+        private const int RenderHeight = 540;
+        // Characters drawn a little bigger (SefaSelim 2026-10-24); colliders and agents scale with them.
+        private const float EnemyScale = 1.15f;
         private const float CameraPitch = 35f;
         private const float CameraYaw = 45f;
         // F29: URP fades shadows by distance from the camera position. 25 m back keeps every visible floor point
         // (screen corners about 42 m away) inside the shadow distance below; at 50 m Defne herself sat at the fade edge.
         private const float CameraDistance = 25f;
         private const float CameraAimLead = 2f;
-        private static readonly Vector2 CameraBoundsMin = new Vector2(-10f, -9f);
-        private static readonly Vector2 CameraBoundsMax = new Vector2(10f, 9f);
+        // Wider focus bounds for the closer view, so the camera still reaches the arena edges.
+        private static readonly Vector2 CameraBoundsMin = new Vector2(-12.5f, -11.5f);
+        private static readonly Vector2 CameraBoundsMax = new Vector2(12.5f, 11.5f);
         private const float ShadowDistance = 48f;
         private const int ShadowCascades = 1;
 
@@ -493,6 +499,19 @@ namespace DanceWithTheDevil.Editor
             rso.FindProperty("_flashMaterial").objectReferenceValue = LoadMaterial("vfx_flash");
             rso.ApplyModifiedPropertiesWithoutUndo();
 
+            // Textured fire, smoke and dust for gunfire and rockets (Dance/VFX/Build Effects), when built.
+            var muzzle = AssetDatabase.LoadAssetAtPath<GameObject>(VfxBuilder.MuzzlePath);
+            if (muzzle != null)
+            {
+                var vfx = feel.AddComponent<RealisticVfx>();
+                var vso = new SerializedObject(vfx);
+                vso.FindProperty("_muzzlePrefab").objectReferenceValue = muzzle;
+                vso.FindProperty("_launchPrefab").objectReferenceValue = AssetDatabase.LoadAssetAtPath<GameObject>(VfxBuilder.LaunchPath);
+                vso.FindProperty("_explosionPrefab").objectReferenceValue = AssetDatabase.LoadAssetAtPath<GameObject>(VfxBuilder.ExplosionPath);
+                vso.FindProperty("_impactPrefab").objectReferenceValue = AssetDatabase.LoadAssetAtPath<GameObject>(VfxBuilder.ImpactPath);
+                vso.ApplyModifiedPropertiesWithoutUndo();
+            }
+
             EditorSceneManager.SaveScene(scene, ArenaScenePath);
             if (!reopenArena && previousActive.IsValid() && previousActive.isLoaded)
             {
@@ -511,6 +530,8 @@ namespace DanceWithTheDevil.Editor
             var model = new GameObject("Model");
             model.transform.SetParent(root.transform, false);
             foreach (Part part in parts) CreateBlock(part, model.transform, keepCollider: false, outline: true);
+            model.transform.localScale = Vector3.one * EnemyScale;
+            height *= EnemyScale;
 
             // Procedural walk bob, limb swing and lean (PLAYER lane component); enemies carry no gun.
             var animator = root.AddComponent<CharacterAnimator>();
@@ -520,7 +541,7 @@ namespace DanceWithTheDevil.Editor
             aso.ApplyModifiedPropertiesWithoutUndo();
 
             var capsule = root.AddComponent<CapsuleCollider>();
-            capsule.radius = 0.35f;
+            capsule.radius = 0.35f * EnemyScale;
             capsule.height = height;
             capsule.center = new Vector3(0f, height * 0.5f, 0f);
 
@@ -530,7 +551,7 @@ namespace DanceWithTheDevil.Editor
             hso.ApplyModifiedPropertiesWithoutUndo();
 
             var agent = root.AddComponent<NavMeshAgent>();
-            agent.radius = 0.35f;
+            agent.radius = 0.35f * EnemyScale;
             agent.height = height;
             agent.baseOffset = 0f;
 
@@ -737,9 +758,10 @@ namespace DanceWithTheDevil.Editor
         private static void SetUpPlayer(GameObject player, PixelCameraRig rig)
         {
             var controller = player.AddComponent<CharacterController>();
-            controller.center = new Vector3(0f, 0.9f, 0f);
-            controller.height = 1.8f;
-            controller.radius = 0.35f;
+            // Defne is 2.0 m tall (CharacterBuilder.TargetHeight); the cube placeholder was 1.8 m.
+            controller.center = new Vector3(0f, 1f, 0f);
+            controller.height = 2f;
+            controller.radius = 0.38f;
             controller.skinWidth = 0.05f;
             controller.stepOffset = 0.3f;
 
@@ -828,6 +850,8 @@ namespace DanceWithTheDevil.Editor
             // D1 (provisional 🧪): follow Defne at size 9 = 20 px per metre, with a small look-ahead toward the aim,
             // the focus clamped so the view never shows far outside the arena (the old fixed view was size 15).
             so.FindProperty("_orthographicSize").floatValue = CameraOrthoSize;
+            so.FindProperty("_width").intValue = RenderWidth;
+            so.FindProperty("_height").intValue = RenderHeight;
             so.FindProperty("_pitch").floatValue = CameraPitch;
             so.FindProperty("_yaw").floatValue = CameraYaw;
             so.FindProperty("_distance").floatValue = CameraDistance;

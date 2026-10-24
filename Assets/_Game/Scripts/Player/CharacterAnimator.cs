@@ -24,6 +24,7 @@ namespace DanceWithTheDevil
     /// the held weapon back on <see cref="Kick"/>, and swaps the rifle in the hand for the rocket launcher for a moment
     /// after a launch (<see cref="ShowLauncher"/>). The weapons are children of a transform named "WeaponSocket"
     /// under the right hand: "Rifle" and "Launcher" (each with a "Muzzle" child), plus an optional "LauncherBack".
+    /// Where the socket sits in the hands is <see cref="WeaponHold"/>'s job (tunable profiles + left-hand IK).
     /// </summary>
     [DefaultExecutionOrder(800)] // LateUpdate before ModelPunch (900) and the camera (1000)
     [DisallowMultipleComponent]
@@ -114,8 +115,6 @@ namespace DanceWithTheDevil
         [SerializeField, Range(0f, 45f)] private float _weaponKickDegrees = 10f;
         [Tooltip("Seconds the rocket launcher stays in the hands after a launch.")]
         [SerializeField, Min(0f)] private float _launcherShowTime = 0.55f;
-        [Tooltip("Grip below the right hand bone (into the palm), metres.")]
-        [SerializeField, Min(0f)] private float _gripDrop = 0.03f;
 
         private static readonly int MoveXId = Animator.StringToHash("MoveX");
         private static readonly int MoveZId = Animator.StringToHash("MoveZ");
@@ -129,8 +128,6 @@ namespace DanceWithTheDevil
         private Transform _launcherBack;
         private Transform _launcherMuzzle;
         private Transform _launcherWarhead;
-        private Transform _socket;
-        private bool _socketFitted;
         private Transform _heldWeapon;
         private Vector3 _heldBasePosition;
         private Quaternion _heldBaseRotation = Quaternion.identity;
@@ -364,7 +361,6 @@ namespace DanceWithTheDevil
         /// </summary>
         private void UpdateHumanoid(float dt)
         {
-            if (!_socketFitted) FitWeaponSocket();
 
             Vector3 position = transform.position;
             Vector3 delta = position - _lastPosition;
@@ -409,30 +405,11 @@ namespace DanceWithTheDevil
             _kickTime = Mathf.MoveTowards(_kickTime, 0f, dt / _kickRecoverTime);
         }
 
-        /// <summary>
-        /// Once, on the first animated frame (the aiming idle): turns the weapon socket so the barrel runs from the
-        /// right (grip) hand toward the left (support) hand, grip in the right palm. It stays fixed to the right hand
-        /// afterwards, so every clip carries the rifle along.
-        /// </summary>
-        private void FitWeaponSocket()
-        {
-            _socketFitted = true;
-            if (_socket == null || _body == null) return;
-            Transform right = _body.GetBoneTransform(HumanBodyBones.RightHand);
-            Transform left = _body.GetBoneTransform(HumanBodyBones.LeftHand);
-            if (right == null || left == null) return;
-            Vector3 barrel = left.position - right.position;
-            if (barrel.sqrMagnitude < 1e-4f) return;
-            _socket.SetPositionAndRotation(right.position + Vector3.down * _gripDrop,
-                Quaternion.LookRotation(barrel.normalized, Vector3.up));
-        }
-
         /// <summary>Humanoid mode setup: finds the weapons under "WeaponSocket" and holds the rifle.</summary>
         private void BuildHumanoid()
         {
             _humanoid = true;
             Transform socket = FindDeep(_model, "WeaponSocket");
-            _socket = socket;
             _rifle = FindDeep(socket, "Rifle");
             _launcher = FindDeep(socket, "Launcher");
             _launcherBack = FindDeep(_model, "LauncherBack");

@@ -267,14 +267,20 @@ namespace DanceWithTheDevil
             // A bigger blast (Contract 1's rocket) grows the core, cubes, light and shake with its real radius.
             float blastScale = p.RingRadius > 0f && ringRadius > 0f ? Mathf.Clamp(ringRadius / p.RingRadius, 0.6f, 1.6f) : 1f;
 
-            if (p.FlashSize > 0f)
+            // Textured fire/smoke (RealisticVfx) replaces the flash cube and cube burst of muzzle fire and rockets;
+            // the light, shake and hitstop below stay here.
+            bool textured = RealisticVfx.Instance != null && RealisticVfx.Instance.Covers(e);
+            if (!textured)
             {
-                Vector3 axis = e.kind == ImpactKind.MuzzleFire ? e.normal : e.direction;
-                float size = p.FlashSize * Mathf.Lerp(0.75f, 1f, intensity) * Mathf.Sqrt(blastScale);
-                SpawnFlash(e.position, size, p.FlashGrow, p.FlashFade, p.Hot, axis, p.FlashStretch);
+                if (p.FlashSize > 0f)
+                {
+                    Vector3 axis = e.kind == ImpactKind.MuzzleFire ? e.normal : e.direction;
+                    float size = p.FlashSize * Mathf.Lerp(0.75f, 1f, intensity) * Mathf.Sqrt(blastScale);
+                    SpawnFlash(e.position, size, p.FlashGrow, p.FlashFade, p.Hot, axis, p.FlashStretch);
+                }
+                EmitCubes(p, e, intensity, blastScale);
+                if (ringRadius > 0f) SpawnRing(FloorPoint(e.position), ringRadius, _blastRing, 0.35f);
             }
-            EmitCubes(p, e, intensity, blastScale);
-            if (ringRadius > 0f) SpawnRing(FloorPoint(e.position), ringRadius, _blastRing, 0.35f);
 
             if (light != null && p.LightIntensity > 0f)
             {

@@ -40,9 +40,12 @@ namespace DanceWithTheDevil.Editor
         public const string RocketPrefabPath = PrefabsFolder + "/proj_rocket.prefab";
         private const string ControllerPath = AnimationFolder + "/Defne.controller";
         private const string UpperBodyMaskPath = AnimationFolder + "/Defne_UpperBody.mask";
+        private const string HoldFolder = "Assets/_Game/Data";
+        private const string RifleHoldPath = HoldFolder + "/hold_rifle.asset";
+        private const string LauncherHoldPath = HoldFolder + "/hold_launcher.asset";
 
-        /// <summary>Defne's standing height in metres (the cube placeholder was about 1.8 m with hair).</summary>
-        private const float TargetHeight = 1.75f;
+        /// <summary>Defne's standing height in metres (1.75 → 2.0, SefaSelim 2026-10-24: "karakteri büyüt").</summary>
+        private const float TargetHeight = 2f;
 
         // Weapon placement in the WeaponSocket (child of the right hand bone), tuned with the previews.
         private static readonly Vector3 SocketPosition = new Vector3(0f, 0.08f, 0.03f);
@@ -161,9 +164,11 @@ namespace DanceWithTheDevil.Editor
         }
 
         /// <summary>Batchmode entry: builds Defne, then rebuilds the arena scene with her.</summary>
+        [MenuItem("Dance/Character/Build Defne + Effects + Arena")]
         public static void BuildAllAndArena()
         {
             BuildAll();
+            VfxBuilder.BuildAll();
             // Batchmode starts in an unsaved untitled scene, which blocks the builder's additive scene: open the arena.
             const string arenaPath = "Assets/_Game/Scenes/Arena.unity";
             if (Application.isBatchMode && AssetDatabase.LoadAssetAtPath<SceneAsset>(arenaPath) != null)
@@ -319,6 +324,9 @@ namespace DanceWithTheDevil.Editor
             Shader shader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/_Game/Art/Shaders/Char_Skinned.shader");
             Material material = LoadOrCreateMaterial(path, shader);
             material.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>(BaseColorPath));
+            // No rim: it read as a glowing outline around her (SefaSelim 2026-10-24).
+            material.SetFloat("_RimStrength", 0f);
+            material.SetFloat("_Brightness", 1.3f);
             EditorUtility.SetDirty(material);
             return material;
         }
@@ -441,6 +449,13 @@ namespace DanceWithTheDevil.Editor
             back.duration = 0.15f;
             controller.AddLayer(hitLayer);
 
+            // IK pass on the base layer: WeaponHold pulls the left hand onto the weapon in OnAnimatorIK.
+            AnimatorControllerLayer[] layers = controller.layers;
+            layers[0].iKPass = true;
+            // The upper-body Hit layer overrides the arms after the base layer's IK, so IK runs there too.
+            for (int i = 1; i < layers.Length; i++) layers[i].iKPass = true;
+            controller.layers = layers;
+
             EditorUtility.SetDirty(controller);
             return controller;
         }
@@ -522,13 +537,19 @@ namespace DanceWithTheDevil.Editor
             Transform rifle = BuildWeapon("Rifle", RiflePrefabPath, RifleLength, socket, weaponMaterial, "Muzzle", null, RifleFlip);
             Transform launcher = BuildWeapon("Launcher", LauncherPrefabPath, LauncherLength, socket, weaponMaterial, "Muzzle", null, false);
             launcher.gameObject.SetActive(false);
+
+            // Where the weapons sit in her hands: tunable profiles (kept between builds) + left-hand IK.
+            var hold = body.AddComponent<WeaponHold>();
+            hold.Configure(socket, rifle, launcher, LoadOrCreateProfile(RifleHoldPath), LoadOrCreateProfile(LauncherHoldPath));
             if (spine != null)
             {
                 var back = new GameObject("LauncherBackSocket").transform;
                 back.SetParent(spine, false);
                 SetWorldScaleOne(back);
-                back.localPosition = Divide(new Vector3(0f, -0.08f, -0.17f), spine.lossyScale);
-                back.localRotation = Quaternion.Euler(0f, 0f, 35f) * Quaternion.Euler(-90f, 0f, 0f);
+                // Placed in world terms (the prefab is built in her bind pose, facing +Z): behind the upper back,
+                // tube pointing up and tilted 30° across the back, so it never crosses her front.
+                back.position = spine.position + Vector3.back * 0.2f + Vector3.down * 0.05f;
+                back.rotation = Quaternion.AngleAxis(30f, Vector3.forward) * Quaternion.LookRotation(Vector3.up, Vector3.back);
                 BuildWeapon("LauncherBack", LauncherPrefabPath, LauncherLength, back, weaponMaterial, null, null, false);
             }
 
@@ -662,6 +683,17 @@ namespace DanceWithTheDevil.Editor
                 proxy.localScale = Divide(p.size, lossy);
                 proxy.gameObject.AddComponent<ShatterProxy>().Configure(p.color, p.face);
             }
+        }
+
+        /// <summary>Loads a hold profile, or creates an unfitted one (WeaponHold fits it on first play). Never overwrites.</summary>
+        private static WeaponHoldProfile LoadOrCreateProfile(string path)
+        {
+            var profile = AssetDatabase.LoadAssetAtPath<WeaponHoldProfile>(path);
+            if (profile != null) return profile;
+            EnsureFolder(HoldFolder);
+            profile = ScriptableObject.CreateInstance<WeaponHoldProfile>();
+            AssetDatabase.CreateAsset(profile, path);
+            return profile;
         }
 
         // ------------------------------------------------------------------ projectiles

@@ -1,6 +1,6 @@
 # MAIN GDD — Dance with the Devil (Bir Şey Olmaz)
 
-**Son güncelleme: 2026-10-24 15:15 (UTC+3)**
+**Son güncelleme: 2026-10-24 16:08 (UTC+3)**
 
 > **Bu dosya projenin tek ve yaşayan Game Design Document'ıdır.** Sürüm numarası yoktur (GDD2, GDD3…
 > diye gitmez). Yeni bir mekanik eklendiğinde, var olan bir mekanik değiştiğinde ya da bir tasarım kararı
@@ -311,6 +311,15 @@ ret ya da sönmeyle biter); ilk kabulden sonra 6 sn "Q basılı + sağ tık: mod
   görünür), sonra RPG sırtına döner. Koyu zeminde okunsun diye modelde sıcak bir kenar ışığı vardır.
 - **Mermiler:** tüfek mermisi pirinç renkli küçük bir mermi ve arkasında kısa sarı-turuncu iz (tracer); roket, RPG'nin kendi
   savaş başlığı ve arkasında turuncudan griye dönen duman izi.
+- **Kamera ve ölçek (kullanıcı kararı 2026-10-24):** kamera yaklaştı (görünen yükseklik 18 m → 13 m) ve görüntü daha ince
+  çizilir (640×360 → 960×540; hafif piksel his kalır ama karakterler bloklaşmaz). Defne 2,0 m boyunda; düşmanlar %15 büyük
+  (çarpışma alanları da). Defne'nin modelinde dış parlama (kenar ışığı) yok.
+- **Silahı tutuş:** tüfek sağ elde, sol el silahın ön tutamağına uzanır; RPG sırtta çaprazdır. Tutuş, ekibin oyun içinde
+  ince ayar yaptığı bir profilden gelir (animasyon başına düzeltme yapılabilir).
+- **Efektler (gerçekçi, dokulu):** tüfek ateşinde namlu parlaması, namlu boyunca kısa alev, kıvılcım ve ince duman; roket
+  atışında ön alev ve arkadan geri ateş (RPG'ye özgü) ile duman bulutu; roket patlamasında parlama, sarıdan turuncuya ve koyu
+  kırmızıya soğuyan ateş topu, yükselen duman, savrulan toprak, korlar, yerde toz halkası ve 6 sn kalan yanık izi; mermi
+  isabetinde kıvılcım ve toz. Işık, sarsıntı ve vuruş duraklaması eskisi gibi; küp parlama yerine bu efektler oynar.
 - **Şeytan:** ekranın sağ kenarından, monitör çerçevesinin dışından eğilen 2B çizim; ekibin kendi çizimiyle değişecek.
 - **Ses:** 🟡 kısa okunur SFX, karanlık tek müzik döngüsü; Sözleşme 2 bir müzik katmanını susturur. Bütün sesler ve müzik
   koddan üretilir (dış kaynak yok). Müzik Re minör, 90 BPM, 8 ölçülük (~21 sn) kesintisiz döngü; iki katman: taban (drone,
@@ -407,3 +416,4 @@ seçenek seçerse değiştirilir:
 - 2026-10-24 11:23 — Burak (Claude Code) — Oyun incelemesinden sonra Burak dört öneriyi onayladı: K-14 takip eden kamera, K-15 5:00 sonrası tırmanan dalgalar, K-16 bütün arenayı silen şok dalgası, K-17 3:00 sonrası artan düşman sayısı.
 - 2026-10-24 12:45 — Burak (Claude Code) — İnceleme sonrası düzeltmeler: takip kamerası (K-14), animasyon ve silah, nişan, vuruş efektleri, paketli dalgalar ve tırmanan zorluk (K-15, K-17), şok dalgası (K-16), kart ve HUD açıklığı, Esc menüsü (§4, §5, §6, §8, §9, §10, §11, §13).
 - 2026-10-24 15:15 — SefaSelim (Claude Code) — Defne, kullanıcının eklediği animasyonlu 3B modelle değişti; AK tüfek ve RPG elinde/sırtında; mermiler gerçekçi (pirinç mermi + iz, RPG roketi + duman); yeni modelde bedellerin görünüşü yazıldı (§2, §13).
+- 2026-10-24 16:08 — SefaSelim (Claude Code) — Kamera yaklaştı ve görüntü inceldi, karakterler büyüdü, Defne'nin dış parlaması kalktı; silah tutuşu ayarlanabilir profil + sol el IK oldu; namlu, roket ve patlama efektleri gerçekçi dokulu efektlerle değişti (§13).

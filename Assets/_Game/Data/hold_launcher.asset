@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6ade899cb968a144ca7bc0099c994dc6, type: 3}
+  m_Name: hold_launcher
+  m_EditorClassIdentifier: Game.Runtime::DanceWithTheDevil.WeaponHoldProfile
+  Fitted: 1
+  GripPosition: {x: -0.005999782, y: -0.23675507, z: 0.011091046}
+  GripRotation: {x: 2.971502, y: 35.991978, z: 56.143604}
+  UseLeftHandIK: 1
+  LeftHandPosition: {x: 0, y: -0.02, z: 0.2}
+  LeftHandRotation: {x: 0, y: 0, z: 90}
+  LeftHandWeight: 1
+  Corrections: []
