@@ -117,3 +117,10 @@ InitTestScene*.unity*
 **/.claude/settings.local.json
 **/.claude/agent-memory-local/
 CLAUDE.local.md
+
+# Synty asset packs (POLYGON Dark Fantasy, Interface Dark Fantasy HUD): ~630 MB, not redistributable and the LFS
+# quota is full. Every teammate imports the same packs (and the URP material extraction) locally; the GUIDs match.
+/Assets/PolygonDarkFantasy/
+/Assets/PolygonDarkFantasy.meta
+/Assets/Synty/
+/Assets/Synty.meta

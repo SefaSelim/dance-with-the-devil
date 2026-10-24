@@ -50,11 +50,31 @@ namespace DanceWithTheDevil
         public static readonly Color HealthRed = new Color(0.86f, 0.22f, 0.27f, 1f);
 
         private static Font _builtinFont;
+        private static UiTheme _theme;
+        private static bool _themeLoaded;
 
-        /// <summary>The serialized font, else Unity's built-in LegacyRuntime font (has the Turkish glyphs).</summary>
+        /// <summary>The UI theme from Resources/UiTheme (Synty frames, Pirata One / Markazi), or null = flat look.</summary>
+        public static UiTheme Theme
+        {
+            get
+            {
+                if (!_themeLoaded)
+                {
+                    _theme = Resources.Load<UiTheme>("UiTheme");
+                    _themeLoaded = true;
+                }
+                return _theme;
+            }
+        }
+
+        /// <summary>The theme's heading font, else <see cref="ResolveFont"/>.</summary>
+        public static Font TitleFont => Theme != null && Theme.TitleFont != null ? Theme.TitleFont : ResolveFont(null);
+
+        /// <summary>The serialized font, else the theme's body font, else Unity's built-in LegacyRuntime font (all have the Turkish glyphs).</summary>
         public static Font ResolveFont(Font preferred)
         {
             if (preferred != null) return preferred;
+            if (Theme != null && Theme.BodyFont != null) return Theme.BodyFont;
             if (_builtinFont == null) _builtinFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             return _builtinFont;
         }
@@ -150,18 +170,107 @@ namespace DanceWithTheDevil
         public static Image Framed(Transform parent, string name, Color border, Color fill, Vector2 anchor,
             Vector2 pivot, Vector2 position, Vector2 size, float thickness = 2f)
         {
+            UiTheme theme = Theme;
+            bool ornate = theme != null && theme.PanelSprite != null
+                && size.x >= theme.MinFramedSize.x && size.y >= theme.MinFramedSize.y;
             Image outer = Box(parent, name, border, anchor, pivot, position, size);
-            Image inner = Box(outer.transform, "Fill", fill, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                Vector2.zero, size - new Vector2(thickness * 2f, thickness * 2f));
-            return inner;
+            if (!ornate)
+            {
+                Image inner = Box(outer.transform, "Fill", fill, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                    Vector2.zero, size - new Vector2(thickness * 2f, thickness * 2f));
+                return inner;
+            }
+
+            // Ornate: the outer block carries the Synty frame (tinted toward the border colour, so state colours
+            // still read) and the fill is a plate under it. The frame is the outer block's own sprite, drawn first,
+            // so a "Rim" copy on top of the plate keeps the bevel visible. Callers keep using fill.transform.parent
+            // as the border, as with the flat frame.
+            Color tint = Color.Lerp(Color.white, border, 0.45f);
+            SetSliced(outer, theme.PanelSprite, theme.PanelSpriteScale);
+            outer.color = tint;
+            float inset = Mathf.Max(thickness, 4f);
+            Image plate = Box(outer.transform, "Fill", fill, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, size - new Vector2(inset * 2f, inset * 2f));
+            if (theme.PanelFillSprite != null) SetSliced(plate, theme.PanelFillSprite, theme.PanelFillSpriteScale);
+            Image rim = Box(outer.transform, "Rim", tint, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
+            Stretch(rim.rectTransform);
+            SetSliced(rim, theme.PanelSprite, theme.PanelSpriteScale);
+            outer.gameObject.AddComponent<UiRimTint>().Initialize(outer, rim);
+            return plate;
+        }
+
+        /// <summary>Stretches a rect over its parent.</summary>
+        public static void Stretch(RectTransform rect)
+        {
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+        }
+
+        /// <summary>9-slice sprite on an image; <paramref name="pixelsPerUnit"/> = sprite pixels per canvas unit of border.</summary>
+        public static void SetSliced(Image image, Sprite sprite, float pixelsPerUnit)
+        {
+            image.sprite = sprite;
+            image.type = sprite.border.sqrMagnitude > 0f ? Image.Type.Sliced : Image.Type.Simple;
+            image.fillCenter = true;
+            image.pixelsPerUnitMultiplier = Mathf.Max(0.01f, pixelsPerUnit);
+        }
+
+        /// <summary>
+        /// A menu button on the theme's plate (a flat block without a theme), label in the title face, with automatic
+        /// keyboard/gamepad navigation.
+        /// </summary>
+        public static Button ThemedButton(Transform parent, string name, string label, Vector2 anchor, Vector2 pivot,
+            Vector2 position, Vector2 size, int fontSize, out Text text)
+        {
+            UiTheme theme = Theme;
+            bool themed = theme != null && theme.ButtonSprite != null;
+            Image plate = Box(parent, name, themed ? Color.white : new Color(0.2f, 0.16f, 0.18f, 1f), anchor, pivot,
+                position, size);
+            if (themed) SetSliced(plate, theme.ButtonSprite, theme.ButtonSpriteScale);
+            Button button = MakeButton(plate, new Color(1f, 0.55f, 0.5f, 1f));
+            ColorBlock colors = button.colors;
+            colors.normalColor = new Color(0.72f, 0.68f, 0.68f, 1f);
+            colors.pressedColor = new Color(0.9f, 0.4f, 0.38f, 1f);
+            button.colors = colors;
+            button.navigation = new Navigation { mode = Navigation.Mode.Automatic };
+            text = Label(plate.transform, "Label", TitleFont, fontSize, Cream, TextAnchor.MiddleCenter,
+                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 1f), size, FontStyle.Bold);
+            text.text = label;
+            AddShadow(text);
+            return button;
         }
 
         public static Text Label(Transform parent, string name, Font font, int size, Color color, TextAnchor alignment,
             Vector2 anchor, Vector2 pivot, Vector2 position, Vector2 rectSize, FontStyle style = FontStyle.Normal)
         {
             Text text = Rect(parent, name, anchor, pivot, position, rectSize).gameObject.AddComponent<Text>();
+            // Theme: bold labels of size 14+ (headings, buttons, the Devil's lines) take the title face; the theme's
+            // faces replace synthesized bold. Each face is scaled to read like the built-in font at the same size.
+            UiTheme theme = Theme;
+            float scale = 1f;
+            if (theme != null)
+            {
+                if (style == FontStyle.Bold && size >= 14 && theme.TitleFont != null
+                    && (font == theme.BodyFont || font == theme.TitleFont))
+                {
+                    font = theme.TitleFont;
+                }
+                if (font == theme.TitleFont)
+                {
+                    scale = theme.TitleFontScale;
+                    style = FontStyle.Normal;
+                }
+                else if (font == theme.BodyFont)
+                {
+                    scale = theme.BodyFontScale;
+                    style = FontStyle.Normal; // Markazi SemiBold is already heavy
+                }
+            }
             text.font = font;
-            text.fontSize = Mathf.Max(6, Mathf.RoundToInt(size * TextScale));
+            text.fontSize = Mathf.Max(6, Mathf.RoundToInt(size * scale * TextScale));
             // The built-in font has a single face: italics would be synthesized (slanted smooth text). Never use them.
             text.fontStyle = style == FontStyle.Italic ? FontStyle.Normal : style == FontStyle.BoldAndItalic ? FontStyle.Bold : style;
             text.color = color;

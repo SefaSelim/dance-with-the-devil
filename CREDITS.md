@@ -21,9 +21,18 @@ The Dance with the Devil team, Women Game Jam 2026.
   animations are free to use in games under Adobe's terms.
 - Weapons (AK74, RPG7 and its rocket): `Assets/Low Poly Weapons VOL.1`, added by the team. Source and licence: to be
   confirmed by the team (looks like a free Unity Asset Store pack; the Asset Store EULA allows use in games).
-- Enemies and the arena are still placeholder cube parts built by `Dance/Placeholders/Rebuild All`.
+- Enemies are still placeholder cube parts built by `Dance/Placeholders/Rebuild All`.
+- Arena dressing (walls, floor, props, particles) and the main menu's candelabra: Synty Studios POLYGON - Dark Fantasy,
+  `Assets/PolygonDarkFantasy`, added by the team (Synty / Unity Asset Store licence: use in games allowed, no
+  redistribution of the source assets).
+- UI frames, bars and buttons: Synty Studios INTERFACE - Dark Fantasy HUD, `Assets/Synty/InterfaceDarkFantasyHUD`, added
+  by the team (same licence terms).
+- Fonts: Pirata One (Rodrigo Fuenzalida, Nicolas Massi) and Markazi Text (Borna Izadpanah, Florian Runge), SIL Open Font
+  Licence 1.1, shipped inside the Synty HUD pack (`Fonts/*/OFL.txt`).
 - Particle textures (fire, smoke, sparks, dirt, scorch): Kenney Particle Pack 1.1 by Kenney Vleugels (kenney.nl), CC0,
   `Assets/_Game/ThirdParty/KenneyParticlePack` (converted to white + alpha, see its License.txt). Particle shader
   `VFX_ParticleUnlit` from the `unity-vfx-game-feel` skill (toolkit licence).
 - All sound effects and the music loop are synthesized by `Dance/Audio/Bake All` (no external assets).
-- The Devil image is a placeholder made of coloured blocks; the team's own drawing replaces it.
+- The Devil on the Devil screen is a placeholder made of coloured blocks; the team's own drawing replaces it.
+- Main menu Devil (placeholder): Gustave Doré, illustration of Satan for Milton's *Paradise Lost* (1866), public domain,
+  via Wikimedia Commons; `Assets/_Game/Art/UI/devil_placeholder_dore.jpg`.

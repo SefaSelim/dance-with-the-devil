@@ -512,6 +512,9 @@ namespace DanceWithTheDevil.Editor
                 vso.ApplyModifiedPropertiesWithoutUndo();
             }
 
+            // Gothic ruin dressing, lights and particles (visual only; colliders and NavMesh unchanged).
+            GothicArenaBuilder.Dress(scene);
+
             EditorSceneManager.SaveScene(scene, ArenaScenePath);
             if (!reopenArena && previousActive.IsValid() && previousActive.isLoaded)
             {

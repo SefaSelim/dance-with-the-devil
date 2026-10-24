@@ -76,7 +76,36 @@ namespace DanceWithTheDevil
         // Pause (Esc).
         public const string PauseTitle = "Duraklatıldı";
         public const string PauseResume = "Devam [Esc]";
-        public const string PauseQuit = "Çık";
+        public const string PauseQuit = "Ana menü";
+
+        // Main menu (design/ux/main-menu.md §2).
+        public const string MenuTitle = "Bir Şey Olmaz";
+        public const string MenuSubtitle = "Dance with the Devil";
+        public const string MenuStart = "Başla";
+        public const string MenuSettings = "Ayarlar";
+        public const string MenuCredits = "Emeği Geçenler";
+        public const string MenuQuit = "Çıkış";
+        public const string MenuFooter = "Hayır demeyi öğrenmelisin.";
+        public const string MenuBack = "Geri";
+        public const string MenuHint = "Enter: seç · Esc: geri";
+        public const string SettingsTitle = "Ayarlar";
+        public const string SettingsMaster = "Ana ses";
+        public const string SettingsMusic = "Müzik";
+        public const string SettingsSfx = "Efektler";
+        public const string SettingsShake = "Ekran sarsıntısı";
+        public const string SettingsFullscreen = "Tam ekran";
+        public const string SettingsOn = "Açık";
+        public const string SettingsOff = "Kapalı";
+        public const string CreditsTitle = "Emeği Geçenler";
+        public const string CreditsBody =
+            "Dance with the Devil ekibi — Women Game Jam 2026\n\n" +
+            "Çevre: Synty POLYGON Dark Fantasy\n" +
+            "Arayüz: Synty Interface Dark Fantasy HUD\n" +
+            "Yazı tipleri: Pirata One, Markazi Text (SIL OFL)\n" +
+            "Animasyonlar: Adobe Mixamo · Silahlar: Low Poly Weapons VOL.1\n" +
+            "Parçacık dokuları: Kenney (CC0)\n" +
+            "Şeytan görseli (geçici): Gustave Doré gravürü (kamu malı)\n" +
+            "Sesler ve müzik: oyunun içinde sentezlendi";
 
         // §12 first-minute hints (first GDD §11 "İlk dakika önerisi"), one at a time.
         public const string HintMoveFire = "WASD: yürü · Fare: nişan · Sol tık: ateş";

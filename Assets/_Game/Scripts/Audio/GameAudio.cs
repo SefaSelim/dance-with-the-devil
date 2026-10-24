@@ -19,6 +19,10 @@ namespace DanceWithTheDevil
     {
         /// <summary>Accessibility: multiplies every sound and the music (0..1).</summary>
         public static float MasterVolume = 1f;
+        /// <summary>Settings menu: music stems (0..1).</summary>
+        public static float MusicVolume = 1f;
+        /// <summary>Settings menu: every sound event that is not music (0..1).</summary>
+        public static float SfxVolume = 1f;
 
         public static GameAudio Instance { get; private set; }
 
@@ -221,7 +225,7 @@ namespace DanceWithTheDevil
             _melodyFade = Mathf.MoveTowards(_melodyFade, target, Time.unscaledDeltaTime / _melodyFadeSeconds);
 
             if (_bank == null) return;
-            float master = Mathf.Clamp01(MasterVolume);
+            float master = Mathf.Clamp01(MasterVolume) * Mathf.Clamp01(MusicVolume);
             if (_musicBase != null) _musicBase.volume = SoundBank.DbToLinear(_bank.MusicBaseDb) * master * _musicTrim;
             if (_musicMelody != null)
                 _musicMelody.volume = SoundBank.DbToLinear(_bank.MusicMelodyDb) * master * _musicTrim * _melodyFade;
@@ -268,7 +272,7 @@ namespace DanceWithTheDevil
             source.Stop();
             source.clip = clip;
             source.pitch = finalPitch;
-            source.volume = Mathf.Clamp01(slot.BaseVolume * SoundBank.DbToLinear(jitterDb) * volumeScale * Mathf.Clamp01(MasterVolume));
+            source.volume = Mathf.Clamp01(slot.BaseVolume * SoundBank.DbToLinear(jitterDb) * volumeScale * Mathf.Clamp01(MasterVolume) * Mathf.Clamp01(SfxVolume));
             source.panStereo = Mathf.Clamp(pan, -1f, 1f);
             source.mute = e.Bus == AudioBus.Voice && _voiceMuted;
             source.Play();

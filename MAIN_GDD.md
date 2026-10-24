@@ -1,6 +1,6 @@
 # MAIN GDD — Dance with the Devil (Bir Şey Olmaz)
 
-**Son güncelleme: 2026-10-24 16:08 (UTC+3)**
+**Son güncelleme: 2026-10-24 17:18 (UTC+3)**
 
 > **Bu dosya projenin tek ve yaşayan Game Design Document'ıdır.** Sürüm numarası yoktur (GDD2, GDD3…
 > diye gitmez). Yeni bir mekanik eklendiğinde, var olan bir mekanik değiştiğinde ya da bir tasarım kararı
@@ -193,7 +193,7 @@ uygulanır, şarj sayısını değiştirmez.
 **Oyuncu HAYIR dediğinde:** 1. ölümde "Hayır mı? Hem de ilk seferde. Pek eğlenceli değilsin." · 2–5. ölümde
 "Şimdi mi hayır? Aldıklarım bende kalıyor."
 
-## 9. Arena — 🟡 (yer tutucu blok arena kuruldu)
+## 9. Arena — 🟡 (oynanış blokları aynı; görünüş karanlık gotik harabe)
 
 İlk GDD §9 düzeni: ~32 × 28 m dikdörtgen platform, kesintisiz dış sekme duvarı (kırılmaz), ~12 × 10 m açık merkez,
 kuzeybatı ve güneydoğuda birbirini karşılayan iki L duvar, en dar geçit 4 m, dört kenarda işaretli giriş. Kamera
@@ -205,8 +205,26 @@ ne kadarının kırılacağı Faz 4'te dengelenir (❓ A-12: Yankı'nın sekme y
 **Kurulan yerleşim (yer tutucu):** oynanabilir alan 32 × 28 m; kuzey ve doğu duvarları 2 m, kameraya yakın güney ve batı
 duvarları görüşü kapatmasın diye 1 m yüksekliktedir ama 2 m gibi seker. L bloklar 1,5 m yüksek, 3 m kalındır. Çevre
 halkası 5–6 m, iki L arası en az 11,7 m; merkezde kuzey–güney ve doğu–batı yönünde 4 m'lik iki açık görüş koridoru
-vardır. Zemin 2 m'lik koyu karolar ve ince ızgara çizgileri; köşelerde çarpışmasız alçak kasa ve moloz; her girişte sıcak bir ışık; dış duvar üstünde soluk kırmızı bir çizgi. Açık merkez ~14 × 12 m çıktı (ilk GDD ~12 × 10 m), halkayı ≥5 m ve 6 m diriliş şokuna yer bırakmak için.
+vardır (yer tutucu karolar, kasalar ve duvar çizgileri aşağıdaki gotik görünüşle değişti). Açık merkez ~14 × 12 m çıktı (ilk GDD ~12 × 10 m), halkayı ≥5 m ve 6 m diriliş şokuna yer bırakmak için.
 Dört giriş kenarların ortasında, içe bakan şeritli zemin plakalarıdır; doğuş noktaları oyuncu başlangıcından 12–14 m uzaktadır.
+
+**Görünüş: "kutsallığı bozulmuş nef" (kullanıcı isteği 2026-10-24, yalnız görsel):** arena, mezarlığa dönmüş yıkık bir
+katedral avlusudur. Oynanış yerleşimi, çarpışmalar, sekme ve yol bulma değişmedi; dekorun hiçbirinin çarpışması yoktur.
+- Kuzey ve doğu duvarları 3 m'lik taş duvarlar, sivri kemerli vitray pencereler ve sütunlarla kameranın baktığı yüksek fon
+  olur; kameraya yakın güney ve batı kenarları 1,5 m'lik yarım duvar, yarım sütun ve kapıların iki yanında demir mezarlık
+  parmaklığıdır (oyuncuyu gizlemez).
+- Kuzey ve doğu girişleri payandalı taş sütunlar ve üstlerinde yanan ateş kaseleriyle, güney ve batı girişleri sütun
+  başındaki fenerlerle çerçevelenir; her girişte sıcak, soluk kehribar bir ışık havuzu düşmanın geldiği yeri gösterir.
+- L bloklar yarım taş duvarlarla kaplı, üstleri taş döşemelidir. Her çeyrekte bir işaret: kuzeybatı bloğunda gargoyl
+  (soğuk mavi ışık), kuzeydoğu köşesinde sivri kule ve duvarın ardında bir türbe (leylak ışık), güneydoğu bloğunda yüzü
+  merkeze dönük heykel ve pentagramlı sunak (kehribar ışık), güneybatı köşesinde alçak, yanan bir kemik-moloz yığını.
+  Blok üstlerinde mumlar, kafatası yığınları, mezar taşları ve açık bir kitap vardır.
+- Zemin çatlak taş karolardır; halkada ve köşelerde aşınma ve yosun lekeleri, merkezde, koridorlarda ve giriş şeritlerinde
+  hiçbir şey yoktur. Duvarların ardında toprak, kayalık, ölü ağaçlar, türbe, kuzey girişinin 4 m arkasında demir mezarlık
+  kapısı ve yarasalar görünür.
+- Işık: soğuk mavi ay ışığı ve koyu mavi ortam; 12 nokta ışık (4 giriş, 4 işaret, 3 pencere, 1 soluk merkez dolgusu).
+  Merkez en loş yerdir; karakterler sahnenin en doygun şeyleri kalır. Kırmızı ve turuncu düşmanlara, uyarı plakalarına ve
+  Şeytan'a ayrılmıştır (tek istisna sunaktaki küçük pentagram).
 
 ## 10. Dalgalar ve zorluk — 🟡 (dalga yöneticisi çalışıyor; ölüm takvimi henüz dengelenmedi)
 
@@ -291,6 +309,21 @@ Kendin kaldın."
 ret ya da sönmeyle biter); ilk kabulden sonra 6 sn "Q basılı + sağ tık: modülü sök ve fırlat"; 20 sn roket kullanılmazsa
 5 sn "E: roket · F: pala · Space: kaçın". Öncelik: teklif > sökme > yürü/ateş > roket. İpuçları oyunu durdurmaz;
 Şeytan ekranı ve sonlarda gizlenir.
+
+**Ana menü ve ayarlar (kullanıcı isteği 2026-10-24):** oyun ana menüyle açılır. Solda başlık "Bir Şey Olmaz", altında
+"Dance with the Devil" ve dört düğme: **Başla** (ekran kararır, arena başlar), **Ayarlar**, **Emeği Geçenler**, **Çıkış**.
+Sağda Defne, iki şamdan arasında, kırmızı bir mühür halkasının üstünde silahıyla bekler ve yavaşça sağa sola döner;
+arkasında kırmızıya boyanmış, yavaşça "nefes alan" geçici bir Şeytan gravürü (Gustave Doré) durur. Altta "Hayır demeyi
+öğrenmelisin." yazar. Menü fare, klavye (ok tuşları/W-S, Enter) ve gamepad ile gezilir; Esc ya da gamepad B açık
+paneli kapatır.
+- **Ayarlar** (sade): Ana ses, Müzik, Efektler, Ekran sarsıntısı (0 = kapalı) kaydırıcıları ve Tam ekran açık/kapalı.
+  Değerler hemen uygulanır, kaydedilir ve oyun açılışında geri yüklenir.
+- **Emeği Geçenler:** ekip satırı ve kullanılan varlıklar ile lisansları (CREDITS.md özeti).
+- Oyundaki duraklatma menüsünde "Çık" yerine **Ana menü** vardır ve menüye döner.
+
+**Arayüz görünüşü:** HUD, Şeytan kartı, son ekranı ve duraklatma paneli karanlık fantastik süslü metal çerçeveler
+(Synty Interface Dark Fantasy HUD) kullanır; başlıklar, düğmeler ve Şeytan'ın sözleri gotik Pirata One, diğer yazılar
+Markazi yazı tipiyledir. Yerleşim ve bilgiler değişmedi.
 
 İlk GDD §11 korunur: üstte can, süre ve skor; altta üç sabit modül yuvası ile ret/kaçınma hazır göstergeleri; teklif
 üzerinde tek satır avantaj, tek satır bedel. Ek olarak HUD'da Defne'nin küçük fotoğrafı (Sözleşme 3 bedeli) ve roket
@@ -417,3 +450,4 @@ seçenek seçerse değiştirilir:
 - 2026-10-24 12:45 — Burak (Claude Code) — İnceleme sonrası düzeltmeler: takip kamerası (K-14), animasyon ve silah, nişan, vuruş efektleri, paketli dalgalar ve tırmanan zorluk (K-15, K-17), şok dalgası (K-16), kart ve HUD açıklığı, Esc menüsü (§4, §5, §6, §8, §9, §10, §11, §13).
 - 2026-10-24 15:15 — SefaSelim (Claude Code) — Defne, kullanıcının eklediği animasyonlu 3B modelle değişti; AK tüfek ve RPG elinde/sırtında; mermiler gerçekçi (pirinç mermi + iz, RPG roketi + duman); yeni modelde bedellerin görünüşü yazıldı (§2, §13).
 - 2026-10-24 16:08 — SefaSelim (Claude Code) — Kamera yaklaştı ve görüntü inceldi, karakterler büyüdü, Defne'nin dış parlaması kalktı; silah tutuşu ayarlanabilir profil + sol el IK oldu; namlu, roket ve patlama efektleri gerçekçi dokulu efektlerle değişti (§13).
+- 2026-10-24 17:18 — SefaSelim (Claude Code) — Arena karanlık gotik harabe olarak giydirildi, ışıkları yeniden kuruldu (yalnız görsel, §9); ana menü, sade ayarlar ve emeği geçenler eklendi, duraklatmadaki "Çık" ana menüye döner, arayüz Synty çerçeveleri ve gotik yazı tipleriyle yenilendi (§12).

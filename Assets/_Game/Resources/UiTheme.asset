@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 110f6e50d7635ca4ea96c2d53ef04352, type: 3}
+  m_Name: UiTheme
+  m_EditorClassIdentifier: Game.Runtime::DanceWithTheDevil.UiTheme
+  TitleFont: {fileID: 12800000, guid: 015b51f4ca0c2fe498f3e71c347c8a89, type: 3}
+  BodyFont: {fileID: 12800000, guid: 98886f0f284dda24e99e94dc6c320dce, type: 3}
+  BodyFontScale: 1.3
+  TitleFontScale: 1.15
+  PanelSprite: {fileID: 21300000, guid: b6ec5468d300cd44fb3efc31c73aab32, type: 3}
+  PanelSpriteScale: 14
+  PanelFillSprite: {fileID: 21300000, guid: 370a88f086f8ad246ac0f19ce2a8a985, type: 3}
+  PanelFillSpriteScale: 14
+  ButtonSprite: {fileID: 21300000, guid: b1fc9e538212e4841a055fcfd1e3a875, type: 3}
+  ButtonSpriteScale: 10
+  SlotSprite: {fileID: 21300000, guid: 04ae625c7dc578e4b9beceb44b8cf9cd, type: 3}
+  SlotSpriteScale: 9
+  DividerSprite: {fileID: 21300000, guid: 4105ef2f020992e4395e73b94b76fd21, type: 3}
+  GlowSprite: {fileID: 21300000, guid: e80c994a5babdce4f8b8735a0e558849, type: 3}
+  SigilSprite: {fileID: 21300000, guid: d6c67e267c2038241911a511b746715c, type: 3}
+  VignetteSprite: {fileID: 21300000, guid: 6e92494e1feb489478d22df207924903, type: 3}
+  MinFramedSize: {x: 40, y: 30}

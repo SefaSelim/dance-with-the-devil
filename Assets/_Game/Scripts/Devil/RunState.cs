@@ -106,10 +106,15 @@ namespace DanceWithTheDevil
             _input = null;
         }
 
-        /// <summary>Leaves the game (stops play mode in the Editor).</summary>
+        /// <summary>Back to the main menu when the build has one; otherwise leaves the game (stops play mode in the Editor).</summary>
         public static void Quit()
         {
             Resume();
+            if (UnityEngine.Application.CanStreamedLevelBeLoaded(GameSettings.MainMenuScene))
+            {
+                UnityEngine.SceneManagement.SceneManager.LoadScene(GameSettings.MainMenuScene);
+                return;
+            }
 #if UNITY_EDITOR
             UnityEditor.EditorApplication.isPlaying = false;
 #else
