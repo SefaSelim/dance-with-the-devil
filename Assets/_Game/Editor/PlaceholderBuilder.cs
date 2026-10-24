@@ -59,6 +59,16 @@ namespace DanceWithTheDevil.Editor
             ("chaser_hips", "#7A1E2A", false),
             ("chaser_horns", "#F0D9A0", false),
             ("chaser_eyes", "#FFE14D", true),
+            ("vfx_shot_player", "#5FFFF0", true),
+            ("vfx_rocket", "#FFD08A", true),
+            ("vfx_machete", "#F2F2F2", true),
+        };
+
+        // Unlit materials for the impact feedback router (shader, colour).
+        private static readonly (string name, string shader)[] UnlitMaterials =
+        {
+            ("vfx_cubes", "Universal Render Pipeline/Particles/Unlit"),
+            ("vfx_flash", "Universal Render Pipeline/Unlit"),
         };
 
         private static readonly Part[] DefneParts =
@@ -164,6 +174,26 @@ namespace DanceWithTheDevil.Editor
                 EditorUtility.SetDirty(material);
             }
 
+            foreach (var (name, shaderName) in UnlitMaterials)
+            {
+                string path = $"{MaterialsFolder}/mat_{name}_flat.mat";
+                Shader unlit = Shader.Find(shaderName);
+                if (unlit == null)
+                {
+                    Debug.LogError($"PlaceholderBuilder: shader '{shaderName}' not found.");
+                    continue;
+                }
+                var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+                if (material == null)
+                {
+                    material = new Material(unlit);
+                    AssetDatabase.CreateAsset(material, path);
+                }
+                material.shader = unlit;
+                material.SetColor("_BaseColor", Color.white);
+                EditorUtility.SetDirty(material);
+            }
+
             AssetDatabase.SaveAssets();
         }
 
@@ -182,11 +212,25 @@ namespace DanceWithTheDevil.Editor
             EnsureFolder("Assets/_Game/Scenes");
 
             // Build in an additive scene so whatever the user has open stays untouched.
+            // The arena is generated, so an open copy of it is discarded and rebuilt.
             Scene previousActive = SceneManager.GetActiveScene();
             Scene existing = SceneManager.GetSceneByPath(ArenaScenePath);
-            if (existing.isLoaded) EditorSceneManager.CloseScene(existing, true);
-
-            Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+            bool reopenArena = existing.isLoaded;
+            Scene scene;
+            if (existing.isLoaded && SceneManager.sceneCount == 1)
+            {
+                scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+                previousActive = default;
+            }
+            else
+            {
+                if (existing.isLoaded)
+                {
+                    if (previousActive == existing) previousActive = default;
+                    EditorSceneManager.CloseScene(existing, true);
+                }
+                scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+            }
             SceneManager.SetActiveScene(scene);
 
             ColorUtility.TryParseHtmlString("#3A3F5C", out Color ambient);
@@ -238,21 +282,45 @@ namespace DanceWithTheDevil.Editor
                 spawnGo.transform.position = spawn;
             }
 
+            PixelCameraRig rig = BuildCameraRig();
+
             var defnePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(DefnePrefabPath);
             var player = (GameObject)PrefabUtility.InstantiatePrefab(defnePrefab, scene);
             player.name = "Player";
             player.transform.SetPositionAndRotation(Vector3.zero, Quaternion.Euler(0f, 180f, 0f));
+            SetUpPlayer(player, rig);
 
-            // Placeholder preview only (🧪): shows enemy scale and colour next to Defne until enemies spawn.
+            // Test targets only (🧪): shot, rocketed and slashed in Phase 2 until real enemies spawn in Phase 4.
             var chaserPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(ChaserPrefabPath);
-            var chaser = (GameObject)PrefabUtility.InstantiatePrefab(chaserPrefab, scene);
-            chaser.name = "Chaser_Preview";
-            chaser.transform.SetPositionAndRotation(new Vector3(3f, 0f, 5f), Quaternion.Euler(0f, 210f, 0f));
+            var dummies = new GameObject("TrainingDummies");
+            Vector3[] dummyPositions = { new Vector3(3f, 0f, 5f), new Vector3(-4f, 0f, -4f), new Vector3(6f, 0f, 1f), new Vector3(4.5f, 0f, 5.5f) };
+            for (int i = 0; i < dummyPositions.Length; i++)
+            {
+                var dummy = (GameObject)PrefabUtility.InstantiatePrefab(chaserPrefab, scene);
+                dummy.name = $"Dummy_{i}";
+                dummy.transform.SetParent(dummies.transform, false);
+                dummy.transform.SetPositionAndRotation(dummyPositions[i], Quaternion.Euler(0f, 210f, 0f));
+                var box = dummy.AddComponent<BoxCollider>();
+                box.center = new Vector3(0f, 0.7f, 0f);
+                box.size = new Vector3(0.9f, 1.4f, 0.6f);
+                var health = dummy.AddComponent<Health>();
+                var hso = new SerializedObject(health);
+                hso.FindProperty("_maxHealth").floatValue = 30f;
+                hso.FindProperty("_invulnerabilityAfterHit").floatValue = 0f;
+                hso.ApplyModifiedPropertiesWithoutUndo();
+                dummy.AddComponent<TrainingDummy>();
+            }
 
-            BuildCameraRig();
+            var feel = new GameObject("ImpactFeedback");
+            var router = feel.AddComponent<PixelImpactFeedback>();
+            var rso = new SerializedObject(router);
+            rso.FindProperty("_cameraRig").objectReferenceValue = rig;
+            rso.FindProperty("_cubeMaterial").objectReferenceValue = LoadMaterial("vfx_cubes");
+            rso.FindProperty("_flashMaterial").objectReferenceValue = LoadMaterial("vfx_flash");
+            rso.ApplyModifiedPropertiesWithoutUndo();
 
             EditorSceneManager.SaveScene(scene, ArenaScenePath);
-            if (previousActive.IsValid() && previousActive.isLoaded)
+            if (!reopenArena && previousActive.IsValid() && previousActive.isLoaded)
             {
                 SceneManager.SetActiveScene(previousActive);
                 EditorSceneManager.CloseScene(scene, true);
@@ -262,7 +330,52 @@ namespace DanceWithTheDevil.Editor
             Debug.Log($"PlaceholderBuilder: arena scene saved to {ArenaScenePath}.");
         }
 
-        private static void BuildCameraRig()
+        // Player components live on the scene instance so the character prefab stays art-only.
+        private static void SetUpPlayer(GameObject player, PixelCameraRig rig)
+        {
+            var controller = player.AddComponent<CharacterController>();
+            controller.center = new Vector3(0f, 0.9f, 0f);
+            controller.height = 1.8f;
+            controller.radius = 0.35f;
+            controller.skinWidth = 0.05f;
+            controller.stepOffset = 0.3f;
+
+            player.AddComponent<Health>();
+            player.AddComponent<PlayerInputReader>();
+            var pc = player.AddComponent<PlayerController>();
+            var pso = new SerializedObject(pc);
+            pso.FindProperty("_cameraRig").objectReferenceValue = rig;
+            pso.ApplyModifiedPropertiesWithoutUndo();
+
+            var muzzle = new GameObject("Muzzle").transform;
+            muzzle.SetParent(player.transform, false);
+            muzzle.localPosition = new Vector3(0.37f, 1.0f, 0.45f);
+
+            var rifle = player.AddComponent<Rifle>();
+            var rocket = player.AddComponent<RocketLauncher>();
+            var machete = player.AddComponent<Machete>();
+            player.AddComponent<WeaponHub>();
+
+            // Swing visual: a pivot at chest height turned through the arc by the machete, blade reaching 2 m.
+            var swing = new GameObject("MacheteSwing").transform;
+            swing.SetParent(player.transform, false);
+            swing.localPosition = new Vector3(0f, 1.0f, 0f);
+            CreateBlock(new Part("Blade", "vfx_machete", new Vector3(0f, 0f, 1.1f), new Vector3(0.14f, 0.06f, 1.8f)), swing, keepCollider: false);
+            var mso = new SerializedObject(machete);
+            mso.FindProperty("_swingVisual").objectReferenceValue = swing;
+            mso.ApplyModifiedPropertiesWithoutUndo();
+
+            var riso = new SerializedObject(rifle);
+            riso.FindProperty("_muzzle").objectReferenceValue = muzzle;
+            riso.FindProperty("_projectileMaterial").objectReferenceValue = LoadMaterial("vfx_shot_player");
+            riso.ApplyModifiedPropertiesWithoutUndo();
+            var roso = new SerializedObject(rocket);
+            roso.FindProperty("_muzzle").objectReferenceValue = muzzle;
+            roso.FindProperty("_projectileMaterial").objectReferenceValue = LoadMaterial("vfx_rocket");
+            roso.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static PixelCameraRig BuildCameraRig()
         {
             var rigGo = new GameObject("CameraRig");
             var cameraGo = new GameObject("GameCamera");
@@ -297,6 +410,7 @@ namespace DanceWithTheDevil.Editor
             Quaternion rotation = Quaternion.Euler(35f, 45f, 0f);
             cameraGo.transform.SetPositionAndRotation(new Vector3(1f, 0f, 1f) - rotation * Vector3.forward * 50f, rotation);
             camera.orthographicSize = 15f;
+            return rig;
         }
 
         private static void SaveCharacterPrefab(string name, Part[] parts, string path)

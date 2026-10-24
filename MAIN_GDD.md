@@ -1,6 +1,6 @@
 # MAIN GDD — Dance with the Devil (Bir Şey Olmaz)
 
-**Son güncelleme: 2026-10-24 04:14 (UTC+3)**
+**Son güncelleme: 2026-10-24 04:30 (UTC+3)**
 
 > **Bu dosya projenin tek ve yaşayan Game Design Document'ıdır.** Sürüm numarası yoktur (GDD2, GDD3…
 > diye gitmez). Yeni bir mekanik eklendiğinde, var olan bir mekanik değiştiğinde ya da bir tasarım kararı
@@ -80,7 +80,7 @@ kabul et / reddet / sök → yeni hareket alanına göre konumlan.
 **Diriliş (karar K-12):** can yeni azami değere dolar; 2,0 sn dokunulmazlık; şok dalgası 6 m içindeki
 bütün düşmanları parçalar; dalga saati kaldığı yerden sürer. Sözleşme ekranı açıkken dalga saati de durur.
 
-## 4. Kontroller — ⬜
+## 4. Kontroller — 🟡 (hareket, nişan, kaçınma, tüfek, roket, pala çalışıyor; ret, Q ve R henüz yok)
 
 | Girdi | İşlev |
 |---|---|
@@ -99,8 +99,10 @@ bütün düşmanları parçalar; dalga saati kaldığı yerden sürer. Sözleşm
 hasar alınmaz, kabul halkası ilerlemez, ateş ve pala kesilir; ret/sökme girdisi tamponlanmaz.
 
 **Oyuncu:** 100 can; hasardan sonra 0,6 sn dokunulmazlık (aynı anda gelen atışlar tek karede yığılmaz).
+Pala vuruşu bittikten sonra 0,5 sn bekleme başlar (yani en fazla 0,7 sn'de bir vuruş). Kaçınma sırasında üç silah da susar;
+basılı tutulan ateş kaçınma bitince sürer, kaçınma sırasında basılan tuşlar saklanmaz.
 
-## 5. Silahlar — ⬜
+## 5. Silahlar — 🟡 (tüfek, roket ve pala çalışıyor; pala dalgası, çevre kırma ve kalkan kuralı henüz yok)
 
 Fısıltı modülleri (§7) ilk GDD'deki temel lazerin yerini alan **tüfeği** etkiler; roket ve palayı etkilemez
 (karar K-7).
@@ -111,6 +113,11 @@ Fısıltı modülleri (§7) ilk GDD'deki temel lazerin yerini alan **tüfeği** 
 | **Roket** | 2 şarj, şarj başına 6,0 sn dolum; mermi 18 m/sn; ilk temasta ya da 20 m sonra patlar; 2,5 m yarıçapta düz 40 hasar ve ~2 m savurma; kalkanı yok sayar; oyuncuya hasar vermez; iç duvar ve dekorları kırar, dış sınırı kırmaz | Başlangıç önerisi (kalkan ve çevre kuralı birleşik tasarım) |
 | **Pala** | 35 hasar, önde 120° yay, 2 m; vuruş 0,2 sn (bu sürede tüfek susar), bekleme 0,5 sn; kalkanı yok sayar; vurduğu yüzeyde düzlemsel kesik açar | Başlangıç önerisi |
 | **Pala dalgası** (Sözleşme 2 ile açılır, bkz. §8) | Her pala vuruşu öne bir dalga da çıkarır: 20 hasar, delip geçer, 8 m / 2,5 m genişlik / 20 m/sn; kalkanlı irinin önünden geçemez | Başlangıç önerisi; kalkan kuralı karar K-13 |
+
+**Vuruş hissi (yer tutucu):** her atış ve isabet aynı karede namlu/isabet parlaması, küp sıçraması ve ekran
+sarsıntısı üretir. Tüfek hafif (sarsıntı yok denecek kadar az, duraklama yok), pala orta (0,06 sn vuruş duraklaması),
+roket ağır (büyük parlama, ışık, güçlü sarsıntı, 0,1 sn duraklama). Ekran sarsıntısı görüntüyü kaydırır, kamerayı
+çevirmez; erişilebilirlik için genel bir sarsıntı çarpanı vardır.
 
 ## 6. Düşmanlar — ⬜
 
@@ -327,3 +334,4 @@ savaş içi fısıltı modülleri.
 - 2026-10-24 03:57 — Burak (Claude Code) — jam teslim tarihi kaydedildi (2026-10-26 15:00).
 - 2026-10-24 03:59 — Burak (Claude Code) — Burak "önerilerini uygula" dedi: 13 açık soru öneriler doğrultusunda karara bağlandı (K-1…K-13, ör. ölüm garanti, modüller yalnız tüfekte, Minimum kapsam); 9 soru açık kaldı.
 - 2026-10-24 04:14 — Burak (Claude Code) — Faz 1 başlangıcı: yer tutucu blok arena (§9 yerleşimi) ve sabit pikselli izometrik kamera (§13) kuruldu.
+- 2026-10-24 04:30 — Burak (Claude Code) — Faz 2: hareket, nişan, kaçınma, tüfek, roket, pala ve vuruş hissi oynanır hâle geldi (§4, §5 🟡); pala beklemesi vuruş bitince başlar.

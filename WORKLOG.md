@@ -64,3 +64,15 @@ Every change to this project goes here — from people and from AI tools. Git sh
 - Why: Phase 1 of the plan, minimum scope (K-11): RawImage upscale instead of a custom Render Graph pass.
 - Status: committed (Phase 1: pixel camera rig, placeholder Defne/Chaser and block arena)
 - Notes / risks: checked through MCP: console clean, play-mode screenshot, every wall/block/character base raycasts onto the floor at y 0.000, 0 collider overlaps. Not done yet in Phase 1: 1 px outline, toon shader, .vox importer and its EditMode test, panning jitter test (camera is fixed for now). `Assets/Scenes/aaaa.unity` is Burak's local scene and is not committed.
+
+### 2026-10-24 — Burak (Claude Code) — branch claude/project-thread-yuc0gi
+- Changed: Phase 2 (player, weapons, game feel).
+  - New runtime code (gameplay-programmer agent): `Scripts/Core/{Damage,Health,TrainingDummy}.cs`, `Scripts/Player/{PlayerInputReader,PlayerController}.cs`, `Scripts/Weapons/{Projectile,ProjectilePool,Rifle,RocketLauncher,Machete,WeaponHub}.cs`. ProjectilePool: `ObjectPool` qualified as `UnityEngine.Pool.ObjectPool` (ambiguous with URP's).
+  - Game feel (unity-vfx-game-feel skill): copied `ImpactEvent.cs`, `HitStop.cs`, `LightFlash.cs`, `PooledEffect.cs`, `SecondOrderDynamics.cs` into `Scripts/Feel/`; new `Scripts/Feel/PixelImpactFeedback.cs` (one ImpactEvent → flash cube, cube burst particle system, point light, camera trauma, global hitstop; profiles for muzzle, bullet, melee, explosion). `PixelCameraRig.cs`: border 1 → 4 texels, trauma shake as a uvRect offset (`AddTrauma`, `GlobalShakeScale`), no camera rotation.
+  - New PlayMode test assembly `Tests/PlayMode/Game.Tests.PlayMode.asmdef` with `PlayerCombatTests.cs` (5 tests).
+  - `PlaceholderBuilder.cs`: new materials `mat_vfx_{shot_player,rocket,machete}_flat` (Simple Lit, emissive) and `mat_vfx_{cubes,flash}_flat` (URP Particles/Unlit, URP Unlit); handles an already open Arena scene; wires the scene.
+  - `Arena.unity` (rebuilt): Player › + CharacterController (center 0,0.9,0, height 1.8, radius 0.35, skin 0.05, step 0.3), Health (100, 0.6 s), PlayerInputReader, PlayerController (camera rig), Rifle/RocketLauncher (muzzle child at 0.37,1,0.45, projectile materials), Machete (MacheteSwing child with Blade cube), WeaponHub. Chaser_Preview removed; TrainingDummies › Dummy_0…3 (🧪, Chaser prefab + BoxCollider center 0,0.7,0 size 0.9,1.4,0.6, Health 30 / 0 s, TrainingDummy). New ImpactFeedback › PixelImpactFeedback (rig, cube and flash materials). `mat_chaser_eyes_flat.mat` re-saved by Unity.
+  - `MAIN_GDD.md` §4, §5 status 🟡, feel notes, machete cooldown rule.
+- Why: Phase 2 of the plan.
+- Status: committed (Phase 2: player controller, rifle, rocket, machete and pixel game feel)
+- Notes / risks: verified through MCP: console clean, PlayMode tests 5/5 passed, scripted shots in play mode (rifle −10 on a dummy, rocket killed dummies in 2.5 m), ~137 fps in the editor. Keyboard/mouse play was not driven by a script; Burak should try WASD, mouse, left click, E, F and Space. Player death does nothing yet (Phase 5 Devil flow). Sound hookup skipped: there are no SFX assets yet (Phase 6).

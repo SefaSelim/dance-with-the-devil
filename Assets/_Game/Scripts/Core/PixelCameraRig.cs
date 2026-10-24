@@ -14,7 +14,7 @@ namespace DanceWithTheDevil
     [DisallowMultipleComponent]
     public sealed class PixelCameraRig : MonoBehaviour
     {
-        private const int Border = 1; // extra texels on each side for the sub-texel shift
+        private const int Border = 4; // extra texels on each side for the sub-texel shift and shake
 
         [Header("Cameras")]
         [Tooltip("Orthographic game camera. Its targetTexture is created and owned by this rig.")]
@@ -51,6 +51,20 @@ namespace DanceWithTheDevil
         [SerializeField, Min(0f)] private float _smoothTime = 0.08f;
         [Tooltip("Shift the displayed image by the snapped-away remainder (smooth sub-texel panning).")]
         [SerializeField] private bool _subTexelOffset = true;
+
+        [Header("Shake (trauma model, shown as an image offset so the snapped camera never moves)")]
+        [Tooltip("Largest shake offset in low-res texels at full trauma. Must stay below the border.")]
+        [SerializeField, Range(0f, 3.4f)] private float _maxShakeTexels = 3f;
+        [Tooltip("Trauma lost per second.")]
+        [SerializeField, Min(0f)] private float _traumaDecay = 1.6f;
+        [Tooltip("Noise frequency in Hz.")]
+        [SerializeField, Min(0f)] private float _shakeFrequency = 22f;
+
+        /// <summary>Accessibility multiplier for all camera shake (0 = off).</summary>
+        public static float GlobalShakeScale = 1f;
+
+        private float _trauma;
+        private Vector2 _shakeTexels;
 
         private RenderTexture _renderTexture;
         private Camera _displayCamera;
@@ -131,6 +145,12 @@ namespace DanceWithTheDevil
         /// Converts a screen position (pixels, bottom-left origin, e.g. Mouse.current.position) into a world
         /// ray from the low-res game camera, accounting for letterbox, scale, border and sub-texel offset.
         /// </summary>
+        /// <summary>Adds camera trauma (0..1). Shake = trauma² so small hits stay subtle.</summary>
+        public void AddTrauma(float amount)
+        {
+            _trauma = Mathf.Clamp01(_trauma + Mathf.Max(0f, amount));
+        }
+
         public Ray ScreenPointToWorldRay(Vector2 screenPos)
         {
             Vector2 viewport = ScreenToGameViewport(screenPos);
@@ -145,8 +165,8 @@ namespace DanceWithTheDevil
         {
             float u = (screenPos.x - _displayRect.x) / _displayRect.width;
             float v = (screenPos.y - _displayRect.y) / _displayRect.height;
-            float px = Border + _remainderTexels.x + u * _width;
-            float py = Border + _remainderTexels.y + v * _height;
+            float px = Border + _remainderTexels.x + _shakeTexels.x + u * _width;
+            float py = Border + _remainderTexels.y + _shakeTexels.y + v * _height;
             return new Vector2(px / RtWidth, py / RtHeight);
         }
 
@@ -255,6 +275,23 @@ namespace DanceWithTheDevil
             _rawImageRect.sizeDelta = new Vector2(w, h);
         }
 
+        // Unscaled time: shake keeps moving through hitstop.
+        private void UpdateShake()
+        {
+            _trauma = Mathf.Max(0f, _trauma - _traumaDecay * Time.unscaledDeltaTime);
+            float shake = _trauma * _trauma * _maxShakeTexels * GlobalShakeScale;
+            if (shake <= 0f)
+            {
+                _shakeTexels = Vector2.zero;
+                return;
+            }
+
+            float t = Time.unscaledTime * _shakeFrequency;
+            _shakeTexels = new Vector2(
+                (Mathf.PerlinNoise(t, 0.37f) * 2f - 1f) * shake,
+                (Mathf.PerlinNoise(0.71f, t) * 2f - 1f) * shake);
+        }
+
         private void UpdateCamera(bool snapImmediately)
         {
             if (_target != null)
@@ -282,10 +319,12 @@ namespace DanceWithTheDevil
 
             _gameCamera.transform.SetPositionAndRotation(rotation * snapped, rotation);
 
-            // Show the window shifted by the remainder (border keeps it inside the RT).
+            UpdateShake();
+
+            // Show the window shifted by the remainder and shake (border keeps it inside the RT).
             _rawImage.uvRect = new Rect(
-                (Border + _remainderTexels.x) / RtWidth,
-                (Border + _remainderTexels.y) / RtHeight,
+                (Border + _remainderTexels.x + _shakeTexels.x) / RtWidth,
+                (Border + _remainderTexels.y + _shakeTexels.y) / RtHeight,
                 (float)_width / RtWidth,
                 (float)_height / RtHeight);
         }
