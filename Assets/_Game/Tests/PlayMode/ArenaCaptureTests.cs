@@ -60,6 +60,18 @@ namespace DanceWithTheDevil.Tests
             }
             Save(rig, folder, "03_rifle");
 
+            // Flash on the gun tip: close views right after a shot, normal body and with Yoğunluk (body ×1.5 in X/Z).
+            yield return Wait(0.2f);
+            rifle.TryFireAt(aim, player.transform.forward);
+            yield return new WaitForEndOfFrame();
+            yield return CloseUps(player.transform, folder, "03b_flash_closeup");
+            player.BodyRadiusScale = 1.5f;
+            yield return Wait(0.25f);
+            rifle.TryFireAt(aim, player.transform.forward);
+            yield return new WaitForEndOfFrame();
+            yield return CloseUps(player.transform, folder, "03c_flash_density_closeup");
+            player.BodyRadiusScale = 1f;
+
             var rocket = player.GetComponent<RocketLauncher>();
             bool exploded = false;
             System.Action<Vector3> onExploded = _ => exploded = true;

@@ -191,3 +191,19 @@ Every change to this project goes here — from people and from AI tools. Git sh
 - Why: SefaSelim's requests above.
 - Status: committed (Gothic arena dressing, main menu, Synty UI theme)
 - Notes / risks: tested in the open Editor through MCP: compile clean, EditMode 5/5, PlayMode 22/22 (+2 explicit capture tests, both run). Captures checked: arena from the game camera and five overview angles, main menu, settings, credits, HUD, pause. Numeric check: 373 dressing objects, 0 colliders, all resting on y 0 / 1.5 / 1.51 except the crypt and cemetery gate (sunk 5 cm on purpose). Changes from the level plan: no ruin wall pieces (plaster faces), no torches, no FX_Ash/FX_Fog (grey slabs in the pixel camera), no sunbeams. Settings: the fullscreen toggle only acts in a built player. The `mat_*_flat.mat` `_EMISSION` re-saves are still left out.
+
+### 2026-10-24 — SefaSelim (Claude Code) — branch character
+- Changed: rifle muzzle flash on the gun tip (also with the Yoğunluk module), and gothic arena level fixes (SefaSelim: "alev izi silahın tam ucundan çıkmıyor; büyüme upgrade'inde de bozuluyor olabilir; level design'da bazı problemler var").
+  - Muzzle flash: the flash was played where the bullet starts (muzzle flattened to the shot height, pulled back from walls, read before WeaponHold placed the gun this frame) and stayed there: 0.33 m off the drawn tip. `Scripts/Feel/RealisticVfx.cs`: rifle flashes play on the event's muzzle transform (+0.03 m along the barrel, barrel rotation) and follow it for 0.12 s in LateUpdate; `[DefaultExecutionOrder(1000)]`; new fields `_muzzleFollowSeconds` 0.12, `_muzzleForwardOffset` 0.03. Bullets still start from the same point as before.
+  - Yoğunluk (body ×1.5 in X/Z) stretched the gun along its barrel (the socket sits under the scaled model) and pushed the muzzle out. `Scripts/Player/WeaponHold.cs`: `KeepUniformScale()` rescales the WeaponSocket each LateUpdate so the weapons keep their world size (read in Awake).
+  - New regression test `Tests/PlayMode/MuzzleFlashTests.cs` (flash within 6 cm of the muzzle for three frames, gun length and uniform scale with Yoğunluk). Watched it fail on the unfixed code (0.335 m off), passes after the fix. `ArenaCaptureTests.cs`: close-ups right after a shot, normal and with Yoğunluk.
+  - Arena (`Editor/GothicArenaBuilder.cs`, rebuilt with Dance/Arena/Rebuild Gothic Dressing → `Arena.unity` › GothicDressing, 379 objects, 0 colliders; gameplay colliders, NavMesh and lights unchanged except the fire bowls following the buttresses):
+    - Entrances closed with `SM_Bld_Gates_Cemetary_02` (N/E) and a 0.95 m fence (S/W); the wall colliders run through the openings, so the open arch was an invisible wall. The cemetery arch behind the N gate removed; short tile paths outside each gate.
+    - S/W walls, half pillars and fences 1.5 m → 1.0 m (they hid Defne against the wall); lanterns on the 1 m pillar tops.
+    - N/E wall line 14.2 → 14.35 / 16.2 → 16.35; pillars at 14.31 / 16.31, buttresses at 14.46 / 16.46 and ±2.37, so no visible stone stands inside the walkable area. L-block corner pillars pushed inside the block footprint.
+    - NE/NW corner tombstones (1.3–1.5 m, walk-through) → flat grave slabs (Tomb_Stone_05/06).
+    - Floor tiles from wall line to wall line only (they stuck out past the S/W walls), stretched to fit; block-top tiles 1.505 → 1.515 (above the half-wall caps).
+  - Docs: `MAIN_GDD.md` §9 + change log, `design/levels/gothic-arena.md`.
+- Why: SefaSelim's report above.
+- Status: committed (Muzzle flash on the gun tip, gothic arena level fixes)
+- Notes / risks: in the Editor through MCP: EditMode 5/5, PlayMode 23/23 (+2 explicit capture tests run). Captures checked: flash on the barrel tip in idle close-ups with and without Yoğunluk, gates, corners, blocks from the game angle and the reverse angle. The rocket launch flash still uses the shot point (not reported). `mat_*_flat.mat` re-saves still left out.

@@ -11,6 +11,8 @@ namespace DanceWithTheDevil
     /// leaves the flash shape and cube burst to this component for the kinds in <see cref="Covers"/>.
     /// Pooling: a fixed round-robin set of instances per effect; a reused instance is cleared and replayed.
     /// </summary>
+    // Late, so the muzzle flash is snapped to the gun after WeaponHold placed it and CharacterAnimator kicked it.
+    [DefaultExecutionOrder(1000)]
     [DisallowMultipleComponent]
     public sealed class RealisticVfx : MonoBehaviour
     {
@@ -28,6 +30,14 @@ namespace DanceWithTheDevil
         [SerializeField, Range(0f, 1f)] private float _launchIntensity = 0.3f;
         [Tooltip("Global size multiplier (tuning).")]
         [SerializeField, Min(0.1f)] private float _scale = 1f;
+        [Tooltip("Seconds a rifle flash stays attached to the gun's muzzle (its core and flame are local-space).")]
+        [SerializeField, Min(0f)] private float _muzzleFollowSeconds = 0.12f;
+        [Tooltip("Metres in front of the Muzzle point where the flash is centred (the flash starts at the bore).")]
+        [SerializeField] private float _muzzleForwardOffset = 0.03f;
+
+        // One follow slot per pooled muzzle instance.
+        private Transform[] _followTarget;
+        private float[] _followUntil;
 
         private Pool _muzzles;
         private Pool _launches;
@@ -53,16 +63,22 @@ namespace DanceWithTheDevil
                 }
             }
 
-            public void Play(Vector3 position, Quaternion rotation, float scale)
+            public int Count => _roots.Length;
+            public Transform Root(int index) => _roots[index];
+
+            /// <summary>Plays the next instance; returns its index, or -1 if it has no particle system.</summary>
+            public int Play(Vector3 position, Quaternion rotation, float scale)
             {
-                Transform root = _roots[_next];
-                ParticleSystem system = _systems[_next];
+                int index = _next;
+                Transform root = _roots[index];
+                ParticleSystem system = _systems[index];
                 _next = (_next + 1) % _roots.Length;
-                if (system == null) return;
+                if (system == null) return -1;
                 system.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
                 root.SetPositionAndRotation(position, rotation);
                 root.localScale = Vector3.one * scale;
                 system.Play(true);
+                return index;
             }
         }
 
@@ -80,7 +96,12 @@ namespace DanceWithTheDevil
         private void Awake()
         {
             Instance = this;
-            if (_muzzlePrefab != null) _muzzles = new Pool(_muzzlePrefab, 6, transform);
+            if (_muzzlePrefab != null)
+            {
+                _muzzles = new Pool(_muzzlePrefab, 6, transform);
+                _followTarget = new Transform[_muzzles.Count];
+                _followUntil = new float[_muzzles.Count];
+            }
             if (_launchPrefab != null) _launches = new Pool(_launchPrefab, 3, transform);
             if (_explosionPrefab != null) _explosions = new Pool(_explosionPrefab, 4, transform);
             if (_impactPrefab != null) _impacts = new Pool(_impactPrefab, 10, transform);
@@ -101,8 +122,24 @@ namespace DanceWithTheDevil
                 case ImpactKind.MuzzleFire:
                 {
                     Quaternion facing = LookAlong(e.normal.sqrMagnitude > 1e-6f ? e.normal : e.direction);
-                    if (e.intensity >= _launchIntensity) _launches?.Play(e.position, facing, _scale);
-                    else _muzzles?.Play(e.position, facing, _scale);
+                    if (e.intensity >= _launchIntensity)
+                    {
+                        _launches?.Play(e.position, facing, _scale);
+                        break;
+                    }
+                    if (_muzzles == null) break;
+                    // The shot itself leaves from a flattened, wall-safe point; the flash belongs on the gun's bore.
+                    Transform muzzle = e.hitTransform;
+                    if (muzzle != null && muzzle.gameObject.activeInHierarchy)
+                    {
+                        int index = _muzzles.Play(MuzzlePoint(muzzle), muzzle.rotation, _scale);
+                        if (index >= 0)
+                        {
+                            _followTarget[index] = muzzle;
+                            _followUntil[index] = Time.time + _muzzleFollowSeconds;
+                        }
+                    }
+                    else _muzzles.Play(e.position, facing, _scale);
                     break;
                 }
                 case ImpactKind.Explosion:
@@ -116,6 +153,26 @@ namespace DanceWithTheDevil
                     break;
             }
         }
+
+        /// <summary>Keeps fresh rifle flashes on the gun: it moves with the aim, the run and the recoil kick.</summary>
+        private void LateUpdate()
+        {
+            if (_followTarget == null) return;
+            float now = Time.time;
+            for (int i = 0; i < _followTarget.Length; i++)
+            {
+                Transform target = _followTarget[i];
+                if (target == null) continue;
+                if (now > _followUntil[i] || !target.gameObject.activeInHierarchy)
+                {
+                    _followTarget[i] = null;
+                    continue;
+                }
+                _muzzles.Root(i).SetPositionAndRotation(MuzzlePoint(target), target.rotation);
+            }
+        }
+
+        private Vector3 MuzzlePoint(Transform muzzle) => muzzle.position + muzzle.forward * _muzzleForwardOffset;
 
         private static Quaternion LookAlong(Vector3 direction)
         {

@@ -25,12 +25,18 @@ namespace DanceWithTheDevil.Editor
         private const string Pf = "Assets/PolygonDarkFantasy/Prefabs/";
         private const string CapMaterialPath = "Assets/_Game/Art/Materials/mat_env_gothic_cap.mat";
 
-        // Wall lines: visual wall centre lines (collider inner faces are at ±14 z and ±16 x).
-        private const float NorthZ = 14.2f;
+        // Wall lines: visual wall centre lines (collider inner faces are at ±14 z and ±16 x). The N/E line sits far
+        // enough back that the deepest piece (the 0.7 m window) ends on the collider face, so nothing visible stands
+        // where the player can walk.
+        private const float NorthZ = 14.35f;
         private const float SouthZ = -14.2f;
-        private const float EastX = 16.2f;
+        private const float EastX = 16.35f;
         private const float WestX = -16.2f;
         private const float Gate = 2f; // half width of each entrance opening
+        // Camera-side (S/W) walls: 1 m like the placeholder (GDD §9), so they never hide Defne standing against them.
+        // The half-wall pieces are 1.51 m tall; 0.66 brings them to 1.0 m.
+        private const float NearWallScale = 0.66f;
+        private const float NearWallTop = 1.0f;
 
         private static Dictionary<string, string> _paths;
 
@@ -183,20 +189,13 @@ namespace DanceWithTheDevil.Editor
         private static void BuildFloor(Transform root)
         {
             Transform floor = Group(root, "Floor");
-            // Cracked stone tiles over the walled area (x -17..17, z -15..15), 2.5 m each, top flush with y = 0.
-            const float tile = 2.5f;
-            for (float x = -17.5f; x < 17f; x += tile)
-            {
-                for (float z = -15f; z < 15f; z += tile)
-                {
-                    GameObject t = Spawn("SM_Bld_Base_Floor_01", floor);
-                    if (t == null) return;
-                    int yaw = ((int)((x + 20f) / tile) * 7 + (int)((z + 20f) / tile) * 3) % 4 * 90;
-                    t.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
-                    FitBox(t, new Vector3(x + tile * 0.5f, 0f, z + tile * 0.5f), new Vector3(tile, 0f, tile), bottom: 0f, top: true);
-                    foreach (var r in t.GetComponentsInChildren<Renderer>()) r.shadowCastingMode = ShadowCastingMode.Off;
-                }
-            }
+            // Cracked stone tiles from wall line to wall line (no tiles sticking out past the S/W walls), plus a short
+            // paved path outside each gate, top flush with y = 0.
+            TileRect(floor, new Rect(WestX - 0.15f, SouthZ - 0.15f, EastX - WestX + 0.25f, NorthZ - SouthZ + 0.25f), 0f);
+            TileRect(floor, new Rect(-Gate, NorthZ + 0.1f, 2f * Gate, 5f), 0f);
+            TileRect(floor, new Rect(-Gate, SouthZ - 5.15f, 2f * Gate, 5f), 0f);
+            TileRect(floor, new Rect(EastX + 0.1f, -Gate, 5f, 2f * Gate), 0f);
+            TileRect(floor, new Rect(WestX - 5.15f, -Gate, 5f, 2f * Gate), 0f);
             // Wear, moss and dirt in the ring and corners (never in the centre, corridors or entrance lanes).
             Decal(floor, "SM_Env_Grunge_01", -12f, 10.5f, 20f);
             Decal(floor, "SM_Env_Grunge_04", -7f, 11.5f, 350f);
@@ -236,10 +235,14 @@ namespace DanceWithTheDevil.Editor
             // West run x -17..-2 (west to east), east run x 2..17 (east to west, so the ruin sits near the corner).
             Run(g, NorthRunWest, -17f, -Gate, NorthZ, alongX: true, yaw: 180f);
             Run(g, Reverse(NorthRunEast), Gate, 17f, NorthZ, alongX: true, yaw: 180f);
+            // Pillars (0.62 m deep) and the gate buttresses (0.91 m deep, 0.74 m wide) end on the collider face (z 14)
+            // and on the opening's edges (x ±2): no visible stone where Defne can walk.
             foreach (float x in new[] { -12f, -7f, 7f, 12f, -14.5f, 14.5f })
-                Pillar(g, "SM_Bld_Pillar_01", new Vector3(x, 0f, NorthZ - 0.05f), 180f);
-            Pillar(g, "SM_Bld_Buttress_Pillar_01", new Vector3(-Gate - 0.3f, 0f, NorthZ - 0.1f), 180f);
-            Pillar(g, "SM_Bld_Buttress_Pillar_01", new Vector3(Gate + 0.3f, 0f, NorthZ - 0.1f), 180f);
+                Pillar(g, "SM_Bld_Pillar_01", new Vector3(x, 0f, 14.31f), 180f);
+            Pillar(g, "SM_Bld_Buttress_Pillar_01", new Vector3(-Gate - 0.37f, 0f, 14.46f), 180f);
+            Pillar(g, "SM_Bld_Buttress_Pillar_01", new Vector3(Gate + 0.37f, 0f, 14.46f), 180f);
+            // The wall collider runs through the opening: a closed iron gate shows it (enemies arrive in front of it).
+            GateFill(g, "SM_Bld_Gates_Cemetary_02", NorthZ, alongX: true, yaw: 180f, heightScale: 1f);
         }
 
         private static void BuildEastWall(Transform g)
@@ -247,37 +250,40 @@ namespace DanceWithTheDevil.Editor
             Run(g, EastRunSouth, -14f, -Gate, EastX, alongX: false, yaw: 270f);
             Run(g, EastRunNorth, Gate, 14f, EastX, alongX: false, yaw: 270f);
             foreach (float z in new[] { -9.2f, -6.8f, 6.8f, 9.2f })
-                Pillar(g, "SM_Bld_Pillar_01", new Vector3(EastX - 0.05f, 0f, z), 270f);
-            Pillar(g, "SM_Bld_Buttress_Pillar_01", new Vector3(EastX - 0.1f, 0f, -Gate - 0.3f), 270f);
-            Pillar(g, "SM_Bld_Buttress_Pillar_01", new Vector3(EastX - 0.1f, 0f, Gate + 0.3f), 270f);
+                Pillar(g, "SM_Bld_Pillar_01", new Vector3(16.31f, 0f, z), 270f);
+            Pillar(g, "SM_Bld_Buttress_Pillar_01", new Vector3(16.46f, 0f, -Gate - 0.37f), 270f);
+            Pillar(g, "SM_Bld_Buttress_Pillar_01", new Vector3(16.46f, 0f, Gate + 0.37f), 270f);
+            GateFill(g, "SM_Bld_Gates_Cemetary_02", EastX, alongX: false, yaw: 270f, heightScale: 1f);
         }
 
         private static void BuildSouthWall(Transform g)
         {
-            Run(g, Repeat("SM_Bld_Base_Wall_Half_01", 5), -17f, -4.5f, SouthZ, alongX: true, yaw: 180f);
-            Run(g, Repeat("SM_Bld_Base_Wall_Half_01", 5), 4.5f, 17f, SouthZ, alongX: true, yaw: 180f);
+            Run(g, Repeat("SM_Bld_Base_Wall_Half_01", 5), -16.35f, -4.5f, SouthZ, alongX: true, yaw: 180f, heightScale: NearWallScale);
+            Run(g, Repeat("SM_Bld_Base_Wall_Half_01", 5), 4.5f, 16.45f, SouthZ, alongX: true, yaw: 180f, heightScale: NearWallScale);
             Fence(g, -4.5f, -Gate, SouthZ, alongX: true, yaw: 180f);
             Fence(g, Gate, 4.5f, SouthZ, alongX: true, yaw: 180f);
+            GateFill(g, "SM_Bld_Fence_Cemetary_01", SouthZ, alongX: true, yaw: 180f, heightScale: 0.5f);
             foreach (float x in new[] { -9.5f, 9.5f, -14.5f, 14.5f, -4.5f, 4.5f })
-                Pillar(g, "SM_Bld_Base_Pillar_Half_01", new Vector3(x, 0f, SouthZ), 0f);
-            Pillar(g, "SM_Bld_Base_Pillar_Half_01", new Vector3(-Gate - 0.2f, 0f, SouthZ), 0f);
-            Pillar(g, "SM_Bld_Base_Pillar_Half_01", new Vector3(Gate + 0.2f, 0f, SouthZ), 0f);
-            Prop(g, "SM_Prop_Lantern_02", -Gate - 0.2f, 1.51f, SouthZ, 0f);
-            Prop(g, "SM_Prop_Lantern_02", Gate + 0.2f, 1.51f, SouthZ, 0f);
+                Pillar(g, "SM_Bld_Base_Pillar_Half_01", new Vector3(x, 0f, SouthZ), 0f, NearWallScale);
+            Pillar(g, "SM_Bld_Base_Pillar_Half_01", new Vector3(-Gate - 0.2f, 0f, SouthZ), 0f, NearWallScale);
+            Pillar(g, "SM_Bld_Base_Pillar_Half_01", new Vector3(Gate + 0.2f, 0f, SouthZ), 0f, NearWallScale);
+            Prop(g, "SM_Prop_Lantern_02", -Gate - 0.2f, NearWallTop, SouthZ, 0f);
+            Prop(g, "SM_Prop_Lantern_02", Gate + 0.2f, NearWallTop, SouthZ, 0f);
         }
 
         private static void BuildWestWall(Transform g)
         {
-            Run(g, Repeat("SM_Bld_Base_Wall_Half_01", 4), -14f, -4.4f, WestX, alongX: false, yaw: 270f);
-            Run(g, Repeat("SM_Bld_Base_Wall_Half_01", 4), 4.4f, 14f, WestX, alongX: false, yaw: 270f);
+            Run(g, Repeat("SM_Bld_Base_Wall_Half_01", 4), -14.3f, -4.4f, WestX, alongX: false, yaw: 270f, heightScale: NearWallScale);
+            Run(g, Repeat("SM_Bld_Base_Wall_Half_01", 4), 4.4f, 14.45f, WestX, alongX: false, yaw: 270f, heightScale: NearWallScale);
             Fence(g, -4.4f, -Gate, WestX, alongX: false, yaw: 270f);
             Fence(g, Gate, 4.4f, WestX, alongX: false, yaw: 270f);
+            GateFill(g, "SM_Bld_Fence_Cemetary_01", WestX, alongX: false, yaw: 270f, heightScale: 0.5f);
             foreach (float z in new[] { -9.2f, 9.2f, -4.4f, 4.4f })
-                Pillar(g, "SM_Bld_Base_Pillar_Half_01", new Vector3(WestX, 0f, z), 0f);
-            Pillar(g, "SM_Bld_Base_Pillar_Half_01", new Vector3(WestX, 0f, -Gate - 0.2f), 0f);
-            Pillar(g, "SM_Bld_Base_Pillar_Half_01", new Vector3(WestX, 0f, Gate + 0.2f), 0f);
-            Prop(g, "SM_Prop_Lantern_02", WestX, 1.51f, -Gate - 0.2f, 0f);
-            Prop(g, "SM_Prop_Lantern_02", WestX, 1.51f, Gate + 0.2f, 0f);
+                Pillar(g, "SM_Bld_Base_Pillar_Half_01", new Vector3(WestX, 0f, z), 0f, NearWallScale);
+            Pillar(g, "SM_Bld_Base_Pillar_Half_01", new Vector3(WestX, 0f, -Gate - 0.2f), 0f, NearWallScale);
+            Pillar(g, "SM_Bld_Base_Pillar_Half_01", new Vector3(WestX, 0f, Gate + 0.2f), 0f, NearWallScale);
+            Prop(g, "SM_Prop_Lantern_02", WestX, NearWallTop, -Gate - 0.2f, 0f);
+            Prop(g, "SM_Prop_Lantern_02", WestX, NearWallTop, Gate + 0.2f, 0f);
         }
 
         private static void Fence(Transform g, float from, float to, float line, bool alongX, float yaw)
@@ -285,12 +291,23 @@ namespace DanceWithTheDevil.Editor
             GameObject f = Spawn("SM_Bld_Fence_Cemetary_01", g);
             if (f == null) return;
             f.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
-            f.transform.localScale = new Vector3(1f, 0.75f, 1f); // 1.43 m: under the 1.5 m camera-side limit
+            f.transform.localScale = new Vector3(1f, 0.5f, 1f); // 0.95 m: as low as the 1 m camera-side wall
             FitSpan(f, from, to, line, alongX, 0f);
         }
 
+        /// <summary>Closes an entrance opening (x or z -2..2 on the wall line) where the wall collider continues.</summary>
+        private static void GateFill(Transform g, string prefab, float line, bool alongX, float yaw, float heightScale)
+        {
+            GameObject f = Spawn(prefab, g);
+            if (f == null) return;
+            f.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+            f.transform.localScale = new Vector3(1f, heightScale, 1f);
+            FitSpan(f, -Gate, Gate, line, alongX, 0f);
+        }
+
         /// <summary>A row of wall pieces filling from..to on one line, each stretched to an equal share.</summary>
-        private static void Run(Transform g, string[] pieces, float from, float to, float line, bool alongX, float yaw)
+        private static void Run(Transform g, string[] pieces, float from, float to, float line, bool alongX, float yaw,
+            float heightScale = 1f)
         {
             float step = (to - from) / pieces.Length;
             for (int i = 0; i < pieces.Length; i++)
@@ -298,15 +315,17 @@ namespace DanceWithTheDevil.Editor
                 GameObject w = Spawn(pieces[i], g);
                 if (w == null) continue;
                 w.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+                w.transform.localScale = new Vector3(1f, heightScale, 1f);
                 FitSpan(w, from + step * i, from + step * (i + 1), line, alongX, 0f);
             }
         }
 
-        private static void Pillar(Transform g, string prefab, Vector3 at, float yaw)
+        private static void Pillar(Transform g, string prefab, Vector3 at, float yaw, float heightScale = 1f)
         {
             GameObject p = Spawn(prefab, g);
             if (p == null) return;
             p.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+            p.transform.localScale = new Vector3(1f, heightScale, 1f);
             PlaceOn(p, at);
         }
 
@@ -356,7 +375,11 @@ namespace DanceWithTheDevil.Editor
             Prop(g, "SM_Prop_Skull_Pile_01", 8.4f, 1.5f, -4.8f, 80f);
         }
 
-        private static void TopTiles(Transform g, Rect rect)
+        // Block tops: just above the half walls' tops (1.51), so the wall caps do not show as bright lines around them.
+        private static void TopTiles(Transform g, Rect rect) => TileRect(g, rect, 1.515f);
+
+        /// <summary>Fills a rectangle with stone tiles of about 2.5 m (stretched to fit), tops at <paramref name="top"/>.</summary>
+        private static void TileRect(Transform g, Rect rect, float top)
         {
             int nx = Mathf.Max(1, Mathf.RoundToInt(rect.width / 2.5f));
             int nz = Mathf.Max(1, Mathf.RoundToInt(rect.height / 2.5f));
@@ -368,8 +391,11 @@ namespace DanceWithTheDevil.Editor
                 {
                     GameObject t = Spawn("SM_Bld_Base_Floor_01", g);
                     if (t == null) return;
+                    // Half the tiles turned 180 degrees so the crack pattern does not repeat in rows.
+                    t.transform.rotation = Quaternion.Euler(0f, ((i * 7 + j * 3) & 1) * 180f, 0f);
                     t.transform.localScale = new Vector3(w / 2.5f, 1f, d / 2.5f);
-                    FitBox(t, new Vector3(rect.x + w * (i + 0.5f), 0f, rect.y + d * (j + 0.5f)), Vector3.zero, 1.505f, top: true);
+                    FitBox(t, new Vector3(rect.x + w * (i + 0.5f), 0f, rect.y + d * (j + 0.5f)), Vector3.zero, top, top: true);
+                    foreach (var r in t.GetComponentsInChildren<Renderer>()) r.shadowCastingMode = ShadowCastingMode.Off;
                 }
             }
         }
@@ -390,8 +416,39 @@ namespace DanceWithTheDevil.Editor
                 int count = Mathf.Max(1, Mathf.RoundToInt((to - from) / 2.5f));
                 float yaw = alongX ? (inwardSign > 0f ? 0f : 180f) : (inwardSign > 0f ? 90f : 270f);
                 Run(g, Repeat("SM_Bld_Base_Wall_Half_01", count), from, to, line, alongX, yaw);
-                Pillar(g, "SM_Bld_Base_Pillar_Half_01", new Vector3(a.x, 0f, a.y), 0f);
+                Pillar(g, "SM_Bld_Base_Pillar_Half_01", CornerPillar(a), 0f);
             }
+        }
+
+        // The four gameplay blocks (x, z, width, depth), for keeping corner pillars inside them.
+        private static readonly Rect[] BlockRects =
+        {
+            new Rect(-10f, 6f, 8f, 3f), new Rect(-10f, 2f, 3f, 4f), new Rect(2f, -9f, 8f, 3f), new Rect(7f, -6f, 3f, 4f),
+        };
+
+        /// <summary>
+        /// A 0.39 m corner pillar at an outline vertex, pushed diagonally into the block so its outer faces line up
+        /// with the block's faces instead of sticking 0.2 m out into the walkway (works for inner corners too).
+        /// </summary>
+        private static Vector3 CornerPillar(Vector2 v)
+        {
+            const float half = 0.195f;
+            foreach (float dx in new[] { -half, half })
+            {
+                foreach (float dz in new[] { -half, half })
+                {
+                    var c = new Vector2(v.x + dx, v.y + dz);
+                    foreach (Rect r in BlockRects)
+                    {
+                        if (c.x - half >= r.xMin - 0.001f && c.x + half <= r.xMax + 0.001f &&
+                            c.y - half >= r.yMin - 0.001f && c.y + half <= r.yMax + 0.001f)
+                        {
+                            return new Vector3(c.x, 0f, c.y);
+                        }
+                    }
+                }
+            }
+            return new Vector3(v.x, 0f, v.y);
         }
 
         // ------------------------------------------------------------------ corners (plan §2.6)
@@ -399,10 +456,10 @@ namespace DanceWithTheDevil.Editor
         private static void BuildCorners(Transform g)
         {
             Prop(g, "SM_Bld_Topper_01", 15.6f, 0f, 15.6f, 180f);
-            Prop(g, "SM_Prop_Tomb_Stone_02", 15.2f, 0f, 12.9f, 215f);
-            Prop(g, "SM_Prop_Tomb_Stone_04", 14.0f, 0f, 13.3f, 190f, 0.9f);
+            // Inside the walls only low things (<= 0.5 m) the player can plausibly step over: decor has no collider.
+            Prop(g, "SM_Prop_Tomb_Stone_05", 14.7f, 0f, 12.5f, 0f);
             Prop(g, "SM_Env_Plant_Fern_01", 15.3f, 0f, 11.6f, 40f);
-            Prop(g, "SM_Prop_Tomb_Stone_01", -15.2f, 0f, 12.9f, 140f);
+            Prop(g, "SM_Prop_Tomb_Stone_06", -14.9f, 0f, 12.4f, 0f);
             Prop(g, "SM_Prop_Bone_Pile_01", -14.0f, 0f, 13.2f, 20f);
             Prop(g, "SM_Env_Rocks_Small_01", -15.0f, 0f, 11.4f, 70f, 0.7f);
             Prop(g, "SM_Prop_Rubble_Pile_Burnt_02", 14.8f, 0f, -12.9f, 15f, 0.6f);
@@ -428,7 +485,6 @@ namespace DanceWithTheDevil.Editor
                 PlaceOn(d, new Vector3(x, -0.12f - 0.004f * g.childCount, z));
             }
             Prop(g, "SM_Prop_Crypt_01", 9f, -0.05f, 21f, 180f);
-            Prop(g, "SM_Bld_Gates_Cemetary_01", 0f, -0.05f, 18.5f, 180f);
             Prop(g, "SM_Env_Rock_Cliff_01", -13f, -1.5f, 29f, 180f);
             Prop(g, "SM_Env_Rock_Cliff_02", -3f, -1.5f, 31f, 180f);
             Prop(g, "SM_Env_Rock_Cliff_03", 7f, -1.5f, 30f, 180f);
@@ -448,10 +504,10 @@ namespace DanceWithTheDevil.Editor
         // read as grey slabs over the whole arena (seen in the 2026-10-24 captures).
         private static void BuildFx(Transform g)
         {
-            Fx(g, "FX_Fire_01", new Vector3(-Gate - 0.3f, 3.0f, NorthZ - 0.1f), 0.6f);
-            Fx(g, "FX_Fire_01", new Vector3(Gate + 0.3f, 3.0f, NorthZ - 0.1f), 0.6f);
-            Fx(g, "FX_Fire_01", new Vector3(EastX - 0.1f, 3.0f, -Gate - 0.3f), 0.6f);
-            Fx(g, "FX_Fire_01", new Vector3(EastX - 0.1f, 3.0f, Gate + 0.3f), 0.6f);
+            Fx(g, "FX_Fire_01", new Vector3(-Gate - 0.37f, 3.0f, 14.46f), 0.6f);
+            Fx(g, "FX_Fire_01", new Vector3(Gate + 0.37f, 3.0f, 14.46f), 0.6f);
+            Fx(g, "FX_Fire_01", new Vector3(16.46f, 3.0f, -Gate - 0.37f), 0.6f);
+            Fx(g, "FX_Fire_01", new Vector3(16.46f, 3.0f, Gate + 0.37f), 0.6f);
             Fx(g, "FX_Fire_01", new Vector3(-14.8f, 0.2f, -12.9f), 0.7f); // SW pyre
             Fx(g, "FX_Fire_Embers_01", new Vector3(-14.8f, 0.4f, -12.9f), 0.6f);
             Fx(g, "FX_Bats_01", new Vector3(-6f, 6f, 20f), 1f);

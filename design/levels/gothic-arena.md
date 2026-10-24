@@ -29,6 +29,17 @@ Entrances: N/E framed by buttress pillars with fire bowls; S/W by half pillars w
 - Floor: Synty cracked stone tiles over the whole walled area (168 tiles) instead of the placeholder checker.
 - Sunbeam FX not used; window light comes from three cool point lights.
 
+## Fixes after the first build (2026-10-24 18:55)
+- Entrances are closed: the wall colliders run through every opening, so an open arch read as an invisible wall. N/E:
+  closed iron cemetery gate (`SM_Bld_Gates_Cemetary_02`) between the buttresses; S/W: a low fence. A short paved path
+  leads to each gate outside. Enemies still appear on the plates in front of the gates.
+- S/W (camera-side) walls, pillars and fences are 1 m high (were 1.5 m): at 1.5 m they hid most of Defne when she stood
+  against them (camera pitch 35°). Lanterns sit on the 1 m pillar tops.
+- Nothing visible stands where the player can walk: the N/E wall line moved back to 14.35 / 16.35 so the windows,
+  pillars and buttresses end on the collider faces; L-block corner pillars sit inside the block footprint.
+- Tall tombstones in the NE/NW corners (walk-through, no collider) became flat grave slabs.
+- Floor tiles no longer stick out past the S/W walls; block-top tiles sit above the half-wall caps (no bright edge lines).
+
 ## Checks (2026-10-24)
 373 dressing objects, 0 colliders; every object rests on y 0, the block tops (1.5) or a pillar top (1.51), except
 the crypt and cemetery gate, sunk 5 cm into the outside ground on purpose. Nothing low stands in the centre 14×12 m

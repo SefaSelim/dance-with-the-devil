@@ -72,7 +72,14 @@ namespace DanceWithTheDevil
             _launcherProfile = launcherProfile;
         }
 
-        private void Awake() => _animator = GetComponent<Animator>();
+        // World size of the weapons, read before any body scaling (the Yoğunluk module widens the model in X/Z only).
+        private float _socketWorldScale = 1f;
+
+        private void Awake()
+        {
+            _animator = GetComponent<Animator>();
+            if (_socket != null) _socketWorldScale = _socket.lossyScale.y;
+        }
 
         private void OnAnimatorIK(int layerIndex)
         {
@@ -117,6 +124,24 @@ namespace DanceWithTheDevil
             }
             GripFor(profile, out Vector3 gripPosition, out Quaternion gripRotation, out _);
             _socket.SetPositionAndRotation(_goalPosition + _goalRotation * gripPosition, _goalRotation * gripRotation);
+            KeepUniformScale();
+        }
+
+        /// <summary>
+        /// Undoes a non-uniform parent scale on the weapons: the Yoğunluk module widens the body 1.5× in X/Z, which
+        /// stretched the gun along its barrel and pushed the muzzle (and its flash) past the drawn tip. Each socket
+        /// axis is rescaled to the original world size; the gun lies close to the body's axes, so no visible shear is left.
+        /// </summary>
+        private void KeepUniformScale()
+        {
+            Transform parent = _socket.parent;
+            if (parent == null) return;
+            Matrix4x4 m = parent.localToWorldMatrix * Matrix4x4.Rotate(_socket.localRotation);
+            float sx = m.MultiplyVector(Vector3.right).magnitude;
+            float sy = m.MultiplyVector(Vector3.up).magnitude;
+            float sz = m.MultiplyVector(Vector3.forward).magnitude;
+            if (sx < 1e-5f || sy < 1e-5f || sz < 1e-5f) return;
+            _socket.localScale = new Vector3(_socketWorldScale / sx, _socketWorldScale / sy, _socketWorldScale / sz);
         }
 
         /// <summary>The grip of this frame: the profile's base plus the per-clip corrections weighted by the clips playing.</summary>

@@ -1,6 +1,6 @@
 # MAIN GDD — Dance with the Devil (Bir Şey Olmaz)
 
-**Son güncelleme: 2026-10-24 17:18 (UTC+3)**
+**Son güncelleme: 2026-10-24 18:55 (UTC+3)**
 
 > **Bu dosya projenin tek ve yaşayan Game Design Document'ıdır.** Sürüm numarası yoktur (GDD2, GDD3…
 > diye gitmez). Yeni bir mekanik eklendiğinde, var olan bir mekanik değiştiğinde ya da bir tasarım kararı
@@ -211,17 +211,20 @@ Dört giriş kenarların ortasında, içe bakan şeritli zemin plakalarıdır; d
 **Görünüş: "kutsallığı bozulmuş nef" (kullanıcı isteği 2026-10-24, yalnız görsel):** arena, mezarlığa dönmüş yıkık bir
 katedral avlusudur. Oynanış yerleşimi, çarpışmalar, sekme ve yol bulma değişmedi; dekorun hiçbirinin çarpışması yoktur.
 - Kuzey ve doğu duvarları 3 m'lik taş duvarlar, sivri kemerli vitray pencereler ve sütunlarla kameranın baktığı yüksek fon
-  olur; kameraya yakın güney ve batı kenarları 1,5 m'lik yarım duvar, yarım sütun ve kapıların iki yanında demir mezarlık
-  parmaklığıdır (oyuncuyu gizlemez).
-- Kuzey ve doğu girişleri payandalı taş sütunlar ve üstlerinde yanan ateş kaseleriyle, güney ve batı girişleri sütun
-  başındaki fenerlerle çerçevelenir; her girişte sıcak, soluk kehribar bir ışık havuzu düşmanın geldiği yeri gösterir.
+  olur; kameraya yakın güney ve batı kenarları 1 m'lik alçak taş duvar, yarım sütun ve demir mezarlık parmaklığıdır
+  (Defne duvarın dibinde dururken bile gövdesini gizlemez).
+- Girişler kapalıdır (dış duvar her yerde kesintisiz seker): kuzey ve doğuda payandalı taş sütunlar arasında, üstünde ateş
+  kaseleri yanan kapalı demir mezarlık kapısı; güney ve batıda sütun başında fenerler ve alçak demir parmaklık. Dışarıda her
+  kapıya taş döşeli kısa bir yol gelir. Düşmanlar kapının hemen önündeki işaretli plakada belirir; her girişte sıcak, soluk
+  kehribar bir ışık havuzu düşmanın geldiği yeri gösterir.
+- Oynanabilir alanda görünen hiçbir taş (sütun, payanda, köşe sütunu) yoktur; duvar içi köşelerde yalnız üstünden
+  geçilebilecek alçak dekor (yassı mezar taşları, kemik ve kafatası yığınları) durur.
 - L bloklar yarım taş duvarlarla kaplı, üstleri taş döşemelidir. Her çeyrekte bir işaret: kuzeybatı bloğunda gargoyl
   (soğuk mavi ışık), kuzeydoğu köşesinde sivri kule ve duvarın ardında bir türbe (leylak ışık), güneydoğu bloğunda yüzü
   merkeze dönük heykel ve pentagramlı sunak (kehribar ışık), güneybatı köşesinde alçak, yanan bir kemik-moloz yığını.
   Blok üstlerinde mumlar, kafatası yığınları, mezar taşları ve açık bir kitap vardır.
 - Zemin çatlak taş karolardır; halkada ve köşelerde aşınma ve yosun lekeleri, merkezde, koridorlarda ve giriş şeritlerinde
-  hiçbir şey yoktur. Duvarların ardında toprak, kayalık, ölü ağaçlar, türbe, kuzey girişinin 4 m arkasında demir mezarlık
-  kapısı ve yarasalar görünür.
+  hiçbir şey yoktur. Duvarların ardında toprak, kayalık, ölü ağaçlar, türbe ve yarasalar görünür.
 - Işık: soğuk mavi ay ışığı ve koyu mavi ortam; 12 nokta ışık (4 giriş, 4 işaret, 3 pencere, 1 soluk merkez dolgusu).
   Merkez en loş yerdir; karakterler sahnenin en doygun şeyleri kalır. Kırmızı ve turuncu düşmanlara, uyarı plakalarına ve
   Şeytan'a ayrılmıştır (tek istisna sunaktaki küçük pentagram).
@@ -451,3 +454,4 @@ seçenek seçerse değiştirilir:
 - 2026-10-24 15:15 — SefaSelim (Claude Code) — Defne, kullanıcının eklediği animasyonlu 3B modelle değişti; AK tüfek ve RPG elinde/sırtında; mermiler gerçekçi (pirinç mermi + iz, RPG roketi + duman); yeni modelde bedellerin görünüşü yazıldı (§2, §13).
 - 2026-10-24 16:08 — SefaSelim (Claude Code) — Kamera yaklaştı ve görüntü inceldi, karakterler büyüdü, Defne'nin dış parlaması kalktı; silah tutuşu ayarlanabilir profil + sol el IK oldu; namlu, roket ve patlama efektleri gerçekçi dokulu efektlerle değişti (§13).
 - 2026-10-24 17:18 — SefaSelim (Claude Code) — Arena karanlık gotik harabe olarak giydirildi, ışıkları yeniden kuruldu (yalnız görsel, §9); ana menü, sade ayarlar ve emeği geçenler eklendi, duraklatmadaki "Çık" ana menüye döner, arayüz Synty çerçeveleri ve gotik yazı tipleriyle yenilendi (§12).
+- 2026-10-24 18:55 — SefaSelim (Claude Code) — Gotik arena düzeltmeleri: girişler kapalı demir kapı/parmaklık oldu (görünmez duvar kalmadı), güney ve batı duvarları 1 m'ye indi, oynanabilir alana taşan sütunlar ve içinden geçilen uzun mezar taşları kaldırıldı (§9).
