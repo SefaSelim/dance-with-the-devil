@@ -119,6 +119,7 @@ namespace DanceWithTheDevil
             ModuleType.TripleShot => "Üçlü Atış",
             ModuleType.Echo => "Yankı",
             ModuleType.Haste => "Hız",
+            ModuleType.CritChance => "Keskin Göz",
             _ => "Yoğunluk",
         };
 
@@ -127,6 +128,7 @@ namespace DanceWithTheDevil
             ModuleType.TripleShot => "Tek atışta 3 mermi (±12°), hepsi tam hasar",
             ModuleType.Echo => "Mermiler duvardan bir kez seker",
             ModuleType.Haste => "Tüfek atış hızı ×1,4 (6 → 8,4 atış/sn)",
+            ModuleType.CritChance => "Tüfekte +%20 kritik şansı",
             _ => "Mermi hasarı ×1,6",
         };
 
@@ -135,6 +137,7 @@ namespace DanceWithTheDevil
             ModuleType.TripleShot => "Her atış seni nişanın tersine iter",
             ModuleType.Echo => "Seken mermi sana da çarpar (yarım hasar), 2. duvarda söner",
             ModuleType.Haste => "Mermiler nişandan rastgele ±6° sapar",
+            ModuleType.CritChance => "Ateş ederken yavaşlarsın (yürüme 6 → 5,1 m/sn)",
             _ => "Gövden ×1,5 büyür, daha kolay vurulursun",
         };
 
@@ -143,6 +146,7 @@ namespace DanceWithTheDevil
             ModuleType.TripleShot => "Bir tetik, üç mermi. Azıcık teper, o kadar.",
             ModuleType.Echo => "Duvardan seker. Arada bir sana döner. Bir şey olmaz.",
             ModuleType.Haste => "Daha hızlı sık. Nereye mi gider? Aşağı yukarı oraya.",
+            ModuleType.CritChance => "Gözünü kıs, tam ortadan vur. Biraz ağır yürürsün, bir şey olmaz.",
             _ => "Daha sert vur. Biraz irileşirsin, kimse fark etmez.",
         };
     }

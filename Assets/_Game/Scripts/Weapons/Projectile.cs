@@ -43,6 +43,14 @@ namespace DanceWithTheDevil
         public Transform DamageOnlyUnder;
         public float HitIntensity;
         public float WallHitIntensity;
+        /// <summary>
+        /// Critical bullet, rolled once by the weapon at fire time (production/design/crit-difficulty.md §2): it crits
+        /// every damageable it hits, through pierces and after an Echo bounce. Its own bounced hit on the shooter never
+        /// crits (half of the non-crit damage). False for enemy shots.
+        /// </summary>
+        public bool IsCrit;
+        /// <summary>Damage multiplier of a crit. 0 or less = <see cref="CritRoll.DefaultMultiplier"/>.</summary>
+        public float CritMultiplier;
 
         // Bounce (Echo module, MAIN_GDD §7)
         /// <summary>Wall reflections allowed (bullet mode). A wall is any collider without a damageable. 0 = none.</summary>
@@ -54,6 +62,11 @@ namespace DanceWithTheDevil
         /// Damage × this. 0 = the shooter stays immune.
         /// </summary>
         public float BouncedSelfDamageScale;
+        /// <summary>
+        /// On each bounce the range still left (MaxRange − travelled) is multiplied by this (Echo: 0.5, at most half of
+        /// the remaining range after a bounce). 0 or ≥ 1 = unchanged.
+        /// </summary>
+        public float BounceRangeScale;
         /// <summary>If true, the visual takes <see cref="BounceTint"/> after the first bounce.</summary>
         public bool HasBounceTint;
         public Color BounceTint;
@@ -107,6 +120,7 @@ namespace DanceWithTheDevil
         private ProjectileLaunch _launch;
         private Vector3 _direction;
         private float _travelled;
+        private float _rangeLimit;
         private int _pierceLeft;
         private bool _active;
         private int _bouncesLeft;
@@ -116,6 +130,8 @@ namespace DanceWithTheDevil
         private Collider _lastBounceCollider;
 
         public bool IsActive => _active;
+        /// <summary>True if this flight is a critical bullet (optional visual).</summary>
+        public bool IsCrit => _launch.IsCrit;
         /// <summary>True after the first wall bounce of this flight.</summary>
         public bool HasBounced => _bounced;
 
@@ -123,6 +139,8 @@ namespace DanceWithTheDevil
         public static event System.Action<Vector3> Bounced;
         /// <summary>Distance travelled this flight (bounces keep counting toward the max range).</summary>
         public float Travelled => _travelled;
+        /// <summary>Total travel at which this flight ends: MaxRange, shortened by <see cref="ProjectileLaunch.BounceRangeScale"/> on bounces.</summary>
+        public float RangeLimit => _rangeLimit;
         public Vector3 Direction => _direction;
         public float Speed => _launch.Speed;
         public GameObject Source => _launch.Source;
@@ -143,6 +161,7 @@ namespace DanceWithTheDevil
             _launch = launch;
             _direction = launch.Direction.sqrMagnitude > 1e-8f ? launch.Direction.normalized : Vector3.forward;
             _travelled = 0f;
+            _rangeLimit = launch.MaxRange;
             _pierceLeft = Mathf.Max(0, launch.PierceCount);
             _bouncesLeft = Mathf.Max(0, launch.Bounces);
             _bounced = false;
@@ -175,7 +194,7 @@ namespace DanceWithTheDevil
             if (!_active) return;
 
             float step = _launch.Speed * Time.deltaTime;
-            float remaining = _launch.MaxRange - _travelled;
+            float remaining = _rangeLimit - _travelled;
             bool reachesEnd = step >= remaining;
             if (reachesEnd) step = Mathf.Max(0f, remaining);
 
@@ -186,7 +205,7 @@ namespace DanceWithTheDevil
                 if (result == SweepResult.Bounced)
                 {
                     // The rest of this frame's step is dropped; the flight resumes next frame from the wall.
-                    if (_travelled >= _launch.MaxRange) Despawn();
+                    if (_travelled >= _rangeLimit) Despawn();
                     return;
                 }
             }
@@ -239,7 +258,7 @@ namespace DanceWithTheDevil
 
                 if (target == null)
                 {
-                    RaiseImpact(collider, point, normal, _launch.WallHitIntensity);
+                    RaiseImpact(collider, point, normal, _launch.WallHitIntensity, false);
                     if (CanBounce && Bounce(centerAtHit, normal, hit.distance, collider)) return SweepResult.Bounced;
                     transform.position = centerAtHit;
                     Despawn();
@@ -247,11 +266,13 @@ namespace DanceWithTheDevil
                 }
 
                 float damage = _launch.Damage;
+                bool selfHit = false;
                 if (_selfRoot != null && collider.transform.IsChildOf(_selfRoot))
                 {
                     // Own bounced bullet (Echo): reduced damage; harmless once the bounce switch is off.
                     if (!SelfHurtActive) continue;
                     damage *= _launch.BouncedSelfDamageScale;
+                    selfHit = true;
                 }
                 else if (_launch.DamageOnlyUnder != null && !collider.transform.IsChildOf(_launch.DamageOnlyUnder))
                 {
@@ -261,8 +282,11 @@ namespace DanceWithTheDevil
                 if (_alreadyHit.Contains(target)) continue;
                 _alreadyHit.Add(target);
 
-                target.TakeDamage(new DamageInfo(damage, point, _direction, _launch.Source, _launch.Kind));
-                RaiseImpact(collider, point, normal, _launch.HitIntensity);
+                // Crit bullet (rolled at fire time): every target crits; the shooter's own bounced bullet never does.
+                bool crit = !selfHit && _launch.IsCrit;
+                if (crit) damage *= _launch.CritMultiplier > 0f ? _launch.CritMultiplier : CritRoll.DefaultMultiplier;
+                target.TakeDamage(new DamageInfo(damage, point, _direction, _launch.Source, _launch.Kind, crit));
+                RaiseImpact(collider, point, normal, _launch.HitIntensity, crit);
 
                 if (_pierceLeft <= 0)
                 {
@@ -307,6 +331,10 @@ namespace DanceWithTheDevil
 
             _direction = reflected.normalized;
             _travelled += distance;
+            // Echo: after a bounce at most this fraction of the range still left (crit-difficulty design: half).
+            float rangeScale = _launch.BounceRangeScale;
+            if (rangeScale > 0f && rangeScale < 1f)
+                _rangeLimit = _travelled + Mathf.Max(0f, _rangeLimit - _travelled) * rangeScale;
             _bouncesLeft--;
             _bounced = true;
             _lastBounceCollider = wall;
@@ -327,7 +355,7 @@ namespace DanceWithTheDevil
             return true;
         }
 
-        private void RaiseImpact(Collider collider, Vector3 point, Vector3 normal, float intensity)
+        private void RaiseImpact(Collider collider, Vector3 point, Vector3 normal, float intensity, bool isCrit)
         {
             ImpactBus.Raise(new ImpactEvent
             {
@@ -340,6 +368,7 @@ namespace DanceWithTheDevil
                 hitTransform = collider.transform,
                 instigator = _launch.Source,
                 instigatorIsLocalPlayer = _launch.SourceIsLocalPlayer,
+                isCrit = isCrit,
             });
         }
 

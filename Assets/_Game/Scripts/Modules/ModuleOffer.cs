@@ -121,6 +121,16 @@ namespace DanceWithTheDevil
                 lower.localRotation = Quaternion.Euler(0f, 0f, 45f);
             }
 
+            // Keskin Göz: an upright crosshair (four thin arms with a gap) around a small diamond (aim).
+            Transform crit = NewShape(ModuleType.CritChance);
+            m = Mat(ModuleType.CritChance);
+            ModuleVisuals.CreatePart("Arm_Up", PrimitiveType.Cube, crit, new Vector3(0f, 0.24f, 0f), new Vector3(0.07f, 0.2f, 0.07f), m);
+            ModuleVisuals.CreatePart("Arm_Down", PrimitiveType.Cube, crit, new Vector3(0f, -0.24f, 0f), new Vector3(0.07f, 0.2f, 0.07f), m);
+            ModuleVisuals.CreatePart("Arm_Left", PrimitiveType.Cube, crit, new Vector3(-0.24f, 0f, 0f), new Vector3(0.2f, 0.07f, 0.07f), m);
+            ModuleVisuals.CreatePart("Arm_Right", PrimitiveType.Cube, crit, new Vector3(0.24f, 0f, 0f), new Vector3(0.2f, 0.07f, 0.07f), m);
+            Transform dot = ModuleVisuals.CreatePart("Dot", PrimitiveType.Cube, crit, Vector3.zero, Vector3.one * 0.1f, m);
+            dot.localRotation = Quaternion.Euler(0f, 0f, 45f);
+
             Material ringBase = materials != null && materials.Length > ModuleCatalog.Count ? materials[ModuleCatalog.Count] : null;
             _ringBase = ModuleVisuals.CreatePart("RingBase", PrimitiveType.Cylinder, transform, new Vector3(0f, 0.02f, 0f),
                 new Vector3(_ringDiameter, 0.01f, _ringDiameter), ringBase);

@@ -193,6 +193,7 @@ namespace DanceWithTheDevil.Tests
             GameObject shooter = Spawn("Shooter", origin); // no collider, no PlayerController
             Rifle rifle = shooter.AddComponent<Rifle>();
             rifle.EchoEnabled = true;
+            rifle.BaseCritChance = 0f; // exact damage: no 5 % crit
             rifle.PierceCount = 1; // pass the target so the bullet can reach the second wall
             ProjectilePool pool = shooter.GetComponent<ProjectilePool>();
 
@@ -212,6 +213,120 @@ namespace DanceWithTheDevil.Tests
 
             Assert.AreEqual(target.MaxHealth - 10f, target.Current, 1e-4f, "hit once, only after the bounce");
             Assert.AreEqual(0, pool.CountActive, "second wall ends it");
+        }
+
+        [UnityTest]
+        public IEnumerator Echo_AfterBounce_TravelsHalfOfRemainingRange()
+        {
+            // Arrange: one wall 3 m to the right, open space behind the shooter.
+            var origin = new Vector3(0f, 1f, 1500f);
+            GameObject shooter = Spawn("Shooter", origin);
+            Rifle rifle = shooter.AddComponent<Rifle>();
+            rifle.EchoEnabled = true;
+            SpawnBox("Wall", origin + new Vector3(3f, 0f, 0f), new Vector3(0.5f, 3f, 6f));
+            Physics.SyncTransforms();
+            const float range = 25f;
+            float travelledAtBounce = -1f;
+            Projectile bullet = null;
+            System.Action<Vector3> onBounce = _ =>
+            {
+                if (bullet != null && bullet.HasBounced && travelledAtBounce < 0f) travelledAtBounce = bullet.Travelled;
+            };
+            Projectile.Bounced += onBounce;
+
+            // Act
+            Assert.IsTrue(rifle.TryFire(origin, Vector3.right));
+            foreach (Projectile p in Object.FindObjectsByType<Projectile>(FindObjectsInactive.Exclude))
+                if (p.IsActive && p.Source == shooter) bullet = p;
+            Assert.IsNotNull(bullet);
+            float deadline = Time.time + 2f;
+            while (bullet.IsActive && Time.time < deadline) yield return null;
+            Projectile.Bounced -= onBounce;
+
+            // Assert
+            Assert.Greater(travelledAtBounce, 0f, "bounced");
+            float expectedAfter = (range - travelledAtBounce) * 0.5f;
+            float after = bullet.Travelled - travelledAtBounce;
+            Assert.IsFalse(bullet.IsActive, "ended at its shortened range");
+            Assert.LessOrEqual(after, expectedAfter + 0.01f, "at most half of the remaining range after the bounce");
+            Assert.AreEqual(expectedAfter, after, 0.05f, "and that much in open space");
+        }
+
+        [UnityTest]
+        public IEnumerator Offer_AllFiveEquipped_NoOfferCanAppear()
+        {
+            // Arrange
+            var origin = new Vector3(0f, 0f, 1600f);
+            PlayerModules modules = SpawnPlayer(origin);
+            for (int i = 0; i < ModuleCatalog.Count; i++) Assert.IsTrue(modules.EquipImmediate((ModuleType)i));
+            yield return null;
+
+            // Act
+            bool canPresent = modules.CanPresentOffer;
+            bool presented = modules.PresentOffer(ModuleType.Echo, origin + new Vector3(0f, 0f, 5f));
+
+            // Assert
+            Assert.AreEqual(5, ModuleCatalog.Count);
+            Assert.AreEqual(ModuleCatalog.Count, modules.EquippedCount);
+            Assert.IsFalse(canPresent, "every slot is full");
+            Assert.IsFalse(presented);
+            Assert.IsNull(modules.Current);
+
+            // Freeing a slot lets offers come again.
+            yield return new WaitForSeconds(0.7f);
+            Assert.IsTrue(modules.TryEject(ModuleType.Echo));
+            Assert.IsTrue(modules.CanPresentOffer);
+        }
+
+        [UnityTest]
+        public IEnumerator Spawner_EquippedTypes_AreNeverDrawn()
+        {
+            // Arrange: four types equipped, only Keskin Göz free.
+            var origin = new Vector3(0f, 0f, 1700f);
+            PlayerModules modules = SpawnPlayer(origin);
+            modules.EquipImmediate(ModuleType.TripleShot);
+            modules.EquipImmediate(ModuleType.Echo);
+            modules.EquipImmediate(ModuleType.Density);
+            modules.EquipImmediate(ModuleType.Haste);
+            ModuleSpawner spawner = Spawn("Spawner", origin).AddComponent<ModuleSpawner>();
+            spawner.Configure(modules, null, null);
+            yield return null;
+
+            // Act / Assert
+            for (int i = 0; i < 20; i++)
+            {
+                Assert.IsTrue(spawner.DrawTypeForTests(out ModuleType type));
+                Assert.AreEqual(ModuleType.CritChance, type, $"draw {i}");
+            }
+
+            // All five equipped: nothing to draw.
+            modules.EquipImmediate(ModuleType.CritChance);
+            Assert.IsFalse(spawner.DrawTypeForTests(out _));
+        }
+
+        [UnityTest]
+        public IEnumerator KeskinGoz_Equipped_RifleCrit25Percent_EjectRestores()
+        {
+            // Arrange
+            var origin = new Vector3(0f, 0f, 1800f);
+            PlayerModules modules = SpawnPlayer(origin);
+            Rifle rifle = modules.Rifle;
+            float baseDamage = rifle.Damage;
+            float baseSpeed = modules.Player.MoveSpeedMultiplier;
+
+            // Act
+            Assert.IsTrue(modules.EquipImmediate(ModuleType.CritChance));
+            float equipped = rifle.CritChance;
+            yield return new WaitForSeconds(0.1f);
+            bool slowWithoutFire = modules.FiringSlowActive;
+            Assert.IsTrue(modules.TryEject(ModuleType.CritChance));
+
+            // Assert
+            Assert.AreEqual(0.25f, equipped, 1e-5f, "5 % + 20 %");
+            Assert.AreEqual(baseDamage, rifle.Damage, 1e-5f, "no damage cost");
+            Assert.IsFalse(slowWithoutFire, "the walk is slowed only while fire is held");
+            Assert.AreEqual(baseSpeed, modules.Player.MoveSpeedMultiplier, 1e-5f);
+            Assert.AreEqual(0.05f, rifle.CritChance, 1e-5f, "back to base");
         }
     }
 }

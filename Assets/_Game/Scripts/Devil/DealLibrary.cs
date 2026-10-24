@@ -34,12 +34,12 @@ namespace DanceWithTheDevil
                     -20f, true),
 
                 DealDefinition.Create(3,
-                    "Mermilerin delip geçsin. Ondan da arkadaşlarını alıyorum. Zaten onlara hiç vakti yoktu.",
-                    "Tüfek mermileri 2 düşmanı daha delip geçer (kalkanı delmez)",
+                    "Mermilerin delip geçsin, arada bir de çifte vursun. Ondan da arkadaşlarını alıyorum. Zaten onlara hiç vakti yoktu.",
+                    "Tüfek mermileri 2 düşmanı daha delip geçer (kalkanı delmez); bütün silahlarda +%15 kritik şansı",
                     "Arkadaşları",
                     "Ekrandaki küçük fotoğraf kaybolur.",
                     "Düşmanlar %15 daha hızlı",
-                    "Delen mermi", "Arkadaşları", "düşmanlar %15 daha hızlı",
+                    "Delen mermi, +%15 kritik", "Arkadaşları", "düşmanlar %15 daha hızlı",
                     0f, true),
 
                 DealDefinition.Create(4,

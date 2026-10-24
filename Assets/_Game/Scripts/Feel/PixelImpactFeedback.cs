@@ -99,35 +99,85 @@ namespace DanceWithTheDevil
         [Tooltip("Unlit material for flash shapes and rings (_BaseColor set per shape). Falls back to a runtime URP Unlit material.")]
         [SerializeField] private Material _flashMaterial;
 
-        [Header("Profiles (for 20 px/m; tune by eye at 0.1 time scale, 1920x1080)")]
-        [SerializeField] private Profile _muzzle = new Profile
+        // Field names carry a "V2" suffix so Arena.unity's stale overrides (old, softer shake) are dropped and these
+        // code defaults apply until the scene is rebuilt (2026-10-25 juice pass: stronger, readable shake).
+        // Shake reference (PixelCameraRig: 6.5 texels × trauma^1.25): 0.1 ≈ 0.4 texel, 0.3 ≈ 1.4, 0.65 ≈ 3.8, 0.9 ≈ 5.7.
+        [Header("Profiles (960×540 RT, ortho 6.5: 1 texel ≈ 0.024 m; tune by eye at 0.1 time scale)")]
+        [SerializeField] private Profile _muzzleV2 = new Profile
         {
             Cubes = 4, CubeSize = new Vector2(0.1f, 0.16f), Speed = new Vector2(3f, 7f), Lifetime = new Vector2(0.08f, 0.16f),
             Hot = new Color(1f, 1f, 1f), Cool = new Color(0.37f, 1f, 0.94f),
-            FlashSize = 0.42f, FlashGrow = 0.016f, FlashFade = 0.05f, FlashStretch = 1.8f, Trauma = 0.03f, HitStop = 0f,
+            FlashSize = 0.42f, FlashGrow = 0.016f, FlashFade = 0.05f, FlashStretch = 1.8f, Trauma = 0.05f, HitStop = 0f,
             LightIntensity = 4f, LightRange = 4f, LightDuration = 0.06f, RingRadius = 0f,
         };
-        [SerializeField] private Profile _bullet = new Profile
+        [SerializeField] private Profile _bulletV2 = new Profile
         {
-            Cubes = 6, CubeSize = new Vector2(0.1f, 0.18f), Speed = new Vector2(2.5f, 5.5f), Lifetime = new Vector2(0.2f, 0.4f),
+            Cubes = 6, CubeSize = new Vector2(0.06f, 0.12f), Speed = new Vector2(2.5f, 5.5f), Lifetime = new Vector2(0.2f, 0.4f),
             Hot = new Color(0.85f, 1f, 0.97f), Cool = new Color(0.37f, 1f, 0.94f),
-            FlashSize = 0.45f, FlashGrow = 0.016f, FlashFade = 0.06f, FlashStretch = 1f, Trauma = 0.04f, HitStop = 0f,
+            FlashSize = 0.4f, FlashGrow = 0.016f, FlashFade = 0.06f, FlashStretch = 1f, Trauma = 0.1f, HitStop = 0f,
             LightIntensity = 0f, LightRange = 0f, LightDuration = 0f, RingRadius = 0f,
         };
-        [SerializeField] private Profile _melee = new Profile
+        [SerializeField] private Profile _meleeV2 = new Profile
         {
-            Cubes = 12, CubeSize = new Vector2(0.12f, 0.22f), Speed = new Vector2(3f, 7f), Lifetime = new Vector2(0.3f, 0.6f),
+            Cubes = 12, CubeSize = new Vector2(0.08f, 0.16f), Speed = new Vector2(3f, 7f), Lifetime = new Vector2(0.3f, 0.6f),
             Hot = new Color(1f, 0.95f, 0.8f), Cool = new Color(0.78f, 0.2f, 0.24f),
-            FlashSize = 0.9f, FlashGrow = 0.016f, FlashFade = 0.08f, FlashStretch = 1f, Trauma = 0.8f, HitStop = 0.06f,
+            FlashSize = 0.9f, FlashGrow = 0.016f, FlashFade = 0.08f, FlashStretch = 1f, Trauma = 0.65f, HitStop = 0.06f,
             LightIntensity = 0f, LightRange = 0f, LightDuration = 0f, RingRadius = 0f,
         };
-        [SerializeField] private Profile _explosion = new Profile
+        [SerializeField] private Profile _explosionV2 = new Profile
         {
             Cubes = 26, CubeSize = new Vector2(0.16f, 0.3f), Speed = new Vector2(4f, 10f), Lifetime = new Vector2(0.45f, 1f),
             Hot = new Color(1f, 0.96f, 0.75f), Cool = new Color(0.35f, 0.12f, 0.1f),
-            FlashSize = 1.2f, FlashGrow = 0.033f, FlashFade = 0.05f, FlashStretch = 1f, Trauma = 0.8f, HitStop = 0.1f,
+            FlashSize = 1.2f, FlashGrow = 0.033f, FlashFade = 0.05f, FlashStretch = 1f, Trauma = 0.9f, HitStop = 0.1f,
             LightIntensity = 8f, LightRange = 9f, LightDuration = 0.2f, RingRadius = 2.5f,
         };
+        [Tooltip("Ceiling for the player's own frequent shots and bullet hits: they never push trauma above this alone " +
+                 "(bullet hell: 10 hits/s must jolt, not blur the screen).")]
+        [SerializeField, Range(0f, 1f)] private float _frequentTraumaCeiling = 0.35f;
+
+        [Header("Screen warp and zoom kick (DisplayGrade / PixelCameraRig)")]
+        [Tooltip("Rocket shockwave strength (DisplayGrade.Shockwave) and its ring radius as a multiple of the blast radius.")]
+        [SerializeField, Min(0f)] private float _blastWarp = 1f;
+        [SerializeField, Min(0.5f)] private float _blastWarpRadiusScale = 2.2f;
+        [Tooltip("Zoom kick (fraction, 0.05 = 5% closer for a moment) on a rocket blast and on the revive.")]
+        [SerializeField, Range(0f, 0.2f)] private float _blastZoomKick = 0.05f;
+        [SerializeField, Range(0f, 0.2f)] private float _reviveZoomKick = 0.09f;
+        [SerializeField, Min(0f)] private float _reviveWarp = 1.6f;
+        [SerializeField, Min(0f)] private float _reviveWarpDuration = 0.9f;
+
+        [Header("Kill feel (every death)")]
+        [SerializeField, Range(0f, 1f)] private float _killTrauma = 0.22f;
+        [Tooltip("Kills alone never push trauma above this (many kills build up, but stay readable).")]
+        [SerializeField, Range(0f, 1f)] private float _killTraumaCeiling = 0.55f;
+        [SerializeField, Min(0f)] private float _killWarp = 0.3f;
+        [SerializeField, Range(0f, 0.1f)] private float _killZoomKick = 0.012f;
+
+        [Header("Pixel bursts (skinned enemies: death pixels and hit chips; 1 texel ≈ 0.024 m)")]
+        [Tooltip("Pixel cube edge range in metres (1–2.5 texels).")]
+        [SerializeField] private Vector2 _pixelSize = new Vector2(0.025f, 0.06f);
+        [Tooltip("Hard cap on live pixel cubes (death pixels + hit chips; one GPU-instanced draw).")]
+        [SerializeField, Min(64)] private int _maxPixels = 12000;
+        [Tooltip("On-screen lighting factor applied to the baked palette (unlit cubes next to the lit body).")]
+        [SerializeField, Range(0.3f, 1.5f)] private float _pixelLight = 0.85f;
+        [Tooltip("World height of the floor plane the pixels land on (one collision plane, no world collision).")]
+        [SerializeField] private float _floorHeight = 0f;
+        [Tooltip("Pixels per death: bullet / melee kill and rocket / explosion kill.")]
+        [SerializeField, Min(8)] private int _deathPixels = 320;
+        [SerializeField, Min(8)] private int _deathPixelsBlast = 400;
+        [Tooltip("Fewest pixels a death emits when the frame or live budget is spent (they get bigger instead).")]
+        [SerializeField, Min(4)] private int _minDeathPixels = 60;
+        [Tooltip("Most death pixels emitted in one frame (a rocket killing 20 enemies degrades to coarser bursts).")]
+        [SerializeField, Min(64)] private int _maxDeathPixelsPerFrame = 3000;
+        [SerializeField] private Vector2 _deathPixelSpeed = new Vector2(2.5f, 6.5f);
+        [SerializeField] private Vector2 _deathPixelLifetime = new Vector2(1.5f, 2.5f);
+        [Tooltip("Chips per non-lethal hit at intensity 0 and 1 (crit ×1.5, melee ×1.5).")]
+        [SerializeField] private Vector2Int _chipCount = new Vector2Int(20, 40);
+        [Tooltip("Half-angle of the chip cone around the bullet direction, degrees.")]
+        [SerializeField, Range(5f, 80f)] private float _chipCone = 35f;
+        [SerializeField] private Vector2 _chipSpeed = new Vector2(2.5f, 7f);
+        [SerializeField] private Vector2 _chipLifetime = new Vector2(0.4f, 1.2f);
+        [Tooltip("Most hit chips emitted in one frame.")]
+        [SerializeField, Min(16)] private int _maxChipsPerFrame = 600;
 
         [Header("Blast ring (explosions)")]
         [SerializeField] private RingStyle _blastRing = new RingStyle
@@ -202,6 +252,12 @@ namespace DanceWithTheDevil
 
         private ParticleSystem _sparks;
         private ParticleSystem _debris;
+        private ParticleSystem _pixels;
+        private Transform _floorPlane;
+        private Material _pixelMaterial;
+        private int _pixelFrame = -1;
+        private int _deathPixelsThisFrame;
+        private int _chipsThisFrame;
         private int _shatterFrame = -1;
         private int _shatterCubesThisFrame;
         private FlashShape[] _flashes;
@@ -224,11 +280,20 @@ namespace DanceWithTheDevil
             if (HitStop.Instance == null) gameObject.AddComponent<HitStop>();
             _resolvedFlashMaterial = _flashMaterial != null ? _flashMaterial : UnlitMaterial("Universal Render Pipeline/Unlit", "ImpactFlash");
 
+            // One floor plane (y = _floorHeight) for every cube system: plane collision instead of world collision
+            // (no physics queries per particle; cubes over the raised blocks sink out of sight inside them).
+            _floorPlane = new GameObject("PixelFloorPlane").transform;
+            _floorPlane.SetParent(transform, false);
+            _floorPlane.SetPositionAndRotation(new Vector3(0f, _floorHeight, 0f), Quaternion.identity);
+
             _sparks = BuildCubeSystem("ImpactCubes", _maxSparks, 1.2f, 2.5f, 0.5f, 0.3f, 0.5f,
                 new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(0.6f, 0.85f), new Keyframe(1f, 0f)));
             // Debris: heavier, less drag so it flies, settles quickly (low bounce), full size until near the end.
             _debris = BuildCubeSystem("ShatterCubes", _maxCubes, 1.6f, 1.2f, 0.6f, 0.15f, 1f,
                 new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(0.82f, 1f), new Keyframe(1f, 0f)));
+            // Pixels: tiny cubes, a little drag, skitter once on the floor, hold full size then shrink in the last 25%.
+            _pixels = BuildCubeSystem("PixelCubes", _maxPixels, 1.5f, 1.4f, 0.55f, 0.25f, 1f,
+                new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(0.75f, 1f), new Keyframe(1f, 0f, -3f, 0f)));
 
             BuildFlashes(FlashCount);
             BuildRings();
@@ -239,6 +304,7 @@ namespace DanceWithTheDevil
         private void OnDestroy()
         {
             if (Instance == this) Instance = null;
+            if (_pixelMaterial != null) Destroy(_pixelMaterial);
             if (_rings == null) return;
             for (int i = 0; i < _rings.Length; i++)
                 if (_rings[i] != null && _rings[i].Batch != null) _rings[i].Batch.Destroy();
@@ -251,12 +317,12 @@ namespace DanceWithTheDevil
         {
             switch (e.kind)
             {
-                case ImpactKind.MuzzleFire: Play(_muzzle, e, _smallLight, _smallLightComponent, 0f); break;
-                case ImpactKind.Bullet: Play(_bullet, e, null, null, 0f); break;
-                case ImpactKind.Melee: Play(_melee, e, null, null, 0f); break;
+                case ImpactKind.MuzzleFire: Play(_muzzleV2, e, _smallLight, _smallLightComponent, 0f); break;
+                case ImpactKind.Bullet: Play(_bulletV2, e, null, null, 0f); break;
+                case ImpactKind.Melee: Play(_meleeV2, e, null, null, 0f); break;
                 case ImpactKind.Explosion:
                     if (IsRevive(e)) PlayShockwave(e.position, e.radius);
-                    else Play(_explosion, e, _bigLight, _bigLightComponent, BlastRadius(e, _explosion.RingRadius));
+                    else Play(_explosionV2, e, _bigLight, _bigLightComponent, BlastRadius(e, _explosionV2.RingRadius));
                     break;
             }
         }
@@ -278,7 +344,9 @@ namespace DanceWithTheDevil
                     float size = p.FlashSize * Mathf.Lerp(0.75f, 1f, intensity) * Mathf.Sqrt(blastScale);
                     SpawnFlash(e.position, size, p.FlashGrow, p.FlashFade, p.Hot, axis, p.FlashStretch);
                 }
-                EmitCubes(p, e, intensity, blastScale);
+                // A hit on an enemy that is still alive chips its real colours off along the bullet instead of the
+                // generic spark cubes (the flash above stays as the hit confirm).
+                if (!TryChip(e, intensity)) EmitCubes(p, e, intensity, blastScale);
                 if (ringRadius > 0f) SpawnRing(FloorPoint(e.position), ringRadius, _blastRing, 0.35f);
             }
 
@@ -292,7 +360,23 @@ namespace DanceWithTheDevil
             // dodged hit must not shake), and the freeze on getting hit read as lag (audit F9).
             bool shakes = e.instigatorIsLocalPlayer || e.kind == ImpactKind.Explosion;
             if (shakes && _cameraRig != null && p.Trauma > 0f)
-                _cameraRig.AddTrauma(p.Trauma * intensity * Mathf.Lerp(1f, blastScale, 0.5f), e.position);
+            {
+                float trauma = p.Trauma * intensity * Mathf.Lerp(1f, blastScale, 0.5f);
+                // Frequent own shots and bullet hits jolt every time but never stack past the ceiling on their own.
+                if (e.kind == ImpactKind.MuzzleFire || e.kind == ImpactKind.Bullet)
+                    _cameraRig.AddTraumaUpTo(trauma, _frequentTraumaCeiling);
+                else
+                    _cameraRig.AddTrauma(trauma, e.position);
+            }
+
+            // Rocket blasts bend the screen: a shockwave ring from the blast and a short zoom-in kick.
+            if (e.kind == ImpactKind.Explosion)
+            {
+                float warpRadius = (ringRadius > 0f ? ringRadius : _explosionV2.RingRadius) * _blastWarpRadiusScale;
+                DisplayGrade.Shockwave(e.position, _blastWarp * Mathf.Lerp(0.6f, 1f, intensity) * Mathf.Sqrt(blastScale),
+                    warpRadius, 0.35f + 0.1f * blastScale);
+                if (_cameraRig != null) _cameraRig.AddZoomKick(_blastZoomKick * Mathf.Lerp(0.6f, 1f, intensity));
+            }
 
             // Medium hits (intensity ≥ 0.5, e.g. machete) get the profile's full pause: GDD §5 machete 0.06 s, rocket 0.1 s.
             if (e.instigatorIsLocalPlayer && p.HitStop > 0f && HitStop.Instance != null)
@@ -324,7 +408,12 @@ namespace DanceWithTheDevil
             EmitCubes(_shockwaveBurst, burst, 1f, 1f);
             PlayLight(_bigLight, _bigLightComponent, center, 10f, 14f, 0.35f, _shockwaveLightColor, 1f);
 
-            if (_cameraRig != null) _cameraRig.AddTrauma(_shockwaveTrauma);
+            if (_cameraRig != null)
+            {
+                _cameraRig.AddTrauma(_shockwaveTrauma);
+                _cameraRig.AddZoomKick(_reviveZoomKick);
+            }
+            DisplayGrade.Shockwave(floor, _reviveWarp, r * 0.6f, _reviveWarpDuration);
             if (_shockwaveHitStop > 0f && HitStop.Instance != null) HitStop.Instance.TriggerGlobal(_shockwaveHitStop);
         }
 
@@ -337,6 +426,168 @@ namespace DanceWithTheDevil
 
         /// <summary>The short white pop at a dying body's centre (audit F21). No shake, no freeze.</summary>
         public void KillFlash(Vector3 position) => Flash(position, _killFlashSize, _killFlashTime, _killFlashColor);
+
+        /// <summary>
+        /// Kill feel at <paramref name="position"/> (body centre): a capped shake, a small zoom kick and a small screen
+        /// shockwave. Called once per death by <see cref="ShatterOnDeath"/>; <paramref name="weight"/> 1 = normal kill.
+        /// Example: <c>PixelImpactFeedback.Instance.KillFeel(center, 1f);</c>
+        /// </summary>
+        public void KillFeel(Vector3 position, float weight)
+        {
+            float w = Mathf.Max(0f, weight);
+            if (_cameraRig != null)
+            {
+                _cameraRig.AddTraumaUpTo(_killTrauma * w, _killTraumaCeiling);
+                _cameraRig.AddZoomKick(_killZoomKick * w);
+            }
+            if (_killWarp > 0f) DisplayGrade.Shockwave(position, _killWarp * w);
+        }
+
+        // ---------------------------------------------------------------- pixel bursts
+
+        /// <summary>
+        /// Death pixels for a skinned enemy: about <see cref="_deathPixels"/> tiny cubes (1–2.5 texels) spread through
+        /// the first <paramref name="count"/> proxy boxes by volume, in each box's baked palette, thrown away from
+        /// <paramref name="point"/> and along <paramref name="direction"/> (the killing bullet). Graceful degradation:
+        /// when the frame budget (<see cref="_maxDeathPixelsPerFrame"/>) or the live cap (<see cref="_maxPixels"/>)
+        /// runs low a death emits fewer, bigger cubes (same mass), never fewer than <see cref="_minDeathPixels"/> while
+        /// there is room. Example: <c>feedback.Disintegrate(visibleProxies, count, hitPoint, bulletDir, 1f, false);</c>
+        /// </summary>
+        public void Disintegrate(ShatterProxy[] proxies, int count, Vector3 point, Vector3 direction, float force, bool blast)
+        {
+            if (proxies == null || count <= 0 || _pixels == null) return;
+            BeginPixelFrame();
+            count = Mathf.Min(count, proxies.Length);
+
+            int target = blast ? _deathPixelsBlast : _deathPixels;
+            int frameLeft = _maxDeathPixelsPerFrame - _deathPixelsThisFrame;
+            int liveLeft = _maxPixels - _pixels.particleCount - _deathPixelsThisFrame - _chipsThisFrame;
+            int budget = Mathf.Min(target, Mathf.Max(frameLeft, _minDeathPixels));
+            budget = Mathf.Min(budget, Mathf.Max(0, liveLeft));
+            if (budget <= 0) return;
+            float sizeScale = Mathf.Clamp(Mathf.Pow((float)target / budget, 1f / 3f), 1f, 2.2f);
+
+            float volume = 0f;
+            for (int i = 0; i < count; i++)
+                if (proxies[i] != null) volume += ProxyVolume(proxies[i].transform);
+            if (volume <= 0f) return;
+
+            Vector3 push = direction.sqrMagnitude > 1e-4f ? direction.normalized : Vector3.zero;
+            var emit = new ParticleSystem.EmitParams { applyShapeToPosition = false };
+            int emitted = 0;
+            for (int i = 0; i < count && emitted < budget; i++)
+            {
+                ShatterProxy proxy = proxies[i];
+                if (proxy == null) continue;
+                Transform part = proxy.transform;
+                // At least 2 per part, so the small eye cubes still sparkle yellow.
+                int n = Mathf.Max(2, Mathf.RoundToInt(budget * ProxyVolume(part) / volume));
+                for (int j = 0; j < n && emitted < budget; j++)
+                {
+                    var local = new Vector3(Random.value - 0.5f, Random.value - 0.5f, Random.value - 0.5f);
+                    Vector3 pos = part.TransformPoint(local);
+                    Vector3 away = pos - point;
+                    away.y = Mathf.Abs(away.y) + 0.25f;
+                    Vector3 dir = (away.normalized + push * 1.1f + Random.insideUnitSphere * 0.45f).normalized;
+                    emit.position = pos;
+                    emit.velocity = dir * (Random.Range(_deathPixelSpeed.x, _deathPixelSpeed.y) * force);
+                    emit.startSize = Random.Range(_pixelSize.x, _pixelSize.y) * sizeScale;
+                    emit.startLifetime = Random.Range(_deathPixelLifetime.x, _deathPixelLifetime.y);
+                    emit.startColor = Shade(proxy.PickColor(Random.value));
+                    emit.rotation3D = new Vector3(Random.Range(0f, 360f), Random.Range(0f, 360f), 0f);
+                    _pixels.Emit(emit, 1);
+                    emitted++;
+                }
+            }
+            _deathPixelsThisFrame += emitted;
+        }
+
+        /// <summary>
+        /// Hit chips: <see cref="_chipCount"/> tiny cubes in the colours of the part nearest <paramref name="point"/>
+        /// (its proxy palette, else <paramref name="partColors"/>), sprayed in a cone along <paramref name="direction"/>
+        /// as if the bullet knocked them off the far side. Short lives (0.4–1.2 s), land on the floor plane. Chips are
+        /// the first thing dropped under load (a quarter of the live cap stays reserved for deaths).
+        /// Example: <c>feedback.Chip(parts, proxies, colors, count, e.position, e.direction, 1f, 1.5f);</c>
+        /// </summary>
+        public void Chip(Transform[] parts, ShatterProxy[] proxies, Color[] partColors, int count, Vector3 point,
+            Vector3 direction, float intensity, float countScale)
+        {
+            if (_pixels == null || parts == null || count <= 0) return;
+            BeginPixelFrame();
+            count = Mathf.Min(count, parts.Length);
+
+            int nearest = -1;
+            float best = float.PositiveInfinity;
+            for (int i = 0; i < count; i++)
+            {
+                Transform t = parts[i];
+                if (t == null || !t.gameObject.activeInHierarchy) continue;
+                float d = (t.position - point).sqrMagnitude;
+                if (d < best)
+                {
+                    best = d;
+                    nearest = i;
+                }
+            }
+            if (nearest < 0) return;
+            ShatterProxy proxy = proxies != null && nearest < proxies.Length ? proxies[nearest] : null;
+            Color flat = partColors != null && nearest < partColors.Length ? partColors[nearest] : Color.gray;
+
+            int wanted = Mathf.RoundToInt(Mathf.Lerp(_chipCount.x, _chipCount.y, Mathf.Clamp01(intensity)) * countScale);
+            int frameLeft = _maxChipsPerFrame - _chipsThisFrame;
+            int liveLeft = _maxPixels - _maxPixels / 4 - _pixels.particleCount - _deathPixelsThisFrame - _chipsThisFrame;
+            int n = Mathf.Min(wanted, Mathf.Min(frameLeft, liveLeft));
+            if (n <= 0) return;
+
+            Vector3 axis = direction.sqrMagnitude > 1e-4f ? direction.normalized : Vector3.up;
+            float spread = Mathf.Tan(_chipCone * Mathf.Deg2Rad);
+            var emit = new ParticleSystem.EmitParams { applyShapeToPosition = false };
+            for (int i = 0; i < n; i++)
+            {
+                Vector3 dir = (axis + Random.insideUnitSphere * spread + Vector3.up * 0.3f).normalized;
+                emit.position = point + Random.insideUnitSphere * 0.06f;
+                emit.velocity = dir * Random.Range(_chipSpeed.x, _chipSpeed.y);
+                emit.startSize = Random.Range(_pixelSize.x, Mathf.Lerp(_pixelSize.x, _pixelSize.y, 0.7f));
+                emit.startLifetime = Random.Range(_chipLifetime.x, _chipLifetime.y);
+                emit.startColor = Shade(proxy != null ? proxy.PickColor(Random.value) : flat);
+                emit.rotation3D = new Vector3(Random.Range(0f, 360f), Random.Range(0f, 360f), 0f);
+                _pixels.Emit(emit, 1);
+            }
+            _chipsThisFrame += n;
+        }
+
+        /// <summary>Live pixel cubes (death pixels + chips), for tests and profiling.</summary>
+        public int LivePixels => _pixels != null ? _pixels.particleCount : 0;
+
+        private bool TryChip(in ImpactEvent e, float intensity)
+        {
+            if ((e.kind != ImpactKind.Bullet && e.kind != ImpactKind.Melee) || e.hitTransform == null || !e.instigatorIsLocalPlayer) return false;
+            ShatterOnDeath target = e.hitTransform.GetComponentInParent<ShatterOnDeath>();
+            if (target == null || !target.CanChip) return false;
+            float scale = (e.kind == ImpactKind.Melee ? 1.5f : 1f) * (e.isCrit ? 1.5f : 1f);
+            target.SprayChips(e.position, e.direction, intensity, scale);
+            return true;
+        }
+
+        private void BeginPixelFrame()
+        {
+            if (_pixelFrame == Time.frameCount) return;
+            _pixelFrame = Time.frameCount;
+            _deathPixelsThisFrame = 0;
+            _chipsThisFrame = 0;
+        }
+
+        private Color Shade(Color c)
+        {
+            float k = _pixelLight * Random.Range(0.85f, 1.1f);
+            return new Color(Mathf.Clamp01(c.r * k), Mathf.Clamp01(c.g * k), Mathf.Clamp01(c.b * k), 1f);
+        }
+
+        private static float ProxyVolume(Transform t)
+        {
+            Vector3 s = t.lossyScale;
+            return Mathf.Max(1e-5f, Mathf.Abs(s.x * s.y * s.z));
+        }
 
         /// <summary>
         /// A small puff of spark cubes (dust, scuffs) along <paramref name="direction"/> with some upward spread.
@@ -711,9 +962,8 @@ namespace DanceWithTheDevil
 
             var collision = system.collision;
             collision.enabled = true;
-            collision.type = ParticleSystemCollisionType.World;
-            collision.mode = ParticleSystemCollisionMode.Collision3D;
-            collision.quality = ParticleSystemCollisionQuality.Medium;
+            collision.type = ParticleSystemCollisionType.Planes;
+            collision.AddPlane(_floorPlane);
             collision.dampen = dampen;
             collision.bounce = bounce;
             collision.lifetimeLoss = 0f;
@@ -726,7 +976,11 @@ namespace DanceWithTheDevil
             renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             renderer.receiveShadows = false;
             if (_cubeMaterial == null) _cubeMaterial = UnlitMaterial("Universal Render Pipeline/Particles/Unlit", "ImpactCubes");
-            renderer.sharedMaterial = _cubeMaterial;
+            // GPU instancing for mesh particles (URP Particles/Unlit has procedural particle instancing): one runtime
+            // copy with instancing on, so the shared asset is not dirtied in the Editor.
+            if (_pixelMaterial == null) _pixelMaterial = new Material(_cubeMaterial) { name = "ImpactCubes (instanced)", enableInstancing = true };
+            renderer.enableGPUInstancing = true;
+            renderer.sharedMaterial = _pixelMaterial;
             return system;
         }
 

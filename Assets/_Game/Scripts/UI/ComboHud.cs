@@ -26,6 +26,9 @@ namespace DanceWithTheDevil
         private const float DamageBreakSeconds = 0.35f;
         private const float TimeoutBreakSeconds = 0.6f;
 
+        [Tooltip("Old top-right counter. Off by default: the combo now shows as world popups (WorldPopups) and the " +
+                 "multiplier in the HUD score line. Only read at Awake.")]
+        [SerializeField] private bool _showCounter;
         [Tooltip("Combo source.")]
         [SerializeField] private ComboTracker _combo;
         [Tooltip("The readout hides while its State is not Playing. Empty = no check.")]
@@ -73,6 +76,11 @@ namespace DanceWithTheDevil
 
         private void Awake()
         {
+            if (!_showCounter)
+            {
+                enabled = false; // replaced by WorldPopups; nothing is built
+                return;
+            }
             Build();
             _countColor = TierColor(0);
             _group.gameObject.SetActive(false);
@@ -80,6 +88,11 @@ namespace DanceWithTheDevil
 
         private void OnEnable()
         {
+            if (_group == null)
+            {
+                enabled = false;
+                return;
+            }
             if (_combo == null) return;
             _combo.Changed += OnChanged;
             _combo.TierUp += OnTierUp;
@@ -88,7 +101,7 @@ namespace DanceWithTheDevil
 
         private void OnDisable()
         {
-            if (_combo == null) return;
+            if (_combo == null || _group == null) return;
             _combo.Changed -= OnChanged;
             _combo.TierUp -= OnTierUp;
             _combo.Broken -= OnBroken;

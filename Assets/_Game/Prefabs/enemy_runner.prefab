@@ -240,6 +240,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game.Runtime::DanceWithTheDevil.ShatterProxy
   _color: {r: 0.55, g: 0.22862746, b: 0.14882354, a: 1}
   _face: 0
+  _palette:
+  - {r: 0.59233016, g: 0.33763516, b: 0.25929883, a: 1}
+  - {r: 0.6890842, g: 0.4058669, b: 0.31761512, a: 1}
+  - {r: 0.5122541, g: 0.27344763, b: 0.20999177, a: 1}
+  - {r: 0.773235, g: 0.4678798, b: 0.366205, a: 1}
+  _paletteCumulative:
+  - 0.42451614
+  - 0.836129
+  - 0.92903227
+  - 1
 --- !u!1 &944571606965732248
 GameObject:
   m_ObjectHideFlags: 0
@@ -485,6 +495,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game.Runtime::DanceWithTheDevil.ShatterProxy
   _color: {r: 0.55, g: 0.22862746, b: 0.14882354, a: 1}
   _face: 0
+  _palette:
+  - {r: 0.8734094, g: 0.5471497, b: 0.43664566, a: 1}
+  - {r: 0.6885006, g: 0.40544337, b: 0.31728023, a: 1}
+  - {r: 0.60858136, g: 0.34995157, b: 0.2694394, a: 1}
+  - {r: 0.7732351, g: 0.4678799, b: 0.36620504, a: 1}
+  _paletteCumulative:
+  - 0.35672516
+  - 0.6725146
+  - 0.9005848
+  - 1
 --- !u!1 &1231468832749122761
 GameObject:
   m_ObjectHideFlags: 0
@@ -849,6 +869,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game.Runtime::DanceWithTheDevil.ShatterProxy
   _color: {r: 1, g: 0.88235295, b: 0.3019608, a: 1}
   _face: 0
+  _palette: []
+  _paletteCumulative: []
 --- !u!1 &2602651125172219814
 GameObject:
   m_ObjectHideFlags: 0
@@ -959,6 +981,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game.Runtime::DanceWithTheDevil.ShatterProxy
   _color: {r: 1, g: 0.41568628, b: 0.27058825, a: 1}
   _face: 0
+  _palette:
+  - {r: 0.6884995, g: 0.40544322, b: 0.3172804, a: 1}
+  - {r: 0.77323467, g: 0.46787974, b: 0.36620474, a: 1}
+  - {r: 0.8734077, g: 0.54714996, b: 0.43664643, a: 1}
+  _paletteCumulative:
+  - 0.5416667
+  - 0.8333333
+  - 1
 --- !u!1 &3093591857844131905
 GameObject:
   m_ObjectHideFlags: 0
@@ -1489,6 +1519,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game.Runtime::DanceWithTheDevil.ShatterProxy
   _color: {r: 1, g: 0.41568628, b: 0.27058825, a: 1}
   _face: 0
+  _palette:
+  - {r: 0.6885006, g: 0.40544337, b: 0.31728026, a: 1}
+  - {r: 0.53919387, g: 0.2969093, b: 0.2256843, a: 1}
+  - {r: 0.77323455, g: 0.46787968, b: 0.36620474, a: 1}
+  _paletteCumulative:
+  - 0.8188679
+  - 0.9245283
+  - 1
 --- !u!1 &5010165280768589262
 GameObject:
   m_ObjectHideFlags: 0
@@ -1535,6 +1573,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game.Runtime::DanceWithTheDevil.ShatterProxy
   _color: {r: 0.55, g: 0.22862746, b: 0.14882354, a: 1}
   _face: 0
+  _palette:
+  - {r: 0.59233, g: 0.33763516, b: 0.2592988, a: 1}
+  - {r: 0.6895336, g: 0.40619385, b: 0.3178726, a: 1}
+  - {r: 0.5122541, g: 0.27344763, b: 0.20999178, a: 1}
+  - {r: 0.773235, g: 0.4678798, b: 0.36620498, a: 1}
+  _paletteCumulative:
+  - 0.42451614
+  - 0.836129
+  - 0.92903227
+  - 1
 --- !u!1 &5028411643497348885
 GameObject:
   m_ObjectHideFlags: 0
@@ -1612,6 +1660,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game.Runtime::DanceWithTheDevil.ShatterProxy
   _color: {r: 1, g: 0.41568628, b: 0.27058825, a: 1}
   _face: 0
+  _palette:
+  - {r: 0.68850416, g: 0.40544224, b: 0.31728092, a: 1}
+  - {r: 0.60220087, g: 0.34507453, b: 0.26541612, a: 1}
+  - {r: 0.87340707, g: 0.5471497, b: 0.43664578, a: 1}
+  - {r: 0.77323484, g: 0.46787995, b: 0.36620495, a: 1}
+  _paletteCumulative:
+  - 0.48927477
+  - 0.7558733
+  - 0.90909094
+  - 1
 --- !u!1 &5144949569103282274
 GameObject:
   m_ObjectHideFlags: 0
@@ -1787,6 +1845,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game.Runtime::DanceWithTheDevil.ShatterProxy
   _color: {r: 1, g: 0.41568628, b: 0.27058825, a: 1}
   _face: 0
+  _palette:
+  - {r: 0.6884995, g: 0.40544322, b: 0.31728032, a: 1}
+  - {r: 0.77323467, g: 0.46787974, b: 0.36620474, a: 1}
+  - {r: 0.87340766, g: 0.54714996, b: 0.43664643, a: 1}
+  _paletteCumulative:
+  - 0.5555556
+  - 0.8666667
+  - 1
 --- !u!1 &5705449848270411996
 GameObject:
   m_ObjectHideFlags: 0
@@ -1930,6 +1996,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game.Runtime::DanceWithTheDevil.ShatterProxy
   _color: {r: 0.55, g: 0.22862746, b: 0.14882354, a: 1}
   _face: 0
+  _palette:
+  - {r: 0.60630643, g: 0.3482128, b: 0.26800492, a: 1}
+  - {r: 0.5120887, g: 0.27330163, b: 0.20990965, a: 1}
+  - {r: 0.6884995, g: 0.40544322, b: 0.3172805, a: 1}
+  - {r: 0.77323496, g: 0.46787968, b: 0.36620495, a: 1}
+  _paletteCumulative:
+  - 0.5583524
+  - 0.77116704
+  - 0.8993135
+  - 1
 --- !u!1 &5949891455673032313
 GameObject:
   m_ObjectHideFlags: 0
@@ -2269,6 +2345,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game.Runtime::DanceWithTheDevil.ShatterProxy
   _color: {r: 1, g: 0.41568628, b: 0.27058825, a: 1}
   _face: 0
+  _palette:
+  - {r: 0.6885006, g: 0.40544337, b: 0.31728026, a: 1}
+  - {r: 0.53919387, g: 0.2969093, b: 0.2256843, a: 1}
+  - {r: 0.77323455, g: 0.46787968, b: 0.36620474, a: 1}
+  _paletteCumulative:
+  - 0.8188679
+  - 0.9245283
+  - 1
 --- !u!1 &6475838384620639314
 GameObject:
   m_ObjectHideFlags: 0
@@ -2475,6 +2559,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game.Runtime::DanceWithTheDevil.ShatterProxy
   _color: {r: 1, g: 0.41568628, b: 0.27058825, a: 1}
   _face: 0
+  _palette:
+  - {r: 0.8734123, g: 0.5471555, b: 0.43664557, a: 1}
+  - {r: 0.6885621, g: 0.40549794, b: 0.3173186, a: 1}
+  - {r: 0.5895408, g: 0.33542126, b: 0.25749815, a: 1}
+  - {r: 0.7740084, g: 0.46851975, b: 0.36674273, a: 1}
+  _paletteCumulative:
+  - 0.40669015
+  - 0.76901406
+  - 0.9158451
+  - 1
 --- !u!1 &8203722067686384791
 GameObject:
   m_ObjectHideFlags: 0
@@ -2553,6 +2647,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game.Runtime::DanceWithTheDevil.ShatterProxy
   _color: {r: 0.55, g: 0.22862746, b: 0.14882354, a: 1}
   _face: 0
+  _palette:
+  - {r: 0.6062971, g: 0.34820566, b: 0.26799902, a: 1}
+  - {r: 0.5120887, g: 0.27330163, b: 0.20990965, a: 1}
+  - {r: 0.6884995, g: 0.40544322, b: 0.3172805, a: 1}
+  - {r: 0.77323496, g: 0.46787968, b: 0.36620495, a: 1}
+  _paletteCumulative:
+  - 0.5586207
+  - 0.7724138
+  - 0.89885056
+  - 1
 --- !u!1 &8404004668690743456
 GameObject:
   m_ObjectHideFlags: 0
@@ -2753,6 +2857,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game.Runtime::DanceWithTheDevil.ShatterProxy
   _color: {r: 1, g: 0.88235295, b: 0.3019608, a: 1}
   _face: 0
+  _palette: []
+  _paletteCumulative: []
 --- !u!1 &9181187901869518163
 GameObject:
   m_ObjectHideFlags: 0

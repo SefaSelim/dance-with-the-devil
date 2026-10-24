@@ -5,15 +5,15 @@ namespace DanceWithTheDevil
     /// <summary>
     /// Pool of one enemy prefab. Instances live under a scene-root container. <see cref="Get"/> spawns an instance at a
     /// position; a dead enemy returns itself one frame after death (<see cref="Enemy.Despawn"/>).
-    /// The prewarm runs in Start (scene load), not on the first spawn, so the packs of the later windows (up to ~12
-    /// of one type alive) do not instantiate a batch of enemies mid-fight.
+    /// The prewarm runs in Start (scene load), not on the first spawn, so the packs of the later windows (bullet-hell
+    /// pass 2026-10-25: active cap up to 32, ~20 of one type alive) do not instantiate a batch of enemies mid-fight.
     /// </summary>
     public sealed class EnemyPool : MonoBehaviour
     {
         [Tooltip("Enemy prefab (root has Enemy, Health, NavMeshAgent, a brain and colliders).")]
         [SerializeField] private Enemy _prefab;
         [Tooltip("Instances created up front when the scene starts (packs and higher active caps need more than 6).")]
-        [SerializeField, Min(0)] private int _prewarmCount = 10;
+        [SerializeField, Min(0)] private int _prewarmCount = 32; // = WaveDirector max active cap: one type can fill it after 5:00
         [Tooltip("Maximum pooled (inactive) instances kept.")]
         [SerializeField, Min(1)] private int _maxSize = 32;
 

@@ -16,7 +16,8 @@ namespace DanceWithTheDevil
     [DisallowMultipleComponent]
     public sealed class PixelCameraRig : MonoBehaviour
     {
-        private const int Border = 4; // extra texels on each side for the sub-texel shift and shake
+        /// <summary>Extra texels rendered on each side of the visible window, for the sub-texel shift and the shake.</summary>
+        public const int Border = 8;
         private const float AimLeadFraction = 0.3f;      // lead = 30% of the flat distance to the aim, capped at _aimLead
         private const float AimLeadSmoothTime = 0.15f;   // the lead eases on its own so mouse jitter never shakes the view
         private const float TraumaFullDistance = 10f;    // positional trauma: full within this flat distance of the focus
@@ -72,19 +73,32 @@ namespace DanceWithTheDevil
         [Tooltip("World maximum (x, z) of the followed focus point.")]
         [SerializeField] private Vector2 _boundsMax = new Vector2(10f, 9f);
 
+        // Shake fields carry a "V2" suffix so the old scene values (3 texels, trauma^1.5) are dropped and these
+        // defaults apply without a scene rebuild (2026-10-25 juice pass).
         [Header("Shake (trauma model, shown as an image offset so the snapped camera never moves)")]
-        [Tooltip("Largest shake offset in low-res texels at full trauma. Must stay below the border.")]
-        [SerializeField, Range(0f, 3.4f)] private float _maxShakeTexels = 3f;
+        [Tooltip("Largest shake offset in low-res texels at full trauma. Clamped below the border (8) minus the remainder.")]
+        [SerializeField, Range(0f, 7.4f)] private float _maxShakeTexelsV2 = 6.5f;
+        [Tooltip("Shake = trauma^exponent. 1.25 makes medium events (kills, hits) read clearly; 2 would be subtler.")]
+        [SerializeField, Range(1f, 3f)] private float _shakeExponentV2 = 1.25f;
         [Tooltip("Trauma lost per second.")]
-        [SerializeField, Min(0f)] private float _traumaDecay = 1.6f;
+        [SerializeField, Min(0f)] private float _traumaDecayV2 = 1.6f;
         [Tooltip("Noise frequency in Hz.")]
-        [SerializeField, Min(0f)] private float _shakeFrequency = 22f;
+        [SerializeField, Min(0f)] private float _shakeFrequencyV2 = 22f;
+        [Tooltip("Largest roll of the displayed image at full shake, degrees (needs DisplayGrade; off with reduce motion).")]
+        [SerializeField, Range(0f, 3f)] private float _maxRollDegrees = 1.2f;
+        [Tooltip("Zoom kick half-life in seconds (AddZoomKick).")]
+        [SerializeField, Min(0.01f)] private float _zoomKickHalfLife = 0.07f;
+        [Tooltip("Largest zoom kick (fraction).")]
+        [SerializeField, Range(0f, 0.3f)] private float _maxZoomKick = 0.12f;
 
         /// <summary>Accessibility multiplier for all camera shake (0 = off).</summary>
         public static float GlobalShakeScale = 1f;
 
         private float _trauma;
         private Vector2 _shakeTexels;
+        private float _rollRadians;
+        private float _zoomKick;
+        private float _zoom = 1f;
 
         private RenderTexture _renderTexture;
         private Camera _displayCamera;
@@ -110,6 +124,28 @@ namespace DanceWithTheDevil
         /// <summary>Screen-pixel rect where the visible low-res window is drawn.</summary>
         public Rect DisplayRect => _displayRect;
         public Quaternion ViewRotation => Quaternion.Euler(_pitch, _yaw, 0f);
+        /// <summary>RT UV rect of the visible window this frame (remainder and shake included), as on the RawImage.</summary>
+        public Rect DisplayUvRect => new Rect(WindowOffset.x / RtWidth, WindowOffset.y / RtHeight,
+            (float)_width / RtWidth, (float)_height / RtHeight);
+        /// <summary>Image roll this frame, radians (applied by the display material when <see cref="ApplyRollZoom"/>).</summary>
+        public float Roll => ApplyRollZoom ? _rollRadians : 0f;
+        /// <summary>Image zoom this frame (1 = none, 1.05 = 5% closer), applied with <see cref="Roll"/>.</summary>
+        public float Zoom => ApplyRollZoom ? _zoom : 1f;
+        /// <summary>
+        /// Set by the display material owner (<see cref="DisplayGrade"/>) when its shader applies <see cref="Roll"/> and
+        /// <see cref="Zoom"/>, so aiming and <see cref="WorldToDisplay01"/> include them. Off = no roll or zoom.
+        /// </summary>
+        public bool ApplyRollZoom { get; set; }
+        /// <summary>Visible width / height in texels (aspect of the shown image).</summary>
+        public float DisplayAspect => (float)_width / _height;
+        /// <summary>Visible window height in world metres (2 × orthographic size).</summary>
+        public float ViewHeightMetres => 2f * _orthographicSize;
+        /// <summary>Current trauma 0..1.</summary>
+        public float Trauma => _trauma;
+
+        // Bottom-left of the visible window inside the RT, in texels.
+        private Vector2 WindowOffset => new Vector2(Border + _remainderTexels.x + _shakeTexels.x,
+            Border + _remainderTexels.y + _shakeTexels.y);
         /// <summary>The followed transform (null = fixed focus).</summary>
         public Transform Target => _target;
         /// <summary>Current world focus point (the centre of the view).</summary>
@@ -188,12 +224,47 @@ namespace DanceWithTheDevil
         }
 
         /// <summary>
-        /// Adds camera trauma (0..1). Shake = trauma^1.5 × max texels (0.5 trauma ≈ 1 texel, 0.8 ≈ 2 texels), so
+        /// Adds camera trauma (0..1). Shake = trauma^1.25 × 6.5 texels (0.3 ≈ 1.4 texels, 0.6 ≈ 3.4, 1 = 6.5), so
         /// small hits stay subtle but still move the image.
         /// </summary>
         public void AddTrauma(float amount)
         {
             _trauma = Mathf.Clamp01(_trauma + Mathf.Max(0f, amount));
+        }
+
+        /// <summary>
+        /// Adds trauma but never past <paramref name="ceiling"/> (an existing higher trauma is kept). For frequent
+        /// events (bullet hits, kills) so they jolt each time without stacking into a constant blur.
+        /// Example: <c>rig.AddTraumaUpTo(0.1f, 0.35f);</c>
+        /// </summary>
+        public void AddTraumaUpTo(float amount, float ceiling)
+        {
+            if (amount <= 0f) return;
+            _trauma = Mathf.Max(_trauma, Mathf.Min(_trauma + amount, Mathf.Clamp01(ceiling)));
+        }
+
+        /// <summary>
+        /// A short zoom-in punch (0.05 = 5% closer) that decays with a 0.07 s half-life; shown by the display material.
+        /// Example: <c>rig.AddZoomKick(0.05f);</c> on a rocket blast.
+        /// </summary>
+        public void AddZoomKick(float amount)
+        {
+            if (amount <= 0f) return;
+            _zoomKick = Mathf.Min(_maxZoomKick, _zoomKick + amount);
+        }
+
+        /// <summary>
+        /// World position → 0..1 position inside the visible game image (0,0 bottom-left, 1,1 top-right of the drawn
+        /// window; outside 0..1 = off screen), including the sub-texel remainder, shake, roll and zoom of this frame.
+        /// Inverse of <see cref="ScreenToGameViewport"/>. Multiply by <see cref="DisplayRect"/> size and add its position
+        /// for screen pixels. Example: <c>Vector2 p = rig.WorldToDisplay01(enemy.position + Vector3.up * 2f);</c>
+        /// </summary>
+        public Vector2 WorldToDisplay01(Vector3 world)
+        {
+            if (_gameCamera == null) return new Vector2(0.5f, 0.5f);
+            Vector3 viewport = _gameCamera.WorldToViewportPoint(world);
+            Vector2 source = ViewportToWindow01(new Vector2(viewport.x, viewport.y), _width, _height, Border, WindowOffset - new Vector2(Border, Border));
+            return SourceToDisplay(source, Roll, Zoom, DisplayAspect);
         }
 
         /// <summary>
@@ -224,11 +295,53 @@ namespace DanceWithTheDevil
         /// <summary>Screen position → game camera viewport (0..1 over the whole RT, border included).</summary>
         public Vector2 ScreenToGameViewport(Vector2 screenPos)
         {
-            float u = (screenPos.x - _displayRect.x) / _displayRect.width;
-            float v = (screenPos.y - _displayRect.y) / _displayRect.height;
-            float px = Border + _remainderTexels.x + _shakeTexels.x + u * _width;
-            float py = Border + _remainderTexels.y + _shakeTexels.y + v * _height;
-            return new Vector2(px / RtWidth, py / RtHeight);
+            var display = new Vector2((screenPos.x - _displayRect.x) / _displayRect.width,
+                (screenPos.y - _displayRect.y) / _displayRect.height);
+            Vector2 source = DisplayToSource(display, Roll, Zoom, DisplayAspect);
+            return Window01ToViewport(source, _width, _height, Border, WindowOffset - new Vector2(Border, Border));
+        }
+
+        // ---------------------------------------------------------------- display math (pure, tested in EditMode)
+
+        /// <summary>
+        /// Visible-window 0..1 → game camera viewport 0..1 (whole RT). <paramref name="offsetTexels"/> = remainder + shake.
+        /// Example: <c>Window01ToViewport(new Vector2(0.5f, 0.5f), 960, 540, 8, Vector2.zero)</c> = (0.5, 0.5).
+        /// </summary>
+        public static Vector2 Window01ToViewport(Vector2 window01, int width, int height, int border, Vector2 offsetTexels)
+        {
+            float rtW = width + 2f * border, rtH = height + 2f * border;
+            return new Vector2((border + offsetTexels.x + window01.x * width) / rtW,
+                (border + offsetTexels.y + window01.y * height) / rtH);
+        }
+
+        /// <summary>Inverse of <see cref="Window01ToViewport"/>.</summary>
+        public static Vector2 ViewportToWindow01(Vector2 viewport, int width, int height, int border, Vector2 offsetTexels)
+        {
+            float rtW = width + 2f * border, rtH = height + 2f * border;
+            return new Vector2((viewport.x * rtW - border - offsetTexels.x) / width,
+                (viewport.y * rtH - border - offsetTexels.y) / height);
+        }
+
+        /// <summary>
+        /// Shown position (display 0..1) → sampled window position: the display material shows, at display point q, the
+        /// window point c + R(roll)·(q − c) / zoom (aspect-correct, c = centre). Must match UI_DisplayGrade.shader.
+        /// </summary>
+        public static Vector2 DisplayToSource(Vector2 display, float roll, float zoom, float aspect)
+        {
+            if (roll == 0f && zoom == 1f) return display;
+            float x = (display.x - 0.5f) * aspect, y = display.y - 0.5f;
+            float c = Mathf.Cos(roll), s = Mathf.Sin(roll);
+            float inv = 1f / Mathf.Max(0.01f, zoom);
+            return new Vector2((c * x - s * y) * inv / aspect + 0.5f, (s * x + c * y) * inv + 0.5f);
+        }
+
+        /// <summary>Inverse of <see cref="DisplayToSource"/>.</summary>
+        public static Vector2 SourceToDisplay(Vector2 source, float roll, float zoom, float aspect)
+        {
+            if (roll == 0f && zoom == 1f) return source;
+            float x = (source.x - 0.5f) * aspect * zoom, y = (source.y - 0.5f) * zoom;
+            float c = Mathf.Cos(roll), s = Mathf.Sin(roll);
+            return new Vector2((c * x + s * y) / aspect + 0.5f, (-s * x + c * y) + 0.5f);
         }
 
         // ---------------------------------------------------------------- setup
@@ -344,19 +457,29 @@ namespace DanceWithTheDevil
         // Unscaled time: shake keeps moving through hitstop.
         private void UpdateShake()
         {
-            _trauma = Mathf.Max(0f, _trauma - _traumaDecay * Time.unscaledDeltaTime);
-            // Clamped so remainder (≤0.5) + shake always stays inside the border.
-            float shake = Mathf.Min(_trauma * Mathf.Sqrt(_trauma) * _maxShakeTexels * GlobalShakeScale, Border - 0.6f);
-            if (shake <= 0f)
-            {
-                _shakeTexels = Vector2.zero;
-                return;
-            }
+            float dt = Time.unscaledDeltaTime;
+            _trauma = Mathf.Max(0f, _trauma - _traumaDecayV2 * dt);
+            _zoomKick *= Mathf.Exp(-0.6931472f / _zoomKickHalfLife * dt);
+            if (_zoomKick < 1e-4f) _zoomKick = 0f;
 
-            float t = Time.unscaledTime * _shakeFrequency;
-            _shakeTexels = new Vector2(
-                (Mathf.PerlinNoise(t, 0.37f) * 2f - 1f) * shake,
-                (Mathf.PerlinNoise(0.71f, t) * 2f - 1f) * shake);
+            float scale = Mathf.Max(0f, GlobalShakeScale);
+            float amount = _trauma > 0f ? Mathf.Pow(_trauma, _shakeExponentV2) : 0f;
+            // Clamped so remainder (≤0.5) + shake always stays inside the border.
+            float shake = Mathf.Min(amount * _maxShakeTexelsV2 * scale, Border - 0.6f);
+            float t = Time.unscaledTime * _shakeFrequencyV2;
+            _shakeTexels = shake > 0f
+                ? new Vector2((Mathf.PerlinNoise(t, 0.37f) * 2f - 1f) * shake, (Mathf.PerlinNoise(0.71f, t) * 2f - 1f) * shake)
+                : Vector2.zero;
+
+            // Roll and zoom: only through the display material, never with reduce motion.
+            bool motion = ApplyRollZoom && !UiKit.ReduceMotion;
+            _rollRadians = motion
+                ? (Mathf.PerlinNoise(t * 0.8f, 5.3f) * 2f - 1f) * amount * _maxRollDegrees * Mathf.Deg2Rad * Mathf.Min(scale, 1.5f)
+                : 0f;
+            float zoomKick = motion ? _zoomKick * Mathf.Min(scale, 1.5f) : 0f;
+            // Enough extra zoom that the rolled image still covers the window corners (no clamped streaks).
+            float cover = Mathf.Abs(_rollRadians) * (DisplayAspect + 1f / DisplayAspect) * 0.5f;
+            _zoom = 1f + zoomKick + cover;
         }
 
         private void UpdateCamera(bool snapImmediately)
@@ -389,11 +512,7 @@ namespace DanceWithTheDevil
             UpdateShake();
 
             // Show the window shifted by the remainder and shake (border keeps it inside the RT).
-            _rawImage.uvRect = new Rect(
-                (Border + _remainderTexels.x + _shakeTexels.x) / RtWidth,
-                (Border + _remainderTexels.y + _shakeTexels.y) / RtHeight,
-                (float)_width / RtWidth,
-                (float)_height / RtHeight);
+            _rawImage.uvRect = DisplayUvRect;
         }
 
         // Flat look-ahead toward the player's aim point, eased on its own (scaled time: it waits through hitstop).

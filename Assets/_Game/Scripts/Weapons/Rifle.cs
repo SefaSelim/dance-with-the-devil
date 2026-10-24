@@ -67,6 +67,14 @@ namespace DanceWithTheDevil
         [SerializeField, Range(0f, 1f)] private float _echoSelfDamageScale = 0.5f;
         [Tooltip("Tint of a bullet after it bounced (Echo purple #9B5CFF).")]
         [SerializeField] private Color _echoTint = new Color(0x9B / 255f, 0x5C / 255f, 0xFF / 255f, 1f);
+        [Tooltip("After a bounce the bullet may travel at most this fraction of its remaining range (design: 0.5).")]
+        [SerializeField, Range(0f, 1f)] private float _echoRangeAfterBounce = 0.5f;
+
+        [Header("Critical hits (crit-difficulty design)")]
+        [Tooltip("Base crit chance per bullet, rolled at fire time, 0..1 (design: 0.05).")]
+        [SerializeField, Range(0f, 1f)] private float _baseCritChance = CritRoll.DefaultChance;
+        [Tooltip("Damage multiplier of a crit (design: 2).")]
+        [SerializeField, Min(1f)] private float _critMultiplier = CritRoll.DefaultMultiplier;
 
         [Header("Feel")]
         [Tooltip("ImpactBus MuzzleFire intensity per shot.")]
@@ -82,6 +90,8 @@ namespace DanceWithTheDevil
         private float _attackSpeedMultiplier = 1f;
         private float _moduleFireRateMultiplier = 1f;
         private float _moduleSpreadDegrees;
+        private float _moduleCritChance;
+        private float _contractCritChance;
         private bool _tripleShot;
         private float _tripleSpreadDegrees = 12f;
         private float _recoilSpeed;
@@ -125,6 +135,33 @@ namespace DanceWithTheDevil
             get => _moduleSpreadDegrees;
             set => _moduleSpreadDegrees = Mathf.Clamp(value, 0f, 45f);
         }
+
+        /// <summary>Base crit chance (serialized 0.05). Settable for tests. Clamped 0..1.</summary>
+        public float BaseCritChance
+        {
+            get => _baseCritChance;
+            set => _baseCritChance = Mathf.Clamp01(value);
+        }
+
+        /// <summary>Crit chance added by contracts (Contract 3: +0.15). Additive. Set by <see cref="DealEffects"/>.</summary>
+        public float ContractCritChance
+        {
+            get => _contractCritChance;
+            set => _contractCritChance = Mathf.Max(0f, value);
+        }
+
+        /// <summary>Damage multiplier of a crit (x2).</summary>
+        public float CritMultiplier => _critMultiplier;
+
+        /// <summary>Crit chance from the module system (Keskin Göz +0.2). Set only by <see cref="PlayerModules"/>.</summary>
+        public float ModuleCritChance
+        {
+            get => _moduleCritChance;
+            set => _moduleCritChance = Mathf.Max(0f, value);
+        }
+
+        /// <summary>Crit chance per bullet (rolled at fire time): base + module + contract, clamped 0..1.</summary>
+        public float CritChance => CritRoll.Combine(_baseCritChance, _moduleCritChance, _contractCritChance);
 
         /// <summary>Extra enemies a bullet passes through (contracts). Min 0.</summary>
         public int PierceCount
@@ -301,14 +338,21 @@ namespace DanceWithTheDevil
                 BouncedSelfDamageScale = echo ? _echoSelfDamageScale : 0f,
                 HasBounceTint = echo,
                 BounceTint = _echoTint,
+                BounceRangeScale = echo ? _echoRangeAfterBounce : 0f,
+                CritMultiplier = _critMultiplier,
             };
+            // Crit: one roll per bullet at fire time; each Triple Shot bullet rolls on its own (crit-difficulty §2).
+            float critChance = CritChance;
+            launch.IsCrit = CritRoll.Roll(critChance);
             _pool.Get().Launch(launch);
 
             if (_tripleShot)
             {
                 launch.Direction = Stray(Quaternion.AngleAxis(-_tripleSpreadDegrees, Vector3.up) * direction);
+                launch.IsCrit = CritRoll.Roll(critChance);
                 _pool.Get().Launch(launch);
                 launch.Direction = Stray(Quaternion.AngleAxis(_tripleSpreadDegrees, Vector3.up) * direction);
+                launch.IsCrit = CritRoll.Roll(critChance);
                 _pool.Get().Launch(launch);
             }
 

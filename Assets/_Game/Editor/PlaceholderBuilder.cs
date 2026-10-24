@@ -516,6 +516,8 @@ namespace DanceWithTheDevil.Editor
             GothicArenaBuilder.Dress(scene);
             // Combo counter, HUD, feel and the post-processing Volume (production/design/combo-haste.md).
             ComboSetup.Install(scene);
+            // Doubled waves, caps and pool prewarm (production/design/crit-difficulty.md).
+            DifficultySetup.Apply(scene);
 
             EditorSceneManager.SaveScene(scene, ArenaScenePath);
             if (!reopenArena && previousActive.IsValid() && previousActive.isLoaded)

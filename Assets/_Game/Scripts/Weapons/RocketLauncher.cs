@@ -66,6 +66,12 @@ namespace DanceWithTheDevil
         [Tooltip("Layers the explosion reaches.")]
         [SerializeField] private LayerMask _explosionMask = ~0;
 
+        [Header("Critical hits (crit-difficulty design)")]
+        [Tooltip("Base crit chance per target hit, 0..1 (design: 0.05).")]
+        [SerializeField, Range(0f, 1f)] private float _baseCritChance = CritRoll.DefaultChance;
+        [Tooltip("Damage multiplier of a crit (design: 2).")]
+        [SerializeField, Min(1f)] private float _critMultiplier = CritRoll.DefaultMultiplier;
+
         [Header("Feel")]
         [Tooltip("ImpactBus Explosion intensity.")]
         [SerializeField, Range(0f, 1f)] private float _explosionIntensity = 0.9f;
@@ -82,6 +88,7 @@ namespace DanceWithTheDevil
         private float _damageMultiplier = 1f;
         private float _radiusMultiplier = 1f;
         private float _refillTimeMultiplier = 1f;
+        private float _contractCritChance;
 
         public int Charges => _charges;
         public int MaxCharges => _maxCharges;
@@ -151,6 +158,26 @@ namespace DanceWithTheDevil
             get => _refillTimeMultiplier;
             set => _refillTimeMultiplier = Mathf.Max(0.01f, value);
         }
+
+        /// <summary>Base crit chance (serialized 0.05). Settable for tests. Clamped 0..1.</summary>
+        public float BaseCritChance
+        {
+            get => _baseCritChance;
+            set => _baseCritChance = Mathf.Clamp01(value);
+        }
+
+        /// <summary>Crit chance added by contracts (Contract 3: +0.15). Additive. Set by <see cref="DealEffects"/>.</summary>
+        public float ContractCritChance
+        {
+            get => _contractCritChance;
+            set => _contractCritChance = Mathf.Max(0f, value);
+        }
+
+        /// <summary>Damage multiplier of a crit (x2).</summary>
+        public float CritMultiplier => _critMultiplier;
+
+        /// <summary>Crit chance per target in the blast: base + contract, clamped 0..1.</summary>
+        public float CritChance => CritRoll.Combine(_baseCritChance, 0f, _contractCritChance);
 
         private float CurrentRefillTime => _refillTime * _refillTimeMultiplier;
 
@@ -265,6 +292,7 @@ namespace DanceWithTheDevil
             int count = Physics.OverlapSphereNonAlloc(point, radius, _overlaps, _explosionMask,
                 QueryTriggerInteraction.Ignore);
             _damagedThisExplosion.Clear();
+            bool anyCrit = false;
 
             for (int i = 0; i < count; i++)
             {
@@ -281,7 +309,11 @@ namespace DanceWithTheDevil
                 away.y = 0f;
                 away = away.sqrMagnitude > 1e-6f ? away.normalized : projectile.Direction;
 
-                bool applied = target.TakeDamage(new DamageInfo(damage, targetPosition, away, source, DamageKind.Rocket));
+                // Crit: one roll per target; the single explosion event carries isCrit if any target critted.
+                bool crit = CritRoll.Roll(CritChance);
+                float dealt = crit ? damage * _critMultiplier : damage;
+                bool applied = target.TakeDamage(new DamageInfo(dealt, targetPosition, away, source, DamageKind.Rocket, crit));
+                if (applied && crit) anyCrit = true;
                 if (applied && _knockback > 0f && targetComponent != null)
                 {
                     IKnockbackable knockbackable = targetComponent.GetComponentInParent<IKnockbackable>();
@@ -299,6 +331,7 @@ namespace DanceWithTheDevil
                 surface = SurfaceType.Default,
                 instigator = source,
                 instigatorIsLocalPlayer = _owner != null,
+                isCrit = anyCrit,
             });
             Exploded?.Invoke(point);
         }

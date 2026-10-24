@@ -1,6 +1,6 @@
 # MAIN GDD — Dance with the Devil (Bir Şey Olmaz)
 
-**Son güncelleme: 2026-10-24 21:30 (UTC+3)**
+**Son güncelleme: 2026-10-25 03:30 (UTC+3)**
 
 > **Bu dosya projenin tek ve yaşayan Game Design Document'ıdır.** Sürüm numarası yoktur (GDD2, GDD3…
 > diye gitmez). Yeni bir mekanik eklendiğinde, var olan bir mekanik değiştiğinde ya da bir tasarım kararı
@@ -25,7 +25,8 @@ diye anılır. **"Başlangıç önerisi"** yazan sayılar kaynakta yoktu; ilk oy
 **Kesin kullanıcı kararları:**
 - İki tasarım birleşir: ilk GDD'nin savaş içi kabul / ret / sökme mekaniği kalır ve bu teklifler artık Şeytan'dan gelir.
 - Ölümde "Hayır" demek mümkündür ve gerçek sona açılır.
-- Bir koşu yaklaşık 5 dakikadır.
+- Bir koşu yaklaşık 5 dakikadır. *(2026-10-25: kullanıcı zorluğu bilerek iki katına çıkardı, "amaç oyuncuyu öldürmek";
+  koşular şimdilik tahminen ~2:30–3:15 sürüyor, bkz. §3 ve K-21. Süre hedefi oyun testine kadar 🧪 geçicidir.)*
 
 ---
 
@@ -65,7 +66,12 @@ gözlüklü, haki/zeytin rengi asker kıyafetli kadın; botlar, kemerde kesecikl
 **Oyun metinleri (2026-10-24):** oyundaki bütün Türkçe metinler gündelik, sıcak, samimi bir Türkçeyle yeniden yazıldı;
 sayılar ve kurallar değişmedi. Güncel metinler ilgili bölümlerde (§7, §8, §11, §12) yazılıdır.
 
-## 3. Temel döngü (~5 dk) — 🟡 (ölüm → Şeytan → EVET/HAYIR döngüsü oynanıyor; takvim henüz dengelenmedi)
+## 3. Temel döngü (~5 dk → şimdilik ~2:30–3:15 🧪) — 🟡 (ölüm → Şeytan → EVET/HAYIR döngüsü oynanıyor; takvim henüz dengelenmedi)
+
+> **Not (kullanıcı kararı 2026-10-25, K-21):** zorluk bilerek iki katına çıkarıldı ("amaç oyuncuyu öldürmek"; düşman
+> canları aynı). Tahmine göre ilk ölüm ~0:20–0:35'te, sonrakiler 20–35 sn arayla gelir; hep-EVET koşusu ~2:30–3:15 sürer.
+> Aşağıdaki ~5 dk döngü ve ölüm takvimi bu yüzden **🧪 geçicidir**; insan oyun testinden sonra yeniden yazılır. Koşuyu
+> uzatmak gerekirse yalnız ilk iki pencerenin aktif sınırı düşürülür (12 → 8, 16 → 12; bkz. §10).
 
 **Saniyelik döngü (ilk GDD §4):** yer aç → nişan al ve ateş et → düşman ön işaretini oku → fısıltıyı değerlendir →
 kabul et / reddet / sök → yeni hareket alanına göre konumlan.
@@ -79,7 +85,7 @@ kabul et / reddet / sök → yeni hareket alanına göre konumlan.
    yükseltmeyi ve kalıcı bedeli alır.
 6. **HAYIR:** koşu biter ve gerçek sona gider.
 
-**Ölüm takvimi (hedef, orta beceri):** ~0:50, 1:40, 2:30, 3:15, 4:00 → 5 sözleşme. **6. ölümde** Şeytan **yalnızca alır**
+**Ölüm takvimi (eski hedef, orta beceri; K-21'den sonra 🧪, yukarıdaki nota bakın):** ~0:50, 1:40, 2:30, 3:15, 4:00 → 5 sözleşme. **6. ölümde** Şeytan **yalnızca alır**
 ("Son anlaşma: neyin kaldıysa"). Ölümleri zorluk getirir: düşman canları sabittir; sayı ve tür karışımı büyür. **Ölüm garantidir; ilk GDD'deki "5. dakikada dalga temizlenince kazanılır" koşulu kalkar** (karar K-4). Zorluk adil ve okunur kalmalıdır.
 
 **Diriliş (karar K-12, şok dalgası K-16):** can yeni azami değere dolar; 2,0 sn dokunulmazlık; şok dalgası 6 m içindeki
@@ -89,7 +95,7 @@ bütün düşmanları parçalar (K-16: artık bütün arena); dalga saati kaldı
 
 | Girdi | İşlev |
 |---|---|
-| WASD | Kamera düzlemine göre hareket (6 m/sn) |
+| WASD | Kamera düzlemine göre hareket (6 m/sn; Keskin Göz takılıyken ateş ederken 5,1 m/sn, §7) |
 | Fare | Nişan: imlecin altındaki düşmana, yoksa imlecin gövde yüksekliğindeki noktasına; mermiler silahın ucundan o noktaya gider. Ekranda piksel artı nişangah |
 | Sol tık / basılı tut | Tüfek |
 | E / orta tık | Roket (şarjlı) |
@@ -133,14 +139,25 @@ saniyedeki atış sayısı artar (6 → Sözleşme 4 ile 7,5 · Hız ile 8,4 · 
 bekleme kısalır (0,5 → 0,4 sn); vuruşun kendisi 0,2 sn kalır. Hız palayı etkilemez (K-7). Roketin dolum süresini yalnız
 Sözleşme 1 değiştirir.
 
+**Kritik vuruş (kullanıcı kararı 2026-10-25, K-20) — 🟡 (uygulandı, oyun testi bekliyor):** Defne'nin düşmana verdiği her
+silah isabeti **%5** ihtimalle kritik olur ve **iki kat** hasar verir (bütün çarpanlardan sonra uygulanır). Tüfekte ihtimal
+mermi çıkarken bir kez atılır: kritik mermi deldiği her düşmana ve Yankı'yla sektikten sonra da kritik vurur; Üçlü Atış'ta
+her mermi ayrı atılır. Palada, pala dalgasında ve rokette her düşman için ayrı atılır. Fırlatılan ya da sökülen modülün
+patlaması, diriliş şok dalgası ve Defne'ye gelen hasar (kendi seken Yankı mermisi dahil) kritik olmaz. Kritik ihtimali iki
+kaynaktan artar ve toplanır: **Keskin Göz** modülü (§7, yalnız tüfek +%20) ve **Sözleşme 3** (§8, bütün silahlar +%15).
+Tüfekte en çok **%40**, pala, pala dalgası ve rokette en çok **%20**. Kritik isabet komboda normal isabet gibi sayılır; ek
+kombo ya da puan vermez. Kritik vuran düşmanın üstünde "KRİTİK! N" yazısı (N: verilen hasar) çıkar (§11b) ve ekran kısa
+bir renk kayması ile bükülme halkası atar (§13). Not: roketin 40 hasarı bugünkü bütün düşmanları zaten öldürdüğü için
+roket kritiği şimdilik yalnız görseldir.
+
 ## 6. Düşmanlar — 🟡 (Takipçi, Koşucu ve Nişancı oyunda, Synty modelleriyle ve geçici animasyonlarla; patlayan imp ve kalkanlı iri Minimum kapsam dışında)
 
 Canlar dalgalarla artmaz. Ön işaret süreleri hiçbir sözleşmeden etkilenmez (okunabilirlik).
 
 **Görünüş (🟡, 2026-10-24):** düşmanlar dokulu Synty POLYGON Dark Fantasy karakterleridir: **Takipçi** boynuzlu bir
 şeytan, **Koşucu** bir iskelet, **Nişancı** bir cadı. Her biri kendi kimlik rengine boyanır (Takipçi kırmızı, Koşucu
-turuncu-kırmızı, Nişancı şarap-macenta) ve koyu zeminde okunsun diye hafif bir kenar ışığı taşır. Ölünce yine kendi
-renklerinde küplere dağılırlar. Takipçi'nin ön işaretinde kollarını açması korunur.
+turuncu-kırmızı, Nişancı şarap-macenta). **2026-10-25:** düşmanlar artık parlamaz (kenar ışığı kapalı), Defne'yle aynı
+parlaklıktadır. Ölünce kendi dokularının renklerinde küçük piksellere dağılırlar (§13). Takipçi'nin ön işaretinde kollarını açması korunur.
 **Animasyonlar geçicidir 🧪:** şimdilik nişancı paketinin yürüme, koşu ve vurulma klipleri kullanılır; saldırı ve ölüm
 klipleri ekibin ekleyeceği animasyon paketiyle gelecek (⬜).
 
@@ -157,7 +174,7 @@ klipleri ekibin ekleyeceği animasyon paketiyle gelecek (⬜).
 **Doğuş güvenliği (ilk GDD §9):** dört kenardaki işaretli girişlerden; oyuncuya en az 9 m; 0,8 sn ön işaret; uygun giriş
 yoksa doğuş ertelenir. Nişancılar aynı anda her yönü kapatacak biçimde doğmaz.
 
-## 7. Fısıltı modülleri: kabul, ret, sökme — 🟡 (dört modül, temasla kabul, ret, Q ile sökme kodda; elle oyun testi bekliyor)
+## 7. Fısıltı modülleri: kabul, ret, sökme — 🟡 (beş modül, temasla kabul, ret, Q ile sökme kodda; elle oyun testi bekliyor)
 
 Savaş sırasında Şeytan'ın "fısıltıları" yüzen modüller olarak gelir. Kurallar ilk GDD §6–7'deki gibidir. Bunlar
 **geri alınabilir** evetlerdir; ölüm sözleşmeleri (§8) **geri alınamaz**.
@@ -166,25 +183,30 @@ Savaş sırasında Şeytan'ın "fısıltıları" yüzen modüller olarak gelir. 
 |---|---|
 | Yaklaşma | Oyuncudan ≥4 m uzakta boş zeminde belirir, yavaşça yaklaşıp ~2 m'de durur; kendisi kabulü tetiklemez |
 | Niyetli kabul | Çekirdeğe 0,45 sn temas; dolan halka gösterir; ayrılınca sıfırlanır; geçip gitmek veya kaçınarak üstünden geçmek sayılmaz |
-| Kapasite | Her türden en fazla 1; dört tür, dört sabit yuva (kullanıcı kararı 2026-10-24). Zaten takılı bir türün teklifi yine gelir ve "TAKILI" gösterir; dört modül de takılıyken de teklifler gelmeye devam eder (dördü takılıyken teklif kesilsin mi: ❓ A-20) |
+| Kapasite | Her türden en fazla 1; beş tür, beş sabit yuva (her türe bir yuva). **Takılı bir tür bir daha teklif edilmez** (artık "TAKILI" teklif gelmez). **Beş modül de takılıyken yeni teklif gelmez**; bir modül sökülüp yuva boşalınca teklifler normal aralıkla yeniden başlar (kullanıcı kararı 2026-10-25, K-21; A-20 kapandı) |
 | Teklif ömrü | Aynı anda en fazla 1 teklif; 14 sn sonra söner; tekrar kovalamaz |
 | Ret | Sağ tık: imleç yönünde 60° koni ve 3 m içindeki en yakın teklif fırlatılır; darbe kendisi hasar vermez; boşa da 0,65 sn bekleme |
 | Fırlatılan modül | ~16 m/sn; ilk düşman/duvar temasında ya da 0,7 sn sonra patlar; 1,8 m içinde 25 hasar ve kısa savurma; duvar arkasına işlemez, oyuncuya vurmaz; bir kez patlar |
 | Sökme | Q + sağ tık; takılı modül aynı fırlatma davranışıyla tüketilir; yerden geri alınamaz; retle aynı beklemeyi paylaşır. Seçim çemberi ve sabit yuva kuralları ilk GDD §6'daki gibidir |
-| Sıklık | İlk teklif ~8. sn, sonra ~25. ve ~42. sn; öğretimden sonra 14–20 sn aralık; dört tür torbadan karışık gelir |
+| Sıklık | İlk teklif ~8. sn, sonra ~25. ve ~42. sn; öğretimden sonra 14–20 sn aralık; takılı olmayan türler torbadan karışık gelir |
 
 Tablodaki Avantaj, Bedel ve Fısıltı yazıları oyunda teklifin üstünde görünen metinlerdir; parantez içindekiler kuraldır.
 
 | Modül | Avantaj | Bedel | Fısıltı |
 |---|---|---|---|
 | **Üçlü Atış** | Tek atışta 3 mermi (±12°), hepsi tam hasar | Her atış seni nişanın tersine iter (hız katkısı ≤2,5 m/sn, duvarda birikmez) | Bir tetik, üç mermi. Azıcık teper, o kadar. |
-| **Yankı** | Mermiler duvardan bir kez seker (görünür duvarlardan) | Seken mermi sana da çarpar (yarım hasar), 2. duvarda söner | Duvardan seker. Arada bir sana döner. Bir şey olmaz. |
+| **Yankı** | Mermiler duvardan bir kez seker (görünür duvarlardan) | Seken mermi sana da çarpar (yarım hasar), 2. duvarda söner (sektikten sonra kalan menzilinin en çok yarısı kadar gider: 10 m'de seken mermi 15 m yerine 7,5 m daha gider; 2026-10-25) | Duvardan seker. Arada bir sana döner. Bir şey olmaz. |
 | **Yoğunluk** | Mermi hasarı ×1,6 | Gövden ×1,5 büyür, daha kolay vurulursun (gövde ve isabet yarıçapı ×1,5; hız değişmez) | Daha sert vur. Biraz irileşirsin, kimse fark etmez. |
 | **Hız** (kullanıcı kararı 2026-10-24, K-19; 🟡 oyun testi bekliyor) | Tüfek saniyede 6 → 8,4 atış (×1,4; palayı etkilemez, K-7) | Mermiler nişandan rastgele ±6° sapar (Üçlü Atış'ta her mermi ayrı ayrı sapar; yakında güçlü, ~8 m'den uzakta ıskalar) | Daha hızlı sık. Nereye mi gider? Aşağı yukarı oraya. |
+| **Keskin Göz** (kullanıcı kararı 2026-10-25, K-20; 🟡 oyun testi bekliyor) | Tüfekte +%20 kritik şansı (%5 → %25; Sözleşme 3 ile %40; §5) | Ateş ederken yavaşlarsın (yürüme 6 → 5,1 m/sn) (yalnız sol tık basılıyken ×0,85; bırakınca hemen tam hız; kaçınma etkilenmez) | Gözünü kıs, tam ortadan vur. Biraz ağır yürürsün, bir şey olmaz. |
 
 Sökülünce etkiler tek noktadan kalkar (ilk GDD §6): Üçlü tekleşir ve geri tepme durur; Yoğunluk gövdeyi ve hasarı
 tabana döndürür; Yankı'nın havadaki mermileri oyuncuya zararsız olur; Hız sökülünce atış hızı ve sapma hemen tabana
-döner. Ölümde takılı modüllerin ne olacağı ❓ A-11b.
+döner; Keskin Göz sökülünce kritik ihtimali ve yürüme hızı hemen tabana döner, havadaki mermiler kendi atışlarını korur.
+Ölümde takılı modüllerin ne olacağı ❓ A-11b.
+
+Keskin Göz'ün bedeli bilerek hasar değil harekettir: tüfek hasarındaki her kesinti Takipçi'nin 3 vuruşluk öldürme eşiğini
+bozar ve modülü tuzağa çevirir (tasarım notu `production/design/crit-difficulty.md` §3).
 
 ## 8. Şeytan'ın ölüm sözleşmeleri — 🟡 (altı sözleşme, kart ve bütün görünür bedeller oynanıyor; A-4, A-9, A-10 için geçici seçimler var)
 
@@ -197,11 +219,15 @@ EVET'in altında "dirilirsin · bedeli kalıcı", HAYIR'ın altında "oyun biter
 Şeytan'ın sunumu EVET'i öne çıkarır (büyük, parlak EVET; küçük, sönük HAYIR; Şeytan HAYIR'ı küçümser) (K-2).
 Şeytan oyuncuya "sen" der, Defne'den hep "o" diye söz eder: "Sana X, ondan Y" (K-10).
 
+**Şeytan'ın görünüşü (🟡, 2026-10-25):** yer tutucu gravürün yerini ekibin elle çizdiği Şeytan aldı. Ekranın sağ yanına
+hâkimdir; EVET düğmesi uzattığı parmağının ucunda durur ve onun salınımını izler. Kart, düğmeler ve Şeytan kısa bir
+"açılma" hareketiyle belirir (§12).
+
 | # | Vaat (yükseltme) | Bedel: görünür | Bedel: mekanik | Şeytan'ın teklifi |
 |---|---|---|---|---|
 | 1 | Roket hasarı iki katı (40 → 80), patlama alanı iki katı (yarıçap 2,5 → 3,5 m 🧪, ❓ A-9; yarıçap ×2 olsaydı 5 m), dolum %40 hızlı (6,0 → 4,3 sn) | **Rengi:** dünya %30 solar, Defne'nin rengi çekilir | Hiçbir şey | Sana iki kat güçlü roket, hem de daha sık. Ondan mı? Biraz renk. Fark etmez bile. |
 | 2 | Pala savurunca öne bir dalga da çıkar; kaçış hakkı 1 → 2 | **Sesi:** Defne'nin sesi ve müziğin bir kısmı susar (uyarı sesleri kalır, K-8); can çubuğu kısalır | Can sınırı 100 → 80 | Sana pala dalgası, bir kaçış hakkı daha. Ondan da sesini alıyorum. Nasılsa hep susuyordu. |
-| 3 | Tüfek mermileri 2 düşmanı daha delip geçer (kalkanı delmez*) | **Arkadaşları:** ekrandaki küçük fotoğraf kaybolur | Düşmanlar %15 daha hızlı | Mermilerin delip geçsin. Ondan da arkadaşlarını alıyorum. Zaten onlara hiç vakti yoktu. |
+| 3 | Tüfek mermileri 2 düşmanı daha delip geçer (kalkanı delmez*); bütün silahlarda +%15 kritik şansı (tüfek %5 → %20, Keskin Göz'le %40; pala, pala dalgası ve roket %5 → %20; K-20, §5) | **Arkadaşları:** ekrandaki küçük fotoğraf kaybolur | Düşmanlar %15 daha hızlı | Mermilerin delip geçsin, arada bir de çifte vursun. Ondan da arkadaşlarını alıyorum. Zaten onlara hiç vakti yoktu. |
 | 4 | Bütün hasar %10, saldırı hızı %25 artar: tüfek saniyede 6 → 7,5 atış, pala beklemesi 0,5 → 0,4 sn (roket değişmez) (❓ A-10; saldırı hızı K-19, 🟡 oyun testi bekliyor) | **Yüzü:** Defne'nin yüzünden parçalar kopar, geri gelmez (vurulma alanı küçülmez, K-13) | Can sınırı 80 → 60 | Biraz daha sert, biraz daha seri. Ondan yüzünü alıyorum. Aynaya bakmıyordu nasılsa. |
 | 5 | Bir roket hakkı daha (2 → 3) | **Zamanı:** ekranın kenarları kararır (doğuş işaretleri kararmanın üstünde çizilir*) | Dirilince koruma süresi yok; kaçış beklemesi iki katı (1,6 → 3,2 sn) | Bir roket daha. Ondan da zamanını alıyorum. Nasılsa kendine hiç ayırmıyordu. |
 | 6 | — | **Kendisi:** Defne griye döner | Tuşlar 0,25 sn geç tepki verir*, kaçınılmaz sona gider (❓ A-4) | Son anlaşma: ondan geriye ne kaldıysa. / Bu sefer sormuyorum. |
@@ -254,7 +280,7 @@ katedral avlusudur. Oynanış yerleşimi, çarpışmalar, sekme ve yol bulma de�
   Merkez en loş yerdir; karakterler sahnenin en doygun şeyleri kalır. Kırmızı ve turuncu düşmanlara, uyarı plakalarına ve
   Şeytan'a ayrılmıştır (tek istisna sunaktaki küçük pentagram).
 
-## 10. Dalgalar ve zorluk — 🟡 (dalga yöneticisi çalışıyor; ölüm takvimi henüz dengelenmedi)
+## 10. Dalgalar ve zorluk — 🟡 (dalga yöneticisi çalışıyor; mermi cehennemi zorluğu K-21 uygulandı; ölüm takvimi henüz dengelenmedi)
 
 İlk GDD §10 bütçe mantığı korunur: 30 sn'lik pencereler, pencere başında kısa alt gruplar, aynı anda aktif düşman sınırı,
 sınır doluysa doğuş bekler, geç kalanlar topluca boşaltılmaz. **Değişen:** bütçe adet yerine **tehdit puanıyla** tutulur
@@ -284,13 +310,39 @@ sınır doluysa doğuş bekler, geç kalanlar topluca boşaltılmaz. **Değişen
   insandan çok daha erken ölür; sonuçları alt sınır olarak okunur.
 - Sözleşme 2 (+1 kaçınma) ve 5 (bekleme ×2) sonrası sürekli kaçınma hızı tabanla aynıdır; yalnız arka arkaya 2 kaçınma kalır.
 
-**Güncel uygulama (2026-10-24 incelemesinden sonra):** her pencerenin bütçesi pencere boyunca 2–4 kişilik paketlere
+**2026-10-24 uygulaması (aşağıdaki mermi cehennemi bunun sayılarını ikiye katlar):** her pencerenin bütçesi pencere boyunca 2–4 kişilik paketlere
 bölünür (16 sn'ye yayılır), arena ~3 sn'den fazla boş kalmaz, paketler tek girişten gelir. Takipçi ve Koşucu oyuncunun
 gideceği yere yönelir ve atılma mesafeleri uzar (Takipçi 2,6 m'ye, Koşucu 2,2 m'ye kadar); Nişancı hedefin hareketine göre
 önden nişan alır ve atışlar arasında yer değiştirir. Başlangıç değerleri: Takipçi hızı 3,5 → 4,2 m/sn, Koşucu hasarı 6 → 8,
 Nişancı mermisi 12 → 14 m/sn (başlangıç önerisi). Pencere sayıları ilk tablonun yaklaşık 1,75 katı, aktif sınır +3
 (K-17: 3:00'ten sonra artmaya devam eder; K-15: 5:00'ten sonra her 30 sn'de +1 Takipçi, +1 Koşucu, +1 Nişancı, sınır +1, en çok 16).
 Bot ölçümü (kaçınan, dolaşan, ±12° ıskalayan bot): sayılar ×1,35 iken ilk ölüm 1:47; ×1,75 iken ölümler 0:33 ve 1:14; şu anki değerler (×1,5) ikisinin ortası. Takvim insan oyun testiyle son hâlini alacak.
+
+**Güncel uygulama — mermi cehennemi (kullanıcı kararı 2026-10-25, K-21) — 🟡 (uygulandı, oyun testi bekliyor):** amaç
+oyuncuyu öldürmek. Düşman canları değişmez; her pencerenin düşman sayısı ve aktif sınırı **iki katına** çıkar. Paketler
+pencerenin ilk **9 sn**'sine yayılır (18 yerine), bir paket en çok **6** düşmandır (4 yerine). 5:00'ten sonra her 30 sn'de
+**+2 Takipçi, +2 Koşucu, +2 Nişancı, sınır +2**; aktif sınır en çok **32** (16 yerine). Doğuş uyarısı (0,8 sn), 9 m doğuş
+mesafesi ve "Nişancılar 3 sn içinde en çok 2 girişten" kuralı aynen kalır; okunabilirlik bunlara dayanır.
+
+| Pencere | Takipçi | Koşucu | Nişancı | Aktif sınır |
+|---|---|---|---|---|
+| 0:00–0:30 | 36 | – | – | 12 |
+| 0:30–1:00 | 42 | 24 | – | 16 |
+| 1:00–1:30 | 34 | 16 | 8 | 18 |
+| 1:30–2:00 | 34 | 16 | 8 | 20 |
+| 2:00–2:30 | 30 | 16 | 10 | 20 |
+| 2:30–3:00 | 30 | 20 | 10 | 22 |
+| 3:00–3:30 | 34 | 20 | 10 | 22 |
+| 3:30–4:00 | 34 | 24 | 10 | 24 |
+| 4:00–4:30 | 36 | 24 | 16 | 24 |
+| 4:30–5:00 | 36 | 28 | 16 | 26 |
+| 5:00 sonrası | +2 | +2 | +2 | +2 (en çok 32, 6:00'da) |
+
+Kaba hesap: 0:30'dan sonra hiçbir oyuncu doğuş hızına yetişemez; arena hep aktif sınır kadar doludur, asıl zorluğu aktif
+sınır belirler. İlk ölüm tahminen 0:20–0:35, sonrakiler 20–35 sn arayla; hep-EVET koşusu ~2:30–3:15 sürer. Bu, "~5 dakika"
+hedefinden kısadır; kullanıcı bunu bilerek istedi, §3'teki süre 🧪 geçicidir. Koşuyu uzatmak gerekirse yalnız ilk iki
+pencerenin aktif sınırı düşürülür (12 → 8, 16 → 12). Yankı'nın sekme sonrası kısalan menzili (§7) kalabalıkta kendi
+mermisine yakalanmayı azaltır.
 
 **Önceki uygulama (Minimum kapsam, K-11):** imp ve iri olmadığı için tablodaki her imp yerine 1 Takipçi + 1 Koşucu,
 her iri yerine 2 Nişancı doğar; pencerelerin tehdit puanı aynı kalır. Her pencerenin bütçesi 0., 4. ve 8. saniyelerde
@@ -323,7 +375,7 @@ hiçbir şey · Verdiklerin: hiçbir şey. Kendin kaldın."
 |---|---|---|
 | 1 | Roket gücü | Rengi |
 | 2 | Pala dalgası, +1 kaçış | Sesi · can sınırı −20 |
-| 3 | Delen mermi | Arkadaşları · düşmanlar %15 daha hızlı |
+| 3 | Delen mermi, +%15 kritik | Arkadaşları · düşmanlar %15 daha hızlı |
 | 4 | +%10 hasar, +%25 saldırı hızı | Yüzü · can sınırı −20 |
 | 5 | +1 roket | Zamanı · dirilince koruma yok, kaçış beklemesi ×2 |
 | 6 | Hiçbir şey | Kendisi |
@@ -345,12 +397,12 @@ oyalanmak komboyu sıfırlar.
 | Donma | Şeytan ekranı, duraklatma ve vuruş duraklaması sırasında süre işlemez. |
 | Çarpan | Her tam 5 kombo için +0,1; en çok **×3,0**. 10 kombo ×1,2 · 25 kombo ×1,5 · 50 kombo ×2,0 · 100 kombo ×3,0. Sayaç 100'ü geçebilir, çarpan ×3,0'da kalır. |
 | Puan | Defne'nin öldürdüğü düşman **100 × çarpan** puan verir (×1,5'te 150). Öldüren isabet ve öldürme önce sayılır, puan yeni çarpanla verilir. Şok dalgasının öldürdükleri 100 puan, çarpansız. Çarpan yalnız düşman puanına uygulanır. |
-| Geri bildirim | HUD'da puanın altında "KOMBO" başlığı, kombo sayısı, çarpan (ör. ×1,5) ve azalan 3 sn çubuğu (arena boşken durduğu görünür). Her sayımda sayaç küçük bir sıçrama yapar; 10, 25, 50 ve 100 eşiklerinde sayaç büyür, rengi değişir, ekran kısa sarsılır ve görüntü efekti nabzı atar (§13); vuruş duraklaması yoktur, oyun durmaz. Eşiklerde yazı ve ses vurgusu henüz yok (⬜). Kombo hasarla sıfırlanınca sayaç "KIRILDI" yazıp kırılarak düşer, süre dolunca "SÖNDÜ" yazıp söner. |
+| Geri bildirim (2026-10-25, K-20) | Sağ üstteki kombo sayacı (sayı, çarpan, 3 sn çubuğu) **kalktı**. Çarpan puanın yanında görünür: "Puan 1200 ×1,5". Kombo ve kritik **dünyada beliren yazılarla** gösterilir; yazılar yükselip söner. **Kritik:** "KRİTİK! N" (N: verilen hasar) vurulan düşmanın üstünde; ekranda en çok 3 tane, 0,2 sn'de en çok 1 yeni (fazlası gösterilmez, hasar yine uygulanır). **Her 5 kombo:** Defne'nin üstünde "N KOMBO". **Eşik** (10, 25, 50, 100): Defne'nin üstünde daha büyük, eşiğe göre renklenen "N KOMBO! ×1,5"; ekran sarsılır, görüntü efekti nabzı ve bükülme halkası atar (§13); vuruş duraklaması yoktur. Defne'nin üstünde aynı anda tek yazı durur (yenisi eskisinin yerini alır; taze eşik yazısı korunur). Yazılar duraklatmada ve Şeytan ekranında gizlenir. Kombo kırılınca ("KIRILDI" / "SÖNDÜ") yazı şu an gösterilmez (⬜). |
 
 Hasar artışları düşman başına isabet sayısını azalttığı için komboyu yavaşlatır; saldırı hızı yalnız hızlandırır,
 düşman başına kombo sayısını büyütmez. Kombo, düşman canıyla sınırlıdır.
 
-## 12. Arayüz ve öğretim — 🟡 (HUD, modül yuvaları, teklif satırı, giriş metni ve ilk dakika ipuçları var; elle test bekliyor)
+## 12. Arayüz ve öğretim — 🟡 (HUD, beş modül yuvası, teklif şeridi, giriş metni ve ilk dakika ipuçları var; elle test bekliyor)
 
 **İlk dakika ipuçları (uygulanan):** ekranın altında aynı anda tek satır. Başta "WASD: yürü · Fare: nişan al · Sol tık:
 ateş et" (oyuncu hem yürüyüp hem ateş edince söner); ilk teklif gelince "Üstüne git, bekle: kabul · Sağ tık: hayır de"
@@ -361,7 +413,8 @@ ateş et" (oyuncu hem yürüyüp hem ateş edince söner); ilk teklif gelince "�
 **Ana menü ve ayarlar (kullanıcı isteği 2026-10-24):** oyun ana menüyle açılır. Solda başlık "Bir Şey Olmaz", altında
 "Dance with the Devil" ve dört düğme: **Başla** (ekran kararır, arena başlar), **Ayarlar**, **Emeği Geçenler**, **Çıkış**.
 Sağda Defne, iki şamdan arasında, kırmızı bir mühür halkasının üstünde silahıyla bekler ve yavaşça sağa sola döner;
-arkasında kırmızıya boyanmış, yavaşça "nefes alan" geçici bir Şeytan gravürü (Gustave Doré) durur. Altta "Hayır demeyi
+arkasında kırmızıya boyanmış, yavaşça "nefes alan" geçici bir Şeytan gravürü (Gustave Doré) durur. Menü arka planı
+her ekran oranında ekranı doldurur, kenarları yumuşakça kararır (2026-10-25). Altta "Hayır demeyi
 öğrenmelisin." yazar. Menü fare, klavye (ok tuşları/W-S, Enter) ve gamepad ile gezilir; Esc ya da gamepad B açık
 paneli kapatır.
 - **Ayarlar** (sade): Genel ses, Müzik, Efektler, Ekran sarsıntısı (0 = kapalı) kaydırıcıları ve Tam ekran açık/kapalı.
@@ -371,26 +424,31 @@ paneli kapatır.
 
 **Arayüz görünüşü:** HUD, Şeytan kartı, son ekranı ve duraklatma paneli karanlık fantastik süslü metal çerçeveler
 (Synty Interface Dark Fantasy HUD) kullanır; başlıklar, düğmeler ve Şeytan'ın sözleri gotik Pirata One, diğer yazılar
-Markazi yazı tipiyledir. Yerleşim ve bilgiler değişmedi. **Düğmeler (🟡, 2026-10-24):** ana menü, duraklatma, son ekranı
-ve Şeytan kartındaki düğmeler Synty Dark Fantasy HUD düğme hazır parçalarıdır; kartta EVET yine büyük ve parlak, HAYIR
-küçük ve sönüktür (K-2).
+Markazi yazı tipiyledir. Yerleşim ve bilgiler değişmedi. **Düğmeler (🟡, 2026-10-25):** ana menü, duraklatma, son
+ekranı ve Şeytan kartındaki düğmeler sadeleşti: ince çerçeveli koyu bir şerit (Synty Dark Fantasy HUD "WorldSpace_Item_01"),
+seçili düğmede altın vurgu. Kartta EVET yine büyük ve parlak, HAYIR küçük ve sönüktür (K-2). **Hareket (DOTween):**
+paneller, düğmeler, Şeytan kartı ve son ekranındaki defter satırları kısa bir "açılma" hareketiyle belirir.
+**Teklif şeridi:** savaş içi teklifin avantaj/bedel yazısı, ekranın sağ üst köşesinde puanın altında küçük bir şerittir.
 
-İlk GDD §11 korunur: üstte can, süre ve puan ("Puan"), puanın altında kombo (§11b); altta dört sabit modül yuvası
-(her türe bir yuva) ile ret/kaçış hazır göstergeleri ("Hayır [Sağ tık]", "Kaçış [Space]"); teklif üzerinde tek satır
+İlk GDD §11 korunur: üstte can, süre ve puan ("Puan", kombo çarpanı yanında: "Puan 1200 ×1,5"; sağ üstteki kombo sayacı
+kalktı, kombo yazıları dünyada görünür, §11b); altta beş sabit modül yuvası
+(her türe bir yuva) ile ret/kaçış hazır göstergeleri ("Hayır [Sağ tık]", "Kaçış [Space]"); teklif şeridinde (sağ üst) tek satır
 avantaj, tek satır bedel; takılı modülün sökme ipucu "Sağ tık: söküp at". Duraklatma panelinin başlığı "Mola"dır. Ek olarak HUD'da Defne'nin küçük fotoğrafı (Sözleşme 3 bedeli) ve roket
 şarjları. Bağlamsal ipuçları ilk dakikada sırayla gelir, oyunu durdurmaz. Renk tek ayırt edici değildir.
 
-## 13. Görsel ve ses yönü — 🟡 (takip kamerası, pikselli görüntü, dış çizgi, Synty düşmanlar, vuruş efektleri ve kombo görüntü efektleri var; düşman saldırı/ölüm animasyonları ve toon ışık yok)
+## 13. Görsel ve ses yönü — 🟡 (takip kamerası, pikselli görüntü, dış çizgi, Synty düşmanlar, piksel dağılması, şok dalgası halkaları, kombo görüntü efektleri, elle çizilmiş Şeytan ve kayıtlı savaş sesleri var; düşman saldırı/ölüm animasyonları ve toon ışık yok)
 
 - **Görünüm:** Defne'yi takip eden ortografik izometrik kamera (35° eğim, 45° dönüş, metre başına ~20 piksel, K-14); karakterlerde 1 piksellik koyu dış çizgi; karakterler sahnenin en parlak ve en doygun şeyleri, zemin ve duvarlar koyu ve sakin; düşük çözünürlükte (640×360) çizilip nokta filtresiyle büyütülen, hafif
   pikselli voksel görünüm; düz gölgeli toon ışık; 1 px dış çizgi; kamera kayarken titreme olmaz.
 - **Parçalanma:** vurulan her şey, düşmanlar ve çevre, piksellerine (küplere) dağılır. Roket geniş, pala düzlemsel kesik,
   mermi küçük delik açar.
-  Şu an 🟡: ölen hedef kendi parça renkleriyle küplere ayrılıp sıçrar, yere düşer ve küçülerek kaybolur; aynı karede çok
-  ölüm olursa sonrakiler daha iri küplerle dağılır. Çevre kırılması ve delikler henüz yok (İsteğe bağlı katman).
+  Şu an 🟡 (2026-10-25): ölen düşman, kendi dokusunun gerçek renklerinde **çok sayıda küçük piksele** (1–2,5 doku pikseli
+  boyunda) dağılır: ölümde ~320 parça, roketle öldürülünce 400. Öldürmeyen her isabette 20–40 küçük piksel vuruş yönünün
+  tersine yontulup saçılır. Parçalar sıçrar, yere düşer ve küçülerek kaybolur. Çevre kırılması ve delikler henüz yok
+  (İsteğe bağlı katman).
 - **Karakterler:** 🟡 Düşmanlar dokulu Synty POLYGON Dark Fantasy karakterleridir (Takipçi: boynuzlu şeytan, Koşucu:
-  iskelet, Nişancı: cadı), kimlik renklerine boyanmış (kırmızı / turuncu-kırmızı / şarap-macenta) ve hafif kenar ışıklı;
-  ölünce yine renkli küplere dağılırlar, Takipçi'nin ön işaretinde kollarını açması korunur (bkz. §6). 🧪 Animasyonlar
+  iskelet, Nişancı: cadı), kimlik renklerine boyanmış (kırmızı / turuncu-kırmızı / şarap-macenta); 2026-10-25'ten beri
+  parlamazlar (kenar ışığı kapalı, Defne'yle aynı parlaklık); ölünce kendi renklerinde küçük piksellere dağılırlar, Takipçi'nin ön işaretinde kollarını açması korunur (bkz. §6). 🧪 Animasyonlar
   geçicidir: nişancı paketinin yürüme, koşu ve vurulma klipleri; saldırı ve ölüm klipleri ekibin ekleyeceği animasyon
   paketiyle gelecek.
   **Defne** artık kullanıcının eklediği dokulu 3B model ve hazır animasyonlarla oynar (nişanlı bekleme, yürüme, koşu, geri
@@ -407,11 +465,17 @@ avantaj, tek satır bedel; takılı modülün sökme ipucu "Sağ tık: söküp a
 - **Efektler (gerçekçi, dokulu):** tüfek ateşinde namlu parlaması, namlu boyunca kısa alev, kıvılcım ve ince duman; roket
   atışında ön alev ve arkadan geri ateş (RPG'ye özgü) ile duman bulutu; roket patlamasında parlama, sarıdan turuncuya ve koyu
   kırmızıya soğuyan ateş topu, yükselen duman, savrulan toprak, korlar, yerde toz halkası ve 6 sn kalan yanık izi; mermi
-  isabetinde kıvılcım ve toz. Işık, sarsıntı ve vuruş duraklaması eskisi gibi; küp parlama yerine bu efektler oynar.
-- **Şeytan:** ekranın sağ kenarından, monitör çerçevesinin dışından eğilen 2B çizim; ekibin kendi çizimiyle değişecek.
-- **Ses:** 🟡 kısa okunur SFX, karanlık tek müzik döngüsü; Sözleşme 2 bir müzik katmanını susturur. Bütün sesler ve müzik
-  koddan üretilir (dış kaynak yok). Müzik Re minör, 90 BPM, 8 ölçülük (~21 sn) kesintisiz döngü; iki katman: taban (drone,
-  bas nabız, kalp atışı) ve melodi (müzik kutusu, yankı). Sözleşme 2: Defne'nin sesleri susar, melodi katmanı 1,5 sn'de
+  isabetinde kıvılcım ve toz. Işık ve vuruş duraklaması eskisi gibi; küp parlama yerine bu efektler oynar.
+- **Vuruş hissi (🟡, 2026-10-25):** ekran sarsıntısı çok daha güçlü (daha geniş kenar payı, hafif yuvarlanma ve kısa
+  yakınlaşma tepmesi). Roket patlamalarında, öldürmelerde, kritik vuruşlarda, kombo eşiklerinde ve Şeytan'ın diriliş
+  dalgasında görüntüyü büken **şok dalgası halkaları** yayılır; kritik vuruşta kısa bir renk kayması (chromatic) parlar.
+  Hepsi Ekran sarsıntısı ayarıyla ölçeklenir, azaltılmış hareket seçeneğinde kapanır.
+- **Şeytan:** ekranın sağ kenarından, monitör çerçevesinin dışından eğilen 2B çizim. 🟡 (2026-10-25) Yer tutucunun yerini
+  ekibin elle çizdiği Şeytan aldı; ekranın sağ yanına hâkimdir, EVET uzattığı parmağının ucunda durur ve salınımını izler (§8).
+- **Ses:** 🟡 kısa okunur SFX, karanlık tek müzik döngüsü; Sözleşme 2 bir müzik katmanını susturur. Müzik ve arayüz/uyarı
+  sesleri koddan üretilir. Müzik Re minör, 90 BPM, 8 ölçülük (~21 sn) kesintisiz döngü; iki katman: taban (drone,
+  bas nabız, kalp atışı) ve melodi (müzik kutusu, yankı). **2026-10-25:** savaş ve düşman sesleri artık kayıtlı ses
+  dosyalarıdır (main dalından alındı); koddan üretilen sesler bunların olmadığı yerlerde kalır. Sözleşme 2: Defne'nin sesleri susar, melodi katmanı 1,5 sn'de
   kısılır; oyun işaretleri (vuruş, uyarı, kaçınma hazır, kabul/ret) kalır (K-8). Ses tasarımında geçici seçimler: Koşucu
   uyarısı Takipçi uyarısının tiz hâli; fırlatılan modül patlaması roket patlamasının tiz ve kısık hâli; kaçınma sesi oyun
   sesi sayılır.
@@ -437,9 +501,9 @@ görsel gösteriş, sonra içerik çeşitliliği gider. Sözleşme → bedel →
 
 | Katman | İçerik |
 |---|---|
-| **Minimum** | Tek arena (duvarlar sağlam olabilir); izometrik kamera ve düşük çözünürlüklü pikselli görünüm; parçalı voksel Defne; hareket, nişan, kaçınma, can; tüfek, roket, pala; Takipçi ve Nişancı; bütçeli dalgalar ve ölüm takvimi; üç fısıltı modülü ile kabul/ret/sökme; ölüm dondurması → Şeytan → sözleşme kartı → EVET/HAYIR; altı görünür bedel (basit uygulama yeterli); bütün sonlar ve defter; giriş metni ve replikler; temel ses; ilk dakika ipuçları; vuruşta sarsıntı, kısa duraklama, namlu parlaması ve basit küp patlaması. **Kullanıcı kararıyla eklendi (2026-10-24, uygulandı):** kombo ve skor çarpanı (K-18), dördüncü fısıltı modülü Hız ve Sözleşme 4'ün saldırı hızı (K-19). |
+| **Minimum** | Tek arena (duvarlar sağlam olabilir); izometrik kamera ve düşük çözünürlüklü pikselli görünüm; parçalı voksel Defne; hareket, nişan, kaçınma, can; tüfek, roket, pala; Takipçi ve Nişancı; bütçeli dalgalar ve ölüm takvimi; üç fısıltı modülü ile kabul/ret/sökme; ölüm dondurması → Şeytan → sözleşme kartı → EVET/HAYIR; altı görünür bedel (basit uygulama yeterli); bütün sonlar ve defter; giriş metni ve replikler; temel ses; ilk dakika ipuçları; vuruşta sarsıntı, kısa duraklama, namlu parlaması ve basit küp patlaması. **Kullanıcı kararıyla eklendi (2026-10-24, uygulandı):** kombo ve skor çarpanı (K-18), dördüncü fısıltı modülü Hız ve Sözleşme 4'ün saldırı hızı (K-19). **Kullanıcı kararıyla eklendi (2026-10-25, uygulandı):** kritik vuruş, beşinci modül Keskin Göz ve Sözleşme 3'ün kritik şansı (K-20); dünyada beliren kombo/kritik yazıları; mermi cehennemi zorluğu ve dolu yuvada teklif yok (K-21); Yankı'nın sekme sonrası kısa menzili. |
 | **İsteğe bağlı** (bu sırayla) | Koşucu → dış çizgi ve titreşimsiz kamera → küçük dekorların küplere dağılması → tam voksel enkaz sistemi → imp ve kalkanlı iri → Defne'den tek tek voksel düşmesi (minimumda parça gizleme yeterli) → iç duvarların kırılması → ek kozmetik efektler → tuş atama. |
-| **Kapsam dışı** | Yeni arena, boss, ek silah (Hız dışında yeni modül de); koşular arası kalıcı güç, mağaza, envanter, yetenek ağacı; uzun eğitim, ara sahne, seslendirme; çok oyunculu. |
+| **Kapsam dışı** | Yeni arena, boss, ek silah (Hız ve Keskin Göz dışında yeni modül de); koşular arası kalıcı güç, mağaza, envanter, yetenek ağacı; uzun eğitim, ara sahne, seslendirme; çok oyunculu. |
 
 **Hiç kesilmez:** ölüm → Şeytan → EVET/HAYIR zinciri, her evetin görünür bedeli, HAYIR ve hep-EVET sonları, defter,
 savaş içi fısıltı modülleri.
@@ -469,6 +533,8 @@ savaş içi fısıltı modülleri.
 | K-17 | **3:00'ten sonra oyun kolaylaşmaz**: düşman sayısı koşu süresiyle artmaya devam eder. K-5'teki "adet düşer" kuralının yerini alır. |
 | K-18 | (SefaSelim, 2026-10-24) **Kombo ve skor çarpanı:** Defne'nin isabetleri ve öldürmeleri komboyu büyütür, kombo öldürme puanını en çok ×3,0'a kadar katlar; hasar almak ya da 3 sn oyalanmak sıfırlar (kurallar §11b). |
 | K-19 | (SefaSelim, 2026-10-24) **Saldırı hızı** iki kaynaktan gelir: dördüncü fısıltı modülü **Hız** (yalnız tüfek ×1,4, bedeli ±6° sapma; K-7 değişmez) ve **Sözleşme 4** (+%25: tüfek ve pala beklemesi). Dört tür modül için **dört sabit yuva** vardır (her türe bir yuva). Kurallar §5, §7, §8. |
+| K-20 | (SefaSelim, 2026-10-25) **Kritik vuruş:** bütün silahlarda %5 ihtimalle ×2 hasar (tüfekte mermi başına, atışta; delme ve Yankı korur; pala, dalga ve rokette düşman başına); modül patlaması, diriliş şok dalgası ve Defne'ye gelen hasar kritik olmaz. Beşinci fısıltı modülü **Keskin Göz** (yalnız tüfek +%20; bedeli ateş ederken yürüme 6 → 5,1 m/sn, kaçınma etkilenmez). **Sözleşme 3**'e "+%15 kritik şansı (bütün silahlar)" eklendi. Tüfekte en çok %40, diğerlerinde %20. Kombo ve kritik geri bildirimi sağ üstteki sayaç yerine dünyada beliren yazılardır; çarpan puanın yanında görünür. Yankı mermisi sektikten sonra kalan menzilinin en çok yarısı kadar gider. Kurallar §5, §7, §8, §11b. |
+| K-21 | (SefaSelim, 2026-10-25: "amaç oyuncuyu öldürmek") **Zorluk iki kat, canlar aynı:** her pencerenin düşman sayısı ve aktif sınırı ×2, paketler 9 sn'ye yayılır, paket başına en çok 6 düşman, 5:00'ten sonra her pencerede +2 / +2 / +2 / sınır +2, aktif sınır en çok 32. Koşular tahminen ~2:30–3:15'e kısalır; kullanıcı bunu bilerek istedi, ~5 dk hedefi 🧪 geçicidir (§3, §10). **Beş yuva doluyken teklif gelmez, takılı tür bir daha teklif edilmez** (A-20 kapandı, §7). |
 
 ### Açık sorular (❓ AÇIK — kullanıcı kararı bekler)
 
@@ -482,7 +548,6 @@ seçenek seçerse değiştirilir:
 - **A-11b (ölümde modüller):** takılı modüller dirilişte kalır.
 - **A-15 (R):** yalnız sonuç ekranında çalışır.
 - **A-16 (skor):** şimdilik yalnız düşman başına +100 sayılır (K-18 kombo çarpanıyla); diğer kalemler 0.
-- **A-20 (dört modül takılıyken teklif):** teklifler gelmeye devam eder; takılı türün teklifi "TAKILI" gösterir.
 
 | # | Soru | Seçenekler |
 |---|---|---|
@@ -495,7 +560,6 @@ seçenek seçerse değiştirilir:
 | A-16 | "Hasardan kaçınma" skoru zorunlu ölümlerle her koşuda 0 olur. Kalsın mı? | Kalsın / değişsin / çıkarılsın |
 | A-18 | İmp patlaması diğer düşmanlara vurur mu? | Evet / hayır |
 | A-19 | Kişi başı iş dağılımı nedir? (Teslim: 2026-10-26 15:00, bkz. §14.) | — |
-| A-20 | Dört modül de takılıyken yeni fısıltı teklifi gelsin mi? (Şu an gelir, takılı tür "TAKILI" gösterir; reddedip fırlatılabilir.) | Gelmeye devam etsin (şu anki hâl) / dördü takılıyken teklif kesilsin, yuva açılınca yeniden başlasın (tasarım notunun önerisi) |
 
 ---
 
@@ -519,3 +583,4 @@ seçenek seçerse değiştirilir:
 - 2026-10-24 17:18 — SefaSelim (Claude Code) — Arena karanlık gotik harabe olarak giydirildi, ışıkları yeniden kuruldu (yalnız görsel, §9); ana menü, sade ayarlar ve emeği geçenler eklendi, duraklatmadaki "Çık" ana menüye döner, arayüz Synty çerçeveleri ve gotik yazı tipleriyle yenilendi (§12).
 - 2026-10-24 18:55 — SefaSelim (Claude Code) — Gotik arena düzeltmeleri: girişler kapalı demir kapı/parmaklık oldu (görünmez duvar kalmadı), güney ve batı duvarları 1 m'ye indi, oynanabilir alana taşan sütunlar ve içinden geçilen uzun mezar taşları kaldırıldı (§9).
 - 2026-10-24 21:30 — SefaSelim (Claude Code) — Kombo ve skor çarpanı eklendi (§11b, K-18); dördüncü fısıltı modülü Hız (yalnız tüfek, K-7 korunur) ve dört sabit yuva, Sözleşme 4'e +%25 saldırı hızı (§5, §7, §8, K-19); dört modül takılıyken teklif sorusu açıldı (A-20); düşmanlar Synty POLYGON Dark Fantasy modelleri oldu (geçici animasyonlarla, §6, §13); menü, duraklatma, son ve Şeytan kartı düğmeleri Synty düğmeleri oldu (§12); kombo eşiklerinde post-processing efektleri (§13); bütün oyun metinleri samimi Türkçeyle yeniden yazıldı, bedel adları üçüncü kişi oldu (Rengi, Sesi, …; §2, §7, §8, §11, §12).
+- 2026-10-25 03:30 — SefaSelim (Claude Code) — Kritik vuruş (%5 ×2, bütün silahlar), beşinci modül Keskin Göz ve Sözleşme 3'e +%15 kritik (K-20; §5, §7, §8, §11); Yankı sekme sonrası yarım menzil (§7); kullanıcı kararıyla zorluk ×2, mermi cehennemi, ~5 dk koşu hedefi 🧪 geçici (K-21; §3, §10); dolu yuvada ve takılı türde teklif yok, A-20 kapandı (§7, §15); kombo sayacı kalktı, dünyada kombo/kritik yazıları ve puan yanında çarpan (§11b, §12); küçük piksel dağılması, güçlü sarsıntı, şok dalgası halkaları, düşmanların parlaması kapandı (§6, §13); sade düğmeler, DOTween açılışları, sağ üstte teklif şeridi, beş yuva, tam ekran menü arka planı (§12); elle çizilmiş Şeytan (§8, §13); kayıtlı savaş/düşman sesleri (§13).

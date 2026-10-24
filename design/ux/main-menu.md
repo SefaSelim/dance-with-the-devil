@@ -64,6 +64,25 @@ Wireframe (1920×1080 reference, scales):
   label (brighter on hover).
 - Pause and ending buttons keep navigation None: their keys (Enter = Devam, R = Tekrar dene) stay as before.
 
+## 3c. Minimal buttons, motion and world popups (2026-10-25, SefaSelim)
+
+- Buttons: `HUD_DarkFantasy_Button_WorldSpace_Item_01` for main and small buttons (dark 50% parchment bar, centred
+  Markazi label) under a thin `Frame_Box_Small_01` frame. Focus (keyboard/pad selection or mouse hover) = gold frame +
+  gold label + a small scale punch. `UiKit` moves the prefab's Button from "Content" to the root.
+- Motion (DOTween, unscaled time, all skipped with ReduceMotion): menu column pops in item by item; settings, credits
+  and pause panels pop in (scale 0.85 → 1 + fade); the Devil leans in, his bubble and card pop, EVET pops on his hand;
+  the ending screen pops in and the ledger lines appear one by one; the offer banner slides in.
+- Devil screen: the hand-drawn Devil fills the right side (sized to the image aspect); EVET (with its stakes line)
+  rides on his reaching fingertip and follows his lean and sway (the sway calms while the pointer is on EVET); the card
+  moved left; HAYIR stays small and dim at the card's bottom centre.
+- HUD: the top-right combo counter is gone. Combo shows as world popups over Defne ("KOMBO ×N" every 5, bigger
+  "KOMBO 25!" with the multiplier at each tier) and "KRİTİK! N" where a crit lands (max 12 on screen, priority
+  crit > tier > combo); the score line shows the live multiplier ("Puan 1200 ×1,5") above ×1,0. The offer banner is a
+  small 232×40 corner banner under the score (one-line whisper, "+"/"−" lines that shrink to fit, lifetime bar). Five
+  module slots (62×20, spacing 68) fit between the pips and "Küçük hayırlar".
+- Menu backdrop: the engraving sits on a screen-space canvas behind the 3D stage, full view height for any aspect,
+  feathered edges (no visible rectangle).
+
 ## 4. Accessibility (minimum)
 Keyboard + mouse + gamepad navigation on the menu; screen shake slider (0 = off) feeds `PixelCameraRig.GlobalShakeScale`;
 no colour-only meaning added.

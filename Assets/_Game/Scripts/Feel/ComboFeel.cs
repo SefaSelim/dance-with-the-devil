@@ -16,6 +16,10 @@ namespace DanceWithTheDevil
     /// running weapon hitstop).</item>
     /// <item>Sustained glow: a second Volume whose weight eases (half-life 0.4 s) toward 0.5 at tier 3 and 1 at tier 4.</item>
     /// </list>
+    /// Tier-up also bends the screen: a shockwave ring from Defne (<see cref="DisplayGrade.Shockwave(Vector3, float, float, float)"/>,
+    /// 0.8 + 0.15 × tier strength, 5 + 1.5 × tier m, 0.5 s) and a zoom kick 0.03 + 0.01 × tier.
+    /// Crits (ImpactEvent.isCrit from the player): a 0.15 s chromatic-aberration punch (own Volume), a small shockwave at
+    /// the hit (≤ one per 0.08 s) and a capped shake (+0.12, ceiling 0.5).
     /// Accessibility: shake goes through <see cref="PixelCameraRig.GlobalShakeScale"/>; pulse and glow weights through
     /// <see cref="FlashScale"/>; lens distortion is also scaled by the shake setting and is off with
     /// <see cref="UiKit.ReduceMotion"/>. The base look (calm bloom, no vignette, no tonemapping) is the scene's
@@ -51,6 +55,23 @@ namespace DanceWithTheDevil
         [SerializeField, Range(-2f, 2f)] private float _pulseExposure = 0.3f;
         [SerializeField, Range(-100f, 100f)] private float _pulseSaturation = 15f;
 
+        [Header("Tier-up screen bend")]
+        [SerializeField, Min(0f)] private float _tierWarp = 0.8f;
+        [SerializeField, Min(0f)] private float _tierWarpPerTier = 0.15f;
+        [SerializeField, Min(0f)] private float _tierWarpRadius = 5f;
+        [SerializeField, Min(0f)] private float _tierWarpRadiusPerTier = 1.5f;
+        [SerializeField, Range(0f, 0.1f)] private float _tierZoomKick = 0.03f;
+        [SerializeField, Range(0f, 0.05f)] private float _tierZoomKickPerTier = 0.01f;
+
+        [Header("Crit punch")]
+        [Tooltip("Chromatic aberration at the crit peak (own Volume, weight-driven).")]
+        [SerializeField, Range(0f, 1f)] private float _critChromatic = 0.9f;
+        [SerializeField, Min(0.01f)] private float _critDecay = 0.15f;
+        [SerializeField, Min(0f)] private float _critWarp = 0.3f;
+        [SerializeField, Min(0f)] private float _critWarpInterval = 0.08f;
+        [SerializeField, Range(0f, 0.5f)] private float _critTrauma = 0.12f;
+        [SerializeField, Range(0f, 1f)] private float _critTraumaCeiling = 0.5f;
+
         [Header("Sustained glow (values at weight 1)")]
         [SerializeField, Min(0f)] private float _glowBloom = 0.8f;
         [SerializeField, Range(-100f, 100f)] private float _glowSaturation = 8f;
@@ -60,8 +81,15 @@ namespace DanceWithTheDevil
 
         private Volume _pulseVolume;
         private Volume _glowVolume;
+        private Volume _critVolume;
         private VolumeProfile _pulseProfile;
         private VolumeProfile _glowProfile;
+        private VolumeProfile _critProfile;
+        private bool _critThisFrame;
+        private Vector3 _critPoint;
+        private bool _critHasPoint;
+        private float _critTime = float.PositiveInfinity;
+        private float _lastCritWarp = float.NegativeInfinity;
         private LensDistortion _distortion;
 
         private int _lastCount;
@@ -88,18 +116,25 @@ namespace DanceWithTheDevil
             _glowProfile.Add<Bloom>(false).intensity.Override(_glowBloom);
             _glowProfile.Add<ColorAdjustments>(false).saturation.Override(_glowSaturation);
 
+            _critProfile = ScriptableObject.CreateInstance<VolumeProfile>();
+            _critProfile.name = "CritPunch (runtime)";
+            _critProfile.Add<ChromaticAberration>(false).intensity.Override(_critChromatic);
+
             _glowVolume = CreateVolume("ComboGlowVolume", _glowProfile, 5f);
             _pulseVolume = CreateVolume("ComboPulseVolume", _pulseProfile, 10f);
+            _critVolume = CreateVolume("CritPunchVolume", _critProfile, 11f);
         }
 
         private void OnDestroy()
         {
             if (_pulseProfile != null) Destroy(_pulseProfile);
             if (_glowProfile != null) Destroy(_glowProfile);
+            if (_critProfile != null) Destroy(_critProfile);
         }
 
         private void OnEnable()
         {
+            ImpactBus.OnImpact += OnImpact;
             if (_combo == null) return;
             _combo.Changed += OnChanged;
             _combo.TierUp += OnTierUp;
@@ -107,6 +142,9 @@ namespace DanceWithTheDevil
 
         private void OnDisable()
         {
+            ImpactBus.OnImpact -= OnImpact;
+            if (_critVolume != null) _critVolume.weight = 0f;
+            _critTime = float.PositiveInfinity;
             if (_combo != null)
             {
                 _combo.Changed -= OnChanged;
@@ -151,6 +189,18 @@ namespace DanceWithTheDevil
             if (tier > _tierUpThisFrame) _tierUpThisFrame = tier;
         }
 
+        private void OnImpact(ImpactEvent e)
+        {
+            if (!e.isCrit || !e.instigatorIsLocalPlayer || e.kind == ImpactKind.MuzzleFire) return;
+            _critThisFrame = true;
+            // Explosions already bend the screen; bullet and machete crits get their own small ring at the hit.
+            if (e.kind == ImpactKind.Bullet || e.kind == ImpactKind.Melee)
+            {
+                _critPoint = e.position;
+                _critHasPoint = true;
+            }
+        }
+
         private void LateUpdate()
         {
             int tier = _combo != null ? _combo.Tier : 0;
@@ -158,7 +208,14 @@ namespace DanceWithTheDevil
             if (_tierUpThisFrame > 0)
             {
                 int t = _tierUpThisFrame;
-                if (_rig != null) _rig.AddTrauma(_tierTrauma + _tierTraumaPerTier * t);
+                if (_rig != null)
+                {
+                    _rig.AddTrauma(_tierTrauma + _tierTraumaPerTier * t);
+                    _rig.AddZoomKick(_tierZoomKick + _tierZoomKickPerTier * t);
+                    Vector3 center = _rig.Target != null ? _rig.Target.position + Vector3.up : _rig.Focus;
+                    DisplayGrade.Shockwave(center, _tierWarp + _tierWarpPerTier * t,
+                        _tierWarpRadius + _tierWarpRadiusPerTier * t, 0.5f);
+                }
                 StartPulse(t);
                 // Never extend or stack on a weapon hitstop that is already running.
                 if (_tierHitStop > 0f && HitStop.Instance != null && !HitStop.Instance.IsGlobalActive)
@@ -171,8 +228,30 @@ namespace DanceWithTheDevil
             _hitsThisFrame = 0;
             _tierUpThisFrame = 0;
 
+            if (_critThisFrame)
+            {
+                _critTime = 0f;
+                if (_rig != null) _rig.AddTraumaUpTo(_critTrauma, _critTraumaCeiling);
+                if (_critHasPoint && Time.unscaledTime - _lastCritWarp >= _critWarpInterval)
+                {
+                    _lastCritWarp = Time.unscaledTime;
+                    DisplayGrade.Shockwave(_critPoint, _critWarp);
+                }
+            }
+            _critThisFrame = false;
+            _critHasPoint = false;
+
             float dt = Time.unscaledDeltaTime;
             float flash = Mathf.Clamp01(FlashScale);
+
+            // Crit punch: full on the crit frame, (1 - u)^2 over _critDecay.
+            float crit = 0f;
+            if (_critTime < _critDecay)
+            {
+                crit = Sq(1f - Mathf.Clamp01(_critTime / _critDecay));
+                _critTime += dt;
+            }
+            if (_critVolume != null) _critVolume.weight = crit * flash;
 
             // Pulse envelope: linear attack over ~2 frames, then (1 - u)^2 decay (fast in, slow out).
             float pulse = 0f;

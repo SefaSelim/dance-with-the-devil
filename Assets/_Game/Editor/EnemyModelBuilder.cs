@@ -158,6 +158,7 @@ namespace DanceWithTheDevil.Editor
             animator.Rebind();
             float k = targetHeight / ReferenceHeight;
             BuildProxies(animator, spec, k);
+            BakeProxyPalettes(body, material); // before the eyes: they keep their flat yellow
             BuildEyes(animator, vertices, k);
         }
 
@@ -393,8 +394,8 @@ namespace DanceWithTheDevil.Editor
 
         /// <summary>
         /// GDD §13: enemies are the most saturated, readable things on screen. The shared atlas is recoloured toward
-        /// the type colour (texture detail kept), lifted, with a hard rim in a lighter identity colour so the
-        /// silhouette pops against the dark gothic floor at the 960×540 camera.
+        /// the type colour (texture detail kept) and lifted like Defne's (brightness 1.3, ambient 0.35, no rim: the
+        /// 0.9 rim and 1.6 brightness made them look shiny, 2026-10-25).
         /// </summary>
         private static Material BuildMaterial(Spec spec, Texture atlas)
         {
@@ -416,10 +417,10 @@ namespace DanceWithTheDevil.Editor
             material.SetFloat("_Saturation", 1f);
             material.SetColor("_TintColor", spec.Identity);
             material.SetFloat("_TintStrength", spec.TintStrength);
-            material.SetFloat("_Brightness", 1.6f);
-            material.SetFloat("_AmbientStrength", 0.45f);
+            material.SetFloat("_Brightness", 1.3f);
+            material.SetFloat("_AmbientStrength", 0.35f);
             material.SetColor("_RimColor", Color.Lerp(spec.Identity, Color.white, 0.35f));
-            material.SetFloat("_RimStrength", 0.9f);
+            material.SetFloat("_RimStrength", 0f);
             material.SetFloat("_RimThreshold", 0.55f);
             material.enableInstancing = true;
             EditorUtility.SetDirty(material);
@@ -495,6 +496,157 @@ namespace DanceWithTheDevil.Editor
             AddSegment(animator, HumanBodyBones.RightUpperLeg, HumanBodyBones.RightLowerLeg, "Proxy_UpperLeg_R", 0.14f * k, main);
             AddSegment(animator, HumanBodyBones.LeftLowerLeg, HumanBodyBones.LeftFoot, "Proxy_LowerLeg_L", 0.12f * k, dark);
             AddSegment(animator, HumanBodyBones.RightLowerLeg, HumanBodyBones.RightFoot, "Proxy_LowerLeg_R", 0.12f * k, dark);
+        }
+
+        // ------------------------------------------------------------------ proxy palettes
+
+        /// <summary>
+        /// Gives every proxy box a small palette of the body's real on-screen colours (death pixels and hit chips):
+        /// each mesh vertex (bind pose, world) goes to the nearest box, its atlas colour is read through a readable copy
+        /// of the atlas (the Synty atlas is not readable at runtime) and recoloured exactly like Char_Skinned does
+        /// (identity tint by luma, then brightness; in linear space), then the colours are bucketed and the 6 most
+        /// common buckets (≥ 3%) kept with their counts as weights.
+        /// </summary>
+        private static void BakeProxyPalettes(GameObject body, Material material)
+        {
+            ShatterProxy[] proxies = body.GetComponentsInChildren<ShatterProxy>(true);
+            Texture atlas = material != null && material.HasProperty("_BaseMap") ? material.GetTexture("_BaseMap") : null;
+            if (proxies.Length == 0 || atlas == null)
+            {
+                Debug.LogWarning("EnemyModelBuilder: no proxies or atlas; death pixels use the flat proxy colours.");
+                return;
+            }
+            Texture2D readable = ReadableCopy(atlas, 1024);
+            if (readable == null) return;
+
+            bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
+            Color tint = material.GetColor("_TintColor");
+            if (linear) tint = tint.linear;
+            float strength = material.GetFloat("_TintStrength");
+            float brightness = material.GetFloat("_Brightness");
+
+            var buckets = new Dictionary<int, Vector4>[proxies.Length]; // key → (sum r, g, b, count) in gamma space
+            for (int i = 0; i < proxies.Length; i++) buckets[i] = new Dictionary<int, Vector4>();
+
+            var mesh = new Mesh();
+            var verts = new List<Vector3>();
+            var uvs = new List<Vector2>();
+            int samples = 0;
+            foreach (Renderer r in body.GetComponentsInChildren<Renderer>(true))
+            {
+                Matrix4x4 m;
+                if (r is SkinnedMeshRenderer smr && smr.sharedMesh != null)
+                {
+                    smr.BakeMesh(mesh, true);
+                    m = Matrix4x4.TRS(smr.transform.position, smr.transform.rotation, Vector3.one);
+                }
+                else if (r.TryGetComponent(out MeshFilter filter) && filter.sharedMesh != null)
+                {
+                    mesh.Clear();
+                    mesh.vertices = filter.sharedMesh.vertices;
+                    mesh.uv = filter.sharedMesh.uv;
+                    m = filter.transform.localToWorldMatrix;
+                }
+                else continue;
+
+                mesh.GetVertices(verts);
+                mesh.GetUVs(0, uvs);
+                if (uvs.Count != verts.Count) continue;
+                for (int v = 0; v < verts.Count; v++)
+                {
+                    int proxy = NearestProxy(proxies, m.MultiplyPoint3x4(verts[v]));
+                    if (proxy < 0) continue;
+                    Color c = readable.GetPixelBilinear(Mathf.Repeat(uvs[v].x, 1f), Mathf.Repeat(uvs[v].y, 1f));
+                    Color shown = Recolour(linear ? c.linear : c, tint, strength, brightness);
+                    if (linear) shown = shown.gamma;
+                    shown.r = Mathf.Clamp01(shown.r);
+                    shown.g = Mathf.Clamp01(shown.g);
+                    shown.b = Mathf.Clamp01(shown.b);
+                    int key = Mathf.RoundToInt(shown.r * 7f) * 64 + Mathf.RoundToInt(shown.g * 7f) * 8 + Mathf.RoundToInt(shown.b * 7f);
+                    buckets[proxy].TryGetValue(key, out Vector4 sum);
+                    buckets[proxy][key] = sum + new Vector4(shown.r, shown.g, shown.b, 1f);
+                    samples++;
+                }
+            }
+            Object.DestroyImmediate(mesh);
+            Object.DestroyImmediate(readable);
+
+            int baked = 0;
+            for (int i = 0; i < proxies.Length; i++)
+            {
+                var list = new List<Vector4>(buckets[i].Values);
+                if (list.Count == 0) continue;
+                list.Sort((a, b) => b.w.CompareTo(a.w));
+                float total = 0f;
+                foreach (Vector4 e in list) total += e.w;
+                var colors = new List<Color>();
+                var weights = new List<float>();
+                for (int j = 0; j < list.Count && colors.Count < ShatterProxy.MaxPalette; j++)
+                {
+                    Vector4 e = list[j];
+                    if (colors.Count > 0 && e.w < total * 0.03f) break;
+                    colors.Add(new Color(e.x / e.w, e.y / e.w, e.z / e.w, 1f));
+                    weights.Add(e.w);
+                }
+                proxies[i].SetPalette(colors.ToArray(), weights.ToArray());
+                baked++;
+            }
+            Debug.Log($"EnemyModelBuilder: baked palettes for {baked}/{proxies.Length} proxies of {body.transform.root.name} from {samples} vertices.");
+        }
+
+        // Char_Skinned's albedo path: tinted = tint × saturate(luma × 1.6 + 0.15); lerp by strength; × brightness.
+        private static Color Recolour(Color albedo, Color tint, float strength, float brightness)
+        {
+            float grey = albedo.r * 0.299f + albedo.g * 0.587f + albedo.b * 0.114f;
+            Color tinted = tint * Mathf.Clamp01(grey * 1.6f + 0.15f);
+            Color c = Color.Lerp(albedo, tinted, strength) * brightness;
+            c.a = 1f;
+            return c;
+        }
+
+        private static int NearestProxy(ShatterProxy[] proxies, Vector3 world)
+        {
+            int best = -1;
+            float bestDistance = float.PositiveInfinity;
+            for (int i = 0; i < proxies.Length; i++)
+            {
+                Transform t = proxies[i].transform;
+                Vector3 local = t.InverseTransformPoint(world);
+                var clamped = new Vector3(Mathf.Clamp(local.x, -0.5f, 0.5f), Mathf.Clamp(local.y, -0.5f, 0.5f), Mathf.Clamp(local.z, -0.5f, 0.5f));
+                float d = (t.TransformPoint(clamped) - world).sqrMagnitude;
+                if (d < bestDistance)
+                {
+                    bestDistance = d;
+                    best = i;
+                }
+            }
+            return best;
+        }
+
+        /// <summary>A CPU-readable copy of a (non-readable) texture through a blit (≤ <paramref name="maxSize"/>).</summary>
+        private static Texture2D ReadableCopy(Texture source, int maxSize)
+        {
+            int w = Mathf.Min(source.width, maxSize), h = Mathf.Min(source.height, maxSize);
+            RenderTexture rt = RenderTexture.GetTemporary(w, h, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+            RenderTexture previous = RenderTexture.active;
+            Graphics.Blit(source, rt);
+            RenderTexture.active = rt;
+            var copy = new Texture2D(w, h, TextureFormat.RGBA32, false, false);
+            copy.ReadPixels(new Rect(0, 0, w, h), 0, 0);
+            copy.Apply(false);
+            RenderTexture.active = previous;
+            RenderTexture.ReleaseTemporary(rt);
+
+            // A blit without a GPU (batch mode -nographics) gives black: fall back to flat colours.
+            Color centre = copy.GetPixel(w / 2, h / 2);
+            Color corner = copy.GetPixel(w / 4, h / 4);
+            if (centre.maxColorComponent <= 0f && corner.maxColorComponent <= 0f)
+            {
+                Debug.LogWarning("EnemyModelBuilder: atlas copy is black (no GPU?); death pixels use the flat proxy colours.");
+                Object.DestroyImmediate(copy);
+                return null;
+            }
+            return copy;
         }
 
         private static void AddSegment(Animator animator, HumanBodyBones from, HumanBodyBones to, string name, float width, Color color)

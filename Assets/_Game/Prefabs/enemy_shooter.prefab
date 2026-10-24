@@ -174,6 +174,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game.Runtime::DanceWithTheDevil.ShatterProxy
   _color: {r: 0.43137255, g: 0.12941177, b: 0.25882354, a: 1}
   _face: 0
+  _palette:
+  - {r: 0.36586088, g: 0.17214596, b: 0.24238588, a: 1}
+  - {r: 0.3491753, g: 0.1736197, b: 0.22080603, a: 1}
+  - {r: 0.40688652, g: 0.22562996, b: 0.25751436, a: 1}
+  - {r: 0.66918004, g: 0.39132327, b: 0.3952334, a: 1}
+  - {r: 0.32911476, g: 0.12836415, b: 0.20502041, a: 1}
+  - {r: 0.98692447, g: 0.62558925, b: 0.6394894, a: 1}
+  _paletteCumulative:
+  - 0.31707317
+  - 0.6045296
+  - 0.83623695
+  - 0.9076655
+  - 0.9686411
+  - 1
 --- !u!1 &534300751713330892
 GameObject:
   m_ObjectHideFlags: 0
@@ -252,6 +266,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game.Runtime::DanceWithTheDevil.ShatterProxy
   _color: {r: 0.78431374, g: 0.23529412, b: 0.47058824, a: 1}
   _face: 0
+  _palette:
+  - {r: 0.32900748, g: 0.12822351, b: 0.20490742, a: 1}
+  - {r: 0.98692447, g: 0.6255893, b: 0.63948965, a: 1}
+  - {r: 0.36586165, g: 0.17214629, b: 0.2423859, a: 1}
+  _paletteCumulative:
+  - 0.7515723
+  - 0.8773585
+  - 1
 --- !u!1 &889636195826590149
 GameObject:
   m_ObjectHideFlags: 0
@@ -330,6 +352,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game.Runtime::DanceWithTheDevil.ShatterProxy
   _color: {r: 0.43137255, g: 0.12941177, b: 0.25882354, a: 1}
   _face: 0
+  _palette:
+  - {r: 0.98692864, g: 0.6255914, b: 0.6394922, a: 1}
+  - {r: 0.36586082, g: 0.17214596, b: 0.24238588, a: 1}
+  _paletteCumulative:
+  - 0.67346936
+  - 1
 --- !u!1 &1029427378177508986
 GameObject:
   m_ObjectHideFlags: 0
@@ -467,6 +495,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game.Runtime::DanceWithTheDevil.ShatterProxy
   _color: {r: 1, g: 0.88235295, b: 0.3019608, a: 1}
   _face: 0
+  _palette: []
+  _paletteCumulative: []
 --- !u!1 &1187856456959445229
 GameObject:
   m_ObjectHideFlags: 0
@@ -608,6 +638,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game.Runtime::DanceWithTheDevil.ShatterProxy
   _color: {r: 0.78431374, g: 0.23529412, b: 0.47058824, a: 1}
   _face: 0
+  _palette:
+  - {r: 0.39527154, g: 0.23185246, b: 0.26018077, a: 1}
+  - {r: 0.3417053, g: 0.15511315, b: 0.21893439, a: 1}
+  - {r: 0.36586052, g: 0.17214592, b: 0.2423859, a: 1}
+  - {r: 0.701681, g: 0.4200708, b: 0.41925338, a: 1}
+  - {r: 0.6869367, g: 0.4534552, b: 0.52921486, a: 1}
+  - {r: 0.32900736, g: 0.12822361, b: 0.20490779, a: 1}
+  _paletteCumulative:
+  - 0.3079848
+  - 0.5127648
+  - 0.6768061
+  - 0.80554044
+  - 0.9337317
+  - 1
 --- !u!1 &1479645430709875085
 GameObject:
   m_ObjectHideFlags: 0
@@ -1292,6 +1336,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game.Runtime::DanceWithTheDevil.ShatterProxy
   _color: {r: 0.78431374, g: 0.23529412, b: 0.47058824, a: 1}
   _face: 0
+  _palette:
+  - {r: 0.38485327, g: 0.22086757, b: 0.2519776, a: 1}
+  - {r: 0.68693805, g: 0.45345655, b: 0.5292167, a: 1}
+  - {r: 0.36586154, g: 0.17214605, b: 0.24238588, a: 1}
+  - {r: 0.98692435, g: 0.6255893, b: 0.6394897, a: 1}
+  _paletteCumulative:
+  - 0.37871286
+  - 0.6460396
+  - 0.89356434
+  - 1
 --- !u!1 &3651335252049314506
 GameObject:
   m_ObjectHideFlags: 0
@@ -2051,6 +2105,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game.Runtime::DanceWithTheDevil.ShatterProxy
   _color: {r: 0.78431374, g: 0.23529412, b: 0.47058824, a: 1}
   _face: 0
+  _palette:
+  - {r: 0.32900703, g: 0.12822355, b: 0.20490779, a: 1}
+  - {r: 0.36586177, g: 0.17214608, b: 0.24238588, a: 1}
+  - {r: 0.9869246, g: 0.6255893, b: 0.6394896, a: 1}
+  _paletteCumulative:
+  - 0.5810811
+  - 0.8783784
+  - 1
 --- !u!1 &5971340773465017166
 GameObject:
   m_ObjectHideFlags: 0
@@ -2337,6 +2399,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game.Runtime::DanceWithTheDevil.ShatterProxy
   _color: {r: 0.43137255, g: 0.12941177, b: 0.25882354, a: 1}
   _face: 0
+  _palette:
+  - {r: 0.32902426, g: 0.12824403, b: 0.20492433, a: 1}
+  - {r: 0.986924, g: 0.6255889, b: 0.63948935, a: 1}
+  - {r: 0.3648335, g: 0.17099705, b: 0.24136388, a: 1}
+  _paletteCumulative:
+  - 0.8211207
+  - 0.9655172
+  - 1
 --- !u!1 &6259874000120390014
 GameObject:
   m_ObjectHideFlags: 0
@@ -2521,6 +2591,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game.Runtime::DanceWithTheDevil.ShatterProxy
   _color: {r: 0.43137255, g: 0.12941177, b: 0.25882354, a: 1}
   _face: 0
+  _palette:
+  - {r: 0.32900828, g: 0.12822348, b: 0.2049075, a: 1}
+  - {r: 0.9869235, g: 0.625588, b: 0.6394889, a: 1}
+  _paletteCumulative:
+  - 0.6256781
+  - 1
 --- !u!1 &7191946153621779187
 GameObject:
   m_ObjectHideFlags: 0
@@ -2663,6 +2739,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game.Runtime::DanceWithTheDevil.ShatterProxy
   _color: {r: 0.78431374, g: 0.23529412, b: 0.47058824, a: 1}
   _face: 0
+  _palette:
+  - {r: 0.3348844, g: 0.1380429, b: 0.21807338, a: 1}
+  - {r: 0.7336698, g: 0.48424265, b: 0.54693663, a: 1}
+  - {r: 0.9869295, g: 0.62559086, b: 0.63949245, a: 1}
+  - {r: 0.6514815, g: 0.42286697, b: 0.48292592, a: 1}
+  - {r: 0.38485327, g: 0.22086759, b: 0.25197762, a: 1}
+  _paletteCumulative:
+  - 0.53747714
+  - 0.7641682
+  - 0.8964046
+  - 0.95490557
+  - 1
 --- !u!1 &7952454439076369765
 GameObject:
   m_ObjectHideFlags: 0
@@ -2801,6 +2889,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game.Runtime::DanceWithTheDevil.ShatterProxy
   _color: {r: 1, g: 0.88235295, b: 0.3019608, a: 1}
   _face: 0
+  _palette: []
+  _paletteCumulative: []
 --- !u!1 &8194164659995181387
 GameObject:
   m_ObjectHideFlags: 0
@@ -2911,6 +3001,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game.Runtime::DanceWithTheDevil.ShatterProxy
   _color: {r: 0.78431374, g: 0.23529412, b: 0.47058824, a: 1}
   _face: 0
+  _palette:
+  - {r: 0.98692375, g: 0.6255884, b: 0.639489, a: 1}
+  - {r: 0.6869382, g: 0.45345652, b: 0.5292167, a: 1}
+  - {r: 0.38485324, g: 0.22086805, b: 0.2519779, a: 1}
+  _paletteCumulative:
+  - 0.36630037
+  - 0.73260075
+  - 1
 --- !u!1 &8494796688798973607
 GameObject:
   m_ObjectHideFlags: 0
@@ -2989,3 +3087,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game.Runtime::DanceWithTheDevil.ShatterProxy
   _color: {r: 0.43137255, g: 0.12941177, b: 0.25882354, a: 1}
   _face: 0
+  _palette:
+  - {r: 0.3290406, g: 0.12826501, b: 0.20494153, a: 1}
+  - {r: 0.98692405, g: 0.62558895, b: 0.6394894, a: 1}
+  - {r: 0.3658615, g: 0.17214626, b: 0.24238588, a: 1}
+  _paletteCumulative:
+  - 0.8217822
+  - 0.95049506
+  - 1

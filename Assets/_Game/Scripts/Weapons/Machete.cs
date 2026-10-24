@@ -80,6 +80,12 @@ namespace DanceWithTheDevil
         [Tooltip("ImpactBus Melee intensity per wave hit.")]
         [SerializeField, Range(0f, 1f)] private float _waveHitIntensity = 0.3f;
 
+        [Header("Critical hits (crit-difficulty design)")]
+        [Tooltip("Base crit chance per target hit, 0..1 (design: 0.05).")]
+        [SerializeField, Range(0f, 1f)] private float _baseCritChance = CritRoll.DefaultChance;
+        [Tooltip("Damage multiplier of a crit (design: 2).")]
+        [SerializeField, Min(1f)] private float _critMultiplier = CritRoll.DefaultMultiplier;
+
         [Header("Feel")]
         [Tooltip("ImpactBus Melee intensity per target hit.")]
         [SerializeField, Range(0f, 1f)] private float _hitIntensity = 0.5f;
@@ -92,6 +98,7 @@ namespace DanceWithTheDevil
         private float _damageMultiplier = 1f;
         private float _attackSpeedMultiplier = 1f;
         private bool _waveEnabled;
+        private float _contractCritChance;
 
         private sealed class WaveSlot
         {
@@ -141,6 +148,26 @@ namespace DanceWithTheDevil
             get => _attackSpeedMultiplier;
             set => _attackSpeedMultiplier = Mathf.Max(0.01f, value);
         }
+
+        /// <summary>Base crit chance (serialized 0.05). Settable for tests. Clamped 0..1.</summary>
+        public float BaseCritChance
+        {
+            get => _baseCritChance;
+            set => _baseCritChance = Mathf.Clamp01(value);
+        }
+
+        /// <summary>Crit chance added by contracts (Contract 3: +0.15). Additive. Set by <see cref="DealEffects"/>.</summary>
+        public float ContractCritChance
+        {
+            get => _contractCritChance;
+            set => _contractCritChance = Mathf.Max(0f, value);
+        }
+
+        /// <summary>Damage multiplier of a crit (x2).</summary>
+        public float CritMultiplier => _critMultiplier;
+
+        /// <summary>Crit chance per target (swing and wave): base + contract, clamped 0..1.</summary>
+        public float CritChance => CritRoll.Combine(_baseCritChance, 0f, _contractCritChance);
 
         /// <summary>Cooldown after the swing ends, with attack speed applied (base 0.5 s).</summary>
         public float Cooldown => _cooldown / _attackSpeedMultiplier;
@@ -439,7 +466,9 @@ namespace DanceWithTheDevil
                 wave.Hit.Add(target);
 
                 // Melee kind: DamageKind has no separate wave entry yet (needed later for the shield rule, K-13).
-                if (!target.TakeDamage(new DamageInfo(damage, targetCenter, wave.Direction, source, DamageKind.Melee))) continue;
+                bool crit = CritRoll.Roll(CritChance); // one roll per target (crit-difficulty design)
+                float dealt = crit ? damage * _critMultiplier : damage;
+                if (!target.TakeDamage(new DamageInfo(dealt, targetCenter, wave.Direction, source, DamageKind.Melee, crit))) continue;
                 ImpactBus.Raise(new ImpactEvent
                 {
                     kind = ImpactKind.Melee,
@@ -451,6 +480,7 @@ namespace DanceWithTheDevil
                     hitTransform = collider.transform,
                     instigator = source,
                     instigatorIsLocalPlayer = isPlayer,
+                    isCrit = crit,
                 });
             }
         }
@@ -486,7 +516,9 @@ namespace DanceWithTheDevil
                 if (IsBlockedByWall(origin, hitDirection, flatDistance)) continue;
 
                 _hitThisSwing.Add(target);
-                if (!target.TakeDamage(new DamageInfo(Damage, targetPoint, hitDirection, source, DamageKind.Melee))) continue;
+                bool crit = CritRoll.Roll(CritChance); // one roll per target (crit-difficulty design)
+                float dealt = crit ? Damage * _critMultiplier : Damage;
+                if (!target.TakeDamage(new DamageInfo(dealt, targetPoint, hitDirection, source, DamageKind.Melee, crit))) continue;
                 any = true;
                 ImpactBus.Raise(new ImpactEvent
                 {
@@ -499,6 +531,7 @@ namespace DanceWithTheDevil
                     hitTransform = collider.transform,
                     instigator = source,
                     instigatorIsLocalPlayer = isPlayer,
+                    isCrit = crit,
                 });
             }
             return any;

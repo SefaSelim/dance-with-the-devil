@@ -196,3 +196,27 @@ The 25 and 100 lines are 18 characters, so check the width. Shorter fallbacks: "
 - **Contract 1 visible cost** now says "Defne'nin rengi çekilir", following §13 (the whole model loses colour on the new
   model), instead of "saçındaki renk".
 - **"TAKILI"** was kept for width (60 px box). A warmer option is "SENDE VAR", if it fits.
+
+## 6. Crit, Keskin Göz and combo popups (2026-10-25, writer)
+
+Only string values changed; constants, `{0}`–`{2}` placeholders and numbers are unchanged.
+
+| File | Constant / field | Old | New |
+|---|---|---|---|
+| ComboTexts.cs | PopupCritFormat | KRİTİK! {0} | *(unchanged)* |
+| ComboTexts.cs | PopupComboFormat | KOMBO ×{0} | {0} KOMBO |
+| ComboTexts.cs | PopupTierFormat | KOMBO {0}!\n×{1},{2} | {0} KOMBO!\n×{1},{2} |
+| ComboTexts.cs | BrokenByDamage / BrokenByTimeout / Title / MultiplierFormat / ScoreWithMultiplierFormat | — | *(unchanged)* |
+| GameTexts.cs | Keskin Göz name | Keskin Göz | *(unchanged)* |
+| GameTexts.cs | Keskin Göz advantage | Kritik şansı +%20 (tüfek) | Tüfekte +%20 kritik şansı |
+| GameTexts.cs | Keskin Göz cost | Ateş ederken yavaş yürürsün (6 → 5,1 m/sn) | Ateş ederken yavaşlarsın (yürüme 6 → 5,1 m/sn) |
+| GameTexts.cs | Keskin Göz whisper | Daha iyi nişan al. Ya da alma. Fark etmez. | Gözünü kıs, tam ortadan vur. Biraz ağır yürürsün, bir şey olmaz. |
+| DealLibrary.cs | 3 Offer | Mermilerin delip geçsin. Ondan da arkadaşlarını alıyorum. Zaten onlara hiç vakti yoktu. | Mermilerin delip geçsin, arada bir de çifte vursun. Ondan da arkadaşlarını alıyorum. Zaten onlara hiç vakti yoktu. |
+| DealLibrary.cs | 3 Upgrade | … ; bütün silahlarda kritik şansı +%15 | … ; bütün silahlarda +%15 kritik şansı |
+| DealLibrary.cs | 3 Ledger | Delen mermi, +%15 kritik | *(unchanged)* |
+
+Why: "KOMBO ×15" read like a ×15 multiplier, since "×" is the multiplier sign everywhere else; "15 KOMBO" matches
+crit-difficulty.md §7. Tier shouts cannot vary per tier without new constants (code change, out of scope); the
+suggestions in section 3 still stand if a per-tier constant is added. The deal 3 offer line is 113 characters, under
+the 120 limit; "çifte vursun" hints at the ×2 crit without numbers. MAIN_GDD §7/§8 placeholders (crit-difficulty.md
+§10.4, §10.5) should use these final lines.

@@ -24,6 +24,7 @@ namespace DanceWithTheDevil
         private EndingScreen _ending;
         private PlayerInputReader _input;
         private RectTransform _root;
+        private RectTransform _panel;
         private bool _openedThisFrame;
 
         public bool IsOpen => RunPause.IsPaused;
@@ -75,6 +76,10 @@ namespace DanceWithTheDevil
         {
             RunPause.Pause(_input);
             _root.gameObject.SetActive(true);
+            // No button stays selected: Enter is read by Update, a selected button would also submit it (double resume).
+            if (UnityEngine.EventSystems.EventSystem.current != null)
+                UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(null);
+            UiKit.PopIn(_panel, 0f, 0.85f, 0.2f); // unscaled: the pause runs at timeScale 0
             _openedThisFrame = true;
             UiKit.NotifyClick();
         }
@@ -94,6 +99,8 @@ namespace DanceWithTheDevil
         // Buttons already raise UiKit.Clicked through UiKit.MakeButton.
         private void ResumeFromButton()
         {
+            if (UnityEngine.EventSystems.EventSystem.current != null)
+                UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(null);
             RunPause.Resume();
             _root.gameObject.SetActive(false);
         }
@@ -111,6 +118,7 @@ namespace DanceWithTheDevil
             Vector2 mid = new Vector2(0.5f, 0.5f);
             Image panel = UiKit.Framed(_root, "Panel", UiKit.Cream, UiKit.Panel, mid, mid, Vector2.zero,
                 new Vector2(220f, 112f));
+            _panel = (RectTransform)panel.transform.parent;
             Text title = UiKit.Label(panel.transform, "Title", font, 16, Color.white, TextAnchor.MiddleCenter,
                 new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -10f), new Vector2(200f, 20f), FontStyle.Bold);
             title.text = GameTexts.PauseTitle;

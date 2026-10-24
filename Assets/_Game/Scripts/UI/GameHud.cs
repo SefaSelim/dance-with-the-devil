@@ -1,4 +1,6 @@
 using System;
+using DG.Tweening;
+using DG.Tweening.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -8,13 +10,15 @@ namespace DanceWithTheDevil
     /// <summary>
     /// In-run HUD (MAIN_GDD §12), fitted to the game image (<see cref="UiKit.CreateCanvas"/>).
     /// Top: HP bar drawn for the base 100 HP, with the part lost to contracts shown as a dark "lost" segment; the
-    /// elapsed run time (the run has no end time: D2, K-4); score. Top-left: Defne's small block portrait (hair
+    /// elapsed run time (the run has no end time: D2, K-4); score with the live combo multiplier ("Puan 1200 ×1,5",
+    /// shown above ×1,0; the combo itself pops up in the world, see WorldPopups). Top-left: Defne's small block portrait (hair
     /// greys after contract 1, hidden by contract 3) and the "Verdiklerin" strip, one icon per cost taken (the
-    /// newest one pulses). Bottom: four fixed module slots (empty = a dim socket with no name until that module has
+    /// newest one pulses). Bottom: one fixed slot per module type (ModuleCatalog.Count, five) (empty = a dim socket with no name until that module has
     /// been offered once; equipped = the module's own colour; while Q is held the highlighted slot grows, turns gold
     /// and "Sağ tık: sök" shows above it), "Küçük hayırlar: N", rocket / machete / dodge / reject pips (reject reads
-    /// PlayerModules' real cooldown). While a whisper offer exists (and the Devil is not up): its name in the module's
-    /// colour, the whisper, one-line advantage and cost, a shrinking lifetime bar and "TAKILI" on a duplicate.
+    /// PlayerModules' real cooldown). While a whisper offer exists (and the Devil is not up): a small banner in the
+    /// top-right corner under the score (slides in): its name in the module's colour with the whisper on one line,
+    /// small "+" advantage and "−" cost lines, a shrinking lifetime bar and "TAKILI" left of it on a duplicate.
     /// Aim reticle: a chunky pixel crosshair at the mouse during play; the OS cursor is hidden and confined to the
     /// window during play and released on the Devil, ending and pause screens. Adds a <see cref="PauseOverlay"/>
     /// (Esc) when the GameObject has none. The whole HUD hides while the ending screen is visible.
@@ -28,12 +32,16 @@ namespace DanceWithTheDevil
         private const int ModuleSlots = ModuleCatalog.Count;
         private const int MaxCostIcons = 6;
         private const int TimeCacheSeconds = 3600;
-        // Four slots at 640×360: centres ±40/±120, extents ±157 (rocket/machete/dodge/reject pips end at −180;
-        // "Küçük hayırlar" starts at +165 and ends at +315 inside the 320 half-width).
-        private const float SlotSpacing = 80f;
-        private static readonly Vector2 SlotSize = new Vector2(74f, 20f);
-        private static readonly Vector2 SlotSizeHighlighted = new Vector2(86f, 26f);
-        private const float OfferTimerWidth = 456f;
+        // Five slots at 640×360: centres 0/±68/±136, extents ±167 (±171 highlighted); the rocket/machete/dodge/reject
+        // pips end at −174; "Küçük hayırlar" starts at +175 and ends at +315 inside the 320 half-width.
+        private const float SlotSpacing = 68f;
+        private static readonly Vector2 SlotSize = new Vector2(62f, 20f);
+        private static readonly Vector2 SlotSizeHighlighted = new Vector2(70f, 26f);
+        // Offer banner: top-right corner under the score line.
+        private static readonly Vector2 OfferSize = new Vector2(232f, 40f);
+        private static readonly Vector2 OfferHome = new Vector2(-6f, -27f);
+        private const float OfferSlide = 40f;
+        private const float OfferTimerWidth = 228f;
 
         private static readonly Color SlotEmptyFill = new Color(0.07f, 0.06f, 0.09f, 0.85f);
         private static readonly Color SlotEmptyBorder = new Color(0.3f, 0.28f, 0.32f, 1f);
@@ -53,6 +61,8 @@ namespace DanceWithTheDevil
         [SerializeField] private Machete _machete;
         [SerializeField] private WaveDirector _waves;
         [SerializeField] private ScoreKeeper _score;
+        [Tooltip("Combo, for the multiplier on the score line. Empty = found in the scene.")]
+        [SerializeField] private ComboTracker _combo;
         [Tooltip("The offer banner hides while its State is not Playing. Empty = searched in parents; null = no check.")]
         [SerializeField] private DevilDirector _devil;
         [Tooltip("The whole HUD hides while it is visible. Empty = taken from this GameObject.")]
@@ -90,6 +100,11 @@ namespace DanceWithTheDevil
         private Text _timeText;
         private Text _scoreText;
         private GameObject _offer;
+        private RectTransform _offerRect;
+        private CanvasGroup _offerGroup;
+        private Tween _offerTween;
+        private DOGetter<Vector2> _offerPosGetter;
+        private DOSetter<Vector2> _offerPosSetter;
         private Text _offerWhisper;
         private Text _offerPlus;
         private Text _offerMinus;
@@ -115,6 +130,7 @@ namespace DanceWithTheDevil
         private readonly string[] _timeStrings = new string[TimeCacheSeconds];
         private int _shownSeconds = -1;
         private int _shownScore = -1;
+        private int _shownTenths = -1;
         private int _shownHp = -1;
         private int _shownMaxHp = -1;
         private int _shownSmallNos = -1;
@@ -196,6 +212,7 @@ namespace DanceWithTheDevil
         {
             if (_devil == null) _devil = GetComponentInParent<DevilDirector>();
             if (_ending == null) _ending = GetComponent<EndingScreen>();
+            if (_combo == null) _combo = FindAnyObjectByType<ComboTracker>();
             if (_playerHealth == null) return;
             GameObject p = _playerHealth.gameObject;
             if (_controller == null) _controller = p.GetComponent<PlayerController>();
@@ -269,7 +286,11 @@ namespace DanceWithTheDevil
             if (_root.gameObject.activeSelf != hudVisible) _root.gameObject.SetActive(hudVisible);
             bool playing = _devil == null || _devil.State == DevilState.Playing;
             bool offerVisible = _offerOpen && playing;
-            if (_offer.activeSelf != offerVisible) _offer.SetActive(offerVisible);
+            if (_offer.activeSelf != offerVisible)
+            {
+                _offer.SetActive(offerVisible);
+                if (offerVisible) SlideOfferIn();
+            }
             return hudVisible;
         }
 
@@ -309,9 +330,14 @@ namespace DanceWithTheDevil
         private void UpdateScore()
         {
             int score = _score != null ? _score.Score : 0;
-            if (score == _shownScore) return;
+            int tenths = _combo != null ? _combo.MultiplierTenths : 10;
+            if (score == _shownScore && tenths == _shownTenths) return;
             _shownScore = score;
-            _scoreText.text = string.Format(GameTexts.HudScoreFormat, score);
+            _shownTenths = tenths;
+            string line = string.Format(GameTexts.HudScoreFormat, score);
+            _scoreText.text = tenths > 10
+                ? string.Format(ComboTexts.ScoreWithMultiplierFormat, line, tenths / 10, tenths % 10)
+                : line;
         }
 
         private void UpdateSmallNos()
@@ -432,6 +458,26 @@ namespace DanceWithTheDevil
         }
 
         // ------------------------------------------------------------ offer banner
+
+        /// <summary>The banner slides in from the right and fades in (DOTween, unscaled); ReduceMotion = in place.</summary>
+        private void SlideOfferIn()
+        {
+            _offerTween?.Kill();
+            _offerTween = null;
+            if (UiKit.ReduceMotion)
+            {
+                _offerRect.anchoredPosition = OfferHome;
+                _offerGroup.alpha = 1f;
+                return;
+            }
+            _offerRect.anchoredPosition = OfferHome + new Vector2(OfferSlide, 0f);
+            _offerGroup.alpha = 0f;
+            Sequence s = DOTween.Sequence();
+            s.Insert(0f, DOTween.To(_offerPosGetter, _offerPosSetter, OfferHome, 0.28f).SetEase(Ease.OutCubic));
+            s.Insert(0f, DOTween.To(() => _offerGroup.alpha, a => _offerGroup.alpha = a, 1f, 0.2f));
+            s.SetUpdate(true).SetLink(_offer);
+            _offerTween = s;
+        }
 
         private void UpdateOffer()
         {
@@ -639,19 +685,24 @@ namespace DanceWithTheDevil
                 new Vector2(-8f, -8f), new Vector2(160f, 16f), FontStyle.Bold);
             UiKit.AddShadow(_scoreText);
 
-            // Offer whisper (near the top, only while an offer exists).
-            Image offer = UiKit.Box(_root, "Offer", new Color(0.25f, 0.03f, 0.06f, 0.85f), top, top,
-                new Vector2(0f, -30f), new Vector2(460f, 46f));
+            // Offer whisper: a small banner in the top-right corner under the score, only while an offer exists.
+            Image offer = UiKit.Box(_root, "Offer", new Color(0.25f, 0.03f, 0.06f, 0.85f), tr, tr, OfferHome, OfferSize);
             _offer = offer.gameObject;
-            _offerWhisper = UiKit.Label(offer.transform, "Whisper", font, 12, UiKit.Cream, TextAnchor.UpperCenter,
-                top, top, new Vector2(0f, -2f), new Vector2(380f, 14f));
-            _offerPlus = UiKit.Label(offer.transform, "Plus", font, 10, new Color(0.55f, 1f, 0.6f, 1f),
-                TextAnchor.UpperCenter, top, top, new Vector2(0f, -17f), new Vector2(450f, 13f));
-            _offerMinus = UiKit.Label(offer.transform, "Minus", font, 10, new Color(1f, 0.55f, 0.55f, 1f),
-                TextAnchor.UpperCenter, top, top, new Vector2(0f, -29f), new Vector2(450f, 13f));
-            Text equipped = UiKit.Label(offer.transform, "Equipped", font, 10, UiKit.Gold, TextAnchor.UpperRight,
-                tr, tr, new Vector2(-6f, -3f), new Vector2(60f, 12f), FontStyle.Bold);
+            _offerRect = offer.rectTransform;
+            _offerGroup = _offer.AddComponent<CanvasGroup>();
+            _offerGroup.blocksRaycasts = false;
+            _offerPosGetter = () => _offerRect.anchoredPosition;
+            _offerPosSetter = v => _offerRect.anchoredPosition = v;
+            _offerWhisper = FitLine(UiKit.Label(offer.transform, "Whisper", font, 10, UiKit.Cream, TextAnchor.UpperLeft,
+                tl, tl, new Vector2(5f, -2f), new Vector2(OfferSize.x - 10f, 13f)));
+            _offerPlus = FitLine(UiKit.Label(offer.transform, "Plus", font, 8, new Color(0.55f, 1f, 0.6f, 1f),
+                TextAnchor.UpperLeft, tl, tl, new Vector2(5f, -15f), new Vector2(OfferSize.x - 10f, 11f)));
+            _offerMinus = FitLine(UiKit.Label(offer.transform, "Minus", font, 8, new Color(1f, 0.55f, 0.55f, 1f),
+                TextAnchor.UpperLeft, tl, tl, new Vector2(5f, -26f), new Vector2(OfferSize.x - 10f, 11f)));
+            Text equipped = UiKit.Label(offer.transform, "Equipped", font, 10, UiKit.Gold, TextAnchor.MiddleRight,
+                left, new Vector2(1f, 0.5f), new Vector2(-4f, 0f), new Vector2(60f, 12f), FontStyle.Bold);
             equipped.text = GameTexts.HudEquippedDuplicate;
+            UiKit.AddShadow(equipped);
             _offerEquipped = equipped.gameObject;
             _offerEquipped.SetActive(false);
             _offerTimer = UiKit.Box(offer.transform, "Lifetime", new Color(0.93f, 0.88f, 0.74f, 0.7f), Vector2.zero,
@@ -666,15 +717,15 @@ namespace DanceWithTheDevil
                 _slotFill[i] = fill;
                 _slotBorder[i] = fill.transform.parent.GetComponent<Image>();
                 _slotRect[i] = _slotBorder[i].rectTransform;
-                _slotLabel[i] = UiKit.Label(fill.transform, "Name", font, 10, UiKit.Dim, TextAnchor.MiddleCenter,
-                    mid, mid, Vector2.zero, new Vector2(80f, 16f));
+                _slotLabel[i] = FitLine(UiKit.Label(fill.transform, "Name", font, 10, UiKit.Dim, TextAnchor.MiddleCenter,
+                    mid, mid, Vector2.zero, new Vector2(SlotSize.x - 4f, 16f)));
             }
             _ejectLabel = UiKit.Label(_root, "EjectHint", font, 10, UiKit.Gold, TextAnchor.MiddleCenter, bottom, bottom,
                 new Vector2(0f, 32f), new Vector2(170f, 12f), FontStyle.Bold);
             UiKit.AddShadow(_ejectLabel);
             _ejectLabel.gameObject.SetActive(false);
             _smallNosText = UiKit.Label(_root, "SmallNos", font, 10, UiKit.Turquoise, TextAnchor.MiddleLeft, bottom,
-                left, new Vector2(SlotX(ModuleSlots - 1) + SlotSize.x * 0.5f + 8f, 18f), new Vector2(150f, 14f));
+                left, new Vector2(SlotX(ModuleSlots - 1) + SlotSizeHighlighted.x * 0.5f + 4f, 18f), new Vector2(140f, 14f));
             UiKit.AddShadow(_smallNosText);
 
             // Charges (bottom left).
@@ -684,6 +735,17 @@ namespace DanceWithTheDevil
             _rejectPips = BuildPipRow(font, GameTexts.HudReject, 8f);
 
             BuildReticle();
+        }
+
+        /// <summary>One line that shrinks (best fit, down to about 70%) instead of wrapping or spilling out.</summary>
+        private static Text FitLine(Text text)
+        {
+            text.horizontalOverflow = HorizontalWrapMode.Wrap;
+            text.verticalOverflow = VerticalWrapMode.Truncate;
+            text.resizeTextForBestFit = true;
+            text.resizeTextMaxSize = text.fontSize;
+            text.resizeTextMinSize = Mathf.Max(6, Mathf.RoundToInt(text.fontSize * 0.7f));
+            return text;
         }
 
         private Pips BuildPipRow(Font font, string label, float y)

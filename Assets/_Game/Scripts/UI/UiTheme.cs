@@ -42,11 +42,23 @@ namespace DanceWithTheDevil
         [Tooltip("Edge tendrils (menu vignette).")]
         public Sprite VignetteSprite;
 
-        [Header("Button prefabs (Synty, TextMesh Pro labels; used as-is by UiKit.PrefabButton)")]
-        [Tooltip("Main text button: menu entries, Devam, Tekrar dene, EVET (HUD_DarkFantasy_Button_DialogueResponse_01).")]
+        [Header("Button prefabs (Synty, TextMesh Pro labels; fitted by UiKit.PrefabButton)")]
+        [Tooltip("Main text button: menu entries, Devam, Tekrar dene, EVET (HUD_DarkFantasy_Button_WorldSpace_Item_01: " +
+                 "a dark parchment bar with a centred label; UiKit moves its Button from the child \"Content\" to the root).")]
         public GameObject ButtonPrefab;
-        [Tooltip("Small text button: Geri, Tam ekran, Ana menü, HAYIR (HUD_DarkFantasy_Button_Simple_01).")]
+        [Tooltip("Small text button: Geri, Tam ekran, Ana menü, HAYIR (same minimal prefab, smaller label).")]
         public GameObject SmallButtonPrefab;
+        [Tooltip("Thin outer frame drawn over every prefab button (SPR_DarkFantasy_Frame_Box_Small_01, border 90).")]
+        public Sprite ButtonFrameSprite;
+        [Tooltip("Sprite pixels per button-local unit of the frame border: higher = thinner frame.")]
+        public float ButtonFrameScale = 6f;
+        [Tooltip("Frame colour at rest; focus (selected or hovered) turns it and the label gold.")]
+        public Color ButtonFrameColor = new Color(0.62f, 0.58f, 0.52f, 0.75f);
+
+        [Header("Devil art")]
+        [Tooltip("Hand-drawn Devil for the Devil screen (black keyed out; built by Dance/UI/Build Devil Art). " +
+                 "DevilScreen uses it when its own sprite field is empty.")]
+        public Sprite DevilSprite;
 
         [Tooltip("Panels smaller than this keep the flat frame (a 10-unit pip cannot carry an ornate border).")]
         public Vector2 MinFramedSize = new Vector2(40f, 30f);

@@ -1,3 +1,4 @@
+using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -68,10 +69,10 @@ namespace DanceWithTheDevil
             }
         }
 
-        /// <summary>The theme's main text button prefab (Synty DialogueResponse), or null = code-built button.</summary>
+        /// <summary>The theme's main text button prefab (Synty WorldSpace_Item_01), or null = code-built button.</summary>
         public static GameObject ButtonPrefab => Theme != null ? Theme.ButtonPrefab : null;
 
-        /// <summary>The theme's small text button prefab (Synty Button_Simple), or null = code-built button.</summary>
+        /// <summary>The theme's small text button prefab (same minimal prefab), or null = code-built button.</summary>
         public static GameObject SmallButtonPrefab => Theme != null ? Theme.SmallButtonPrefab : null;
 
         /// <summary>Smallest prefab label, canvas units (one unit is about 3 px at 1080p, so about 18 px).</summary>
@@ -267,7 +268,10 @@ namespace DanceWithTheDevil
         /// A Synty button prefab used as-is: instantiated under <paramref name="parent"/> and fitted to
         /// <paramref name="size"/> (canvas units) by scaling the root uniformly to the requested height; the root keeps
         /// the prefab's own height and gets the matching width, so its layout groups and 9-slice borders stay as
-        /// authored. <paramref name="fontSize"/> is the label size in canvas units (0 = the prefab's own, scaled),
+        /// authored. Prefabs whose Button sits on a child (WorldSpace_Item_01: root > "Content") get it moved to the
+        /// root, so the returned Button's transform is always the fitted root; the bar fills the root, the label is
+        /// centred and a thin theme frame is drawn over it (gold on focus, see UiButtonFx).
+        /// <paramref name="fontSize"/> is the label size in canvas units (0 = the prefab's own, scaled),
         /// never below <see cref="MinLabelUnits"/>. Clicks raise <see cref="Clicked"/>; navigation is Automatic;
         /// Animators run on unscaled time (the pause menu runs at timeScale 0). No prefab = the code-built themed
         /// plate with a TextMesh Pro label (TMP's default font).
@@ -285,20 +289,22 @@ namespace DanceWithTheDevil
 
             GameObject go = InstantiateFitted(parent, prefab, name, anchor, pivot, position, size, out float scale);
             AdaptPrefabLook(go);
-            button = go.GetComponent<Button>();
-            if (button == null) button = go.AddComponent<Button>();
-            if (button.targetGraphic == null) button.targetGraphic = go.GetComponent<Graphic>();
-            // Simple_01 tints its label by 4% on highlight/select: too faint to show keyboard focus.
+            text = SetPrefabLabel(go, label, scale, fontSize);
+            button = RootButton(go, text, true);
+            // Focus = gold label (tint) + gold frame and a small punch (UiButtonFx).
             if (button.transition == Selectable.Transition.ColorTint)
             {
                 ColorBlock colors = button.colors;
+                colors.normalColor = Color.white;
                 colors.highlightedColor = Gold;
                 colors.selectedColor = Gold;
+                colors.pressedColor = new Color(0.85f, 0.62f, 0.2f, 1f);
+                colors.fadeDuration = 0.08f;
                 button.colors = colors;
             }
             button.onClick.AddListener(NotifyClick);
             button.navigation = new Navigation { mode = Navigation.Mode.Automatic };
-            text = SetPrefabLabel(go, label, scale, fontSize);
+            AddFrame(go);
             return button;
         }
 
@@ -322,13 +328,15 @@ namespace DanceWithTheDevil
 
             GameObject go = InstantiateFitted(parent, prefab, name, anchor, pivot, position, size, out float scale);
             AdaptPrefabLook(go);
-            Button visuals = go.GetComponent<Button>();
+            text = SetPrefabLabel(go, label, scale, fontSize);
+            // No new Button: the screen tints the label and plates itself; hover lights the frame (UiButtonFx).
+            Button visuals = RootButton(go, text, false);
             if (visuals != null)
             {
                 visuals.onClick.RemoveAllListeners();
                 visuals.navigation = new Navigation { mode = Navigation.Mode.None };
             }
-            text = SetPrefabLabel(go, label, scale, fontSize);
+            AddFrame(go);
             return go.AddComponent<UiHoldButton>();
         }
 
@@ -365,6 +373,85 @@ namespace DanceWithTheDevil
                 if (image.gameObject.name == "SPR_Background") plates.Add(image);
             if (plates.Count == 0 && root.TryGetComponent(out Image own)) plates.Add(own);
             return plates.ToArray();
+        }
+
+        /// <summary>
+        /// The Button on the prefab root. A Button on a child (WorldSpace_Item_01 keeps it on "Content") is replaced by
+        /// one on the root with the same transition and colours, targeting the label, so callers can position, select
+        /// and link the returned component's transform as before. <paramref name="keep"/> false (hold buttons): any
+        /// child Button is removed and none is added (returns the root's own Button if the prefab has one).
+        /// </summary>
+        private static Button RootButton(GameObject root, TMP_Text label, bool keep)
+        {
+            Button inner = null;
+            foreach (Button b in root.GetComponentsInChildren<Button>(true))
+            {
+                if (b.gameObject == root) continue;
+                inner = b;
+                break;
+            }
+            Button button = root.GetComponent<Button>();
+            if (button == null && keep)
+            {
+                button = root.AddComponent<Button>();
+                if (inner != null)
+                {
+                    button.transition = inner.transition;
+                    button.colors = inner.colors;
+                    button.spriteState = inner.spriteState;
+                    button.animationTriggers = inner.animationTriggers;
+                    button.targetGraphic = inner.targetGraphic;
+                }
+            }
+            if (inner != null)
+            {
+                inner.enabled = false; // stops it at once; the component goes at the end of the frame
+                DestroyComponent(inner);
+            }
+            if (button != null && (button.targetGraphic == null || button.targetGraphic.gameObject == root))
+                button.targetGraphic = label != null ? (Graphic)label : root.GetComponent<Graphic>();
+            return button;
+        }
+
+        private static void DestroyComponent(Component component)
+        {
+            if (Application.isPlaying) Object.Destroy(component);
+            else Object.DestroyImmediate(component);
+        }
+
+        /// <summary>
+        /// Minimal look for layout-group prefabs (WorldSpace_Item_01): "Content" fills the root inside a small inset
+        /// (so the parchment bar spans the button) with its label centred; the theme's thin frame (no centre) on top;
+        /// <see cref="UiButtonFx"/> for the focus colour and punch.
+        /// </summary>
+        private static void AddFrame(GameObject root)
+        {
+            if (root.TryGetComponent(out HorizontalLayoutGroup layout))
+            {
+                layout.padding = new RectOffset(40, 40, 14, 14);
+                layout.childAlignment = TextAnchor.MiddleCenter;
+                layout.childControlWidth = true;
+                layout.childControlHeight = true;
+                layout.childForceExpandWidth = true;
+                layout.childForceExpandHeight = true;
+            }
+            foreach (Image image in root.GetComponentsInChildren<Image>(true))
+                if (image.gameObject != root) image.raycastTarget = false; // the root's clear block takes the pointer
+
+            UiTheme theme = Theme;
+            Image frame = null;
+            if (theme != null && theme.ButtonFrameSprite != null)
+            {
+                RectTransform rect = Stretch(root.transform, "Frame");
+                rect.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+                frame = rect.gameObject.AddComponent<Image>();
+                SetSliced(frame, theme.ButtonFrameSprite, theme.ButtonFrameScale);
+                frame.fillCenter = false;
+                frame.raycastTarget = false;
+                frame.color = theme.ButtonFrameColor;
+            }
+            Color normal = theme != null ? theme.ButtonFrameColor : Cream;
+            root.AddComponent<UiButtonFx>().Initialize(frame, normal, Gold);
         }
 
         private static GameObject InstantiateFitted(Transform parent, GameObject prefab, string name, Vector2 anchor,
@@ -415,6 +502,10 @@ namespace DanceWithTheDevil
             units = Mathf.Max(MinLabelUnits, units) * TextScale;
             text.enableAutoSizing = false;
             text.fontSize = units / scale;
+            text.alignment = TextAlignmentOptions.Center;
+            text.textWrappingMode = TextWrappingModes.NoWrap;
+            text.overflowMode = TextOverflowModes.Overflow;
+            text.raycastTarget = false;
             text.text = label;
             return text;
         }
@@ -547,6 +638,49 @@ namespace DanceWithTheDevil
         /// which the player is usually mashing when they die. Clicks are handled by the screen's own blocks.
         /// </summary>
         public static bool AdvancePressed() => ConfirmPressed();
+
+        // ------------------------------------------------------------ DOTween helpers (core API only, unscaled time)
+
+        /// <summary>
+        /// Pops a block in: scale from x rest to rest (ease out back) and alpha 0 to 1 through a CanvasGroup (added
+        /// when missing), after <paramref name="delay"/> seconds, on unscaled time (pause and the Devil run at
+        /// timeScale 0). Kills an earlier pop on the same rect. ReduceMotion = shown at once.
+        /// Example: <c>panel.SetActive(true); UiKit.PopIn(panelRect);</c>
+        /// </summary>
+        public static void PopIn(RectTransform rect, float delay = 0f, float from = 0.85f, float duration = 0.22f,
+            float restScale = 1f)
+        {
+            if (rect == null) return;
+            if (!rect.TryGetComponent(out CanvasGroup group)) group = rect.gameObject.AddComponent<CanvasGroup>();
+            DOTween.Kill(rect);
+            Vector3 rest = new Vector3(restScale, restScale, 1f);
+            if (ReduceMotion || duration <= 0f)
+            {
+                rect.localScale = rest;
+                group.alpha = 1f;
+                return;
+            }
+            rect.localScale = rest * from;
+            group.alpha = 0f;
+            Sequence s = DOTween.Sequence();
+            s.Insert(0f, rect.DOScale(rest, duration).SetEase(Ease.OutBack));
+            s.Insert(0f, DOTween.To(() => group.alpha, a => group.alpha = a, 1f, duration * 0.8f));
+            s.SetDelay(delay).SetTarget(rect).SetUpdate(true).SetLink(rect.gameObject);
+        }
+
+        /// <summary>
+        /// A short scale punch on unscaled time (skipped with ReduceMotion); restores the rest scale first.
+        /// Example: <c>UiKit.Punch(label.transform, Vector3.one);</c>
+        /// </summary>
+        public static Tween Punch(Transform t, Vector3 restScale, float amount = 0.12f, float duration = 0.3f)
+        {
+            if (t == null) return null;
+            DOTween.Kill(t);
+            t.localScale = restScale;
+            if (ReduceMotion) return null;
+            return t.DOPunchScale(restScale * amount, duration, 6, 0.6f).SetTarget(t).SetUpdate(true)
+                .SetLink(t.gameObject);
+        }
 
         /// <summary>Ease-out cubic.</summary>
         public static float EaseOut(float t)

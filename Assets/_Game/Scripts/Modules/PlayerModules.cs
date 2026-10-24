@@ -8,7 +8,9 @@ namespace DanceWithTheDevil
     /// 0.45 s intentional contact accept), capacity (one per type), right-click reject (60° cone, 3 m), Q selection
     /// ring with fixed slots (one per <see cref="ModuleType"/>), Q + right-click eject, the shared 0.65 s cooldown,
     /// and applying/removing every module effect on the Rifle and PlayerController in one place
-    /// (<see cref="ApplyEffects"/>). Hız (production/design/combo-haste.md §3) is rifle only (K-7).
+    /// (<see cref="ApplyEffects"/>). Hız (production/design/combo-haste.md §3) and Keskin Göz
+    /// (production/design/crit-difficulty.md §3) are rifle only (K-7); Keskin Göz's cost slows Defne's walk while the
+    /// fire button is held (<see cref="UpdateFiringSlow"/>). No offer while every slot is full (A-20).
     /// Offers are placed by <see cref="ModuleSpawner"/> through <see cref="PresentOffer"/>. Scaled time throughout.
     /// World-side feedback: every reject pulse flashes its cone on the floor (cream on a whiff, the module's colour
     /// when it throws an offer), and Defne's body feedback (<see cref="HurtFeedback"/>) is added here when the scene
@@ -74,14 +76,19 @@ namespace DanceWithTheDevil
         [SerializeField, Min(0.01f)] private float _hasteFireRateMultiplier = 1.4f;
         [Tooltip("Hız cost: each bullet strays randomly up to ± this many degrees (design: 6).")]
         [SerializeField, Range(0f, 45f)] private float _hasteSpreadDegrees = 6f;
+        [Tooltip("Keskin Göz rifle crit chance bonus, added to the base (design: 0.2, 5 % → 25 %).")]
+        [SerializeField, Range(0f, 1f)] private float _keskinGozCritBonus = 0.2f;
+        [Tooltip("Keskin Göz cost: walk speed multiplier while the fire button is held (design: 0.85, 6 → 5.1 m/s). Dodge unaffected.")]
+        [SerializeField, Range(0.05f, 1f)] private float _keskinGozFiringSpeedMultiplier = 0.85f;
 
-        /// <summary>Left, up, right, down around the player (index = ModuleType).</summary>
+        /// <summary>Left, up, right, down, up-right around the player (index = ModuleType).</summary>
         private static readonly Vector3[] DefaultSlotOffsets =
         {
             new Vector3(-1.2f, 1.2f, 0f),
             new Vector3(0f, 1.2f, 1.2f),
             new Vector3(1.2f, 1.2f, 0f),
             new Vector3(0f, 1.2f, -1.2f),
+            new Vector3(1.1f, 1.2f, 1.1f),
         };
 
         private PlayerController _player;
@@ -96,6 +103,7 @@ namespace DanceWithTheDevil
         private bool _selectionOpen;
         private int _highlighted = -1;
         private ConeFlash _rejectFlash;
+        private bool _firingSlowApplied;
 
         public event Action<ModuleType> OfferAppeared;
         public event Action<ModuleType> Accepted;
@@ -198,8 +206,12 @@ namespace DanceWithTheDevil
 
         // ------------------------------------------------------------------ offers
 
-        /// <summary>True when a new offer may appear (none active, player alive).</summary>
-        public bool CanPresentOffer => !HasOffer && (_player == null || !_player.Health.IsDead);
+        /// <summary>True when a new offer may appear (none active, a free slot, player alive).</summary>
+        public bool CanPresentOffer =>
+            !HasOffer && EquippedCount < ModuleCatalog.Count && (_player == null || !_player.Health.IsDead);
+
+        /// <summary>True while Keskin Göz slows the walk (equipped and fire held).</summary>
+        public bool FiringSlowActive => _firingSlowApplied;
 
         /// <summary>Shows an offer of <paramref name="type"/> on the floor point. Fails if one is already active.</summary>
         public bool PresentOffer(ModuleType type, Vector3 floorPosition)
@@ -228,9 +240,11 @@ namespace DanceWithTheDevil
             if (_player.Health.IsDead)
             {
                 CloseSelection();
+                UpdateFiringSlow();
                 return;
             }
 
+            UpdateFiringSlow();
             TickOffer(Time.deltaTime);
             UpdateSelection();
 
@@ -401,6 +415,7 @@ namespace DanceWithTheDevil
             bool echo = _equipped[(int)ModuleType.Echo];
             bool density = _equipped[(int)ModuleType.Density];
             bool haste = _equipped[(int)ModuleType.Haste];
+            bool keskinGoz = _equipped[(int)ModuleType.CritChance];
 
             if (_rifle != null)
             {
@@ -411,12 +426,29 @@ namespace DanceWithTheDevil
                 _rifle.ModuleDamageMultiplier = density ? _densityDamageMultiplier : 1f;
                 _rifle.ModuleFireRateMultiplier = haste ? _hasteFireRateMultiplier : 1f;
                 _rifle.ModuleSpreadDegrees = haste ? _hasteSpreadDegrees : 0f;
+                _rifle.ModuleCritChance = keskinGoz ? _keskinGozCritBonus : 0f;
             }
             if (_player != null)
             {
                 _player.BodyRadiusScale = density ? _densityBodyScale : 1f;
                 if (tripleRemoved) _player.ClearExternalVelocity(); // remaining recoil stops at once
             }
+            UpdateFiringSlow(); // removal restores full walk speed the same frame
+        }
+
+        /// <summary>
+        /// Keskin Göz cost: while equipped and the fire button is held, the walk speed multiplier is multiplied by
+        /// ×0.85; released, ejected or dead, it is divided back (other multipliers on it are kept). Dodge unaffected.
+        /// </summary>
+        private void UpdateFiringSlow()
+        {
+            if (_player == null) return;
+            bool want = _equipped[(int)ModuleType.CritChance] && _input != null && _input.FireHeld &&
+                        !_player.Health.IsDead;
+            if (want == _firingSlowApplied) return;
+            float factor = Mathf.Max(0.05f, _keskinGozFiringSpeedMultiplier);
+            _player.MoveSpeedMultiplier = want ? _player.MoveSpeedMultiplier * factor : _player.MoveSpeedMultiplier / factor;
+            _firingSlowApplied = want;
         }
 
         // ------------------------------------------------------------------ selection ring

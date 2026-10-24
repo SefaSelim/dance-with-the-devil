@@ -63,6 +63,29 @@ namespace DanceWithTheDevil.Tests
         }
 
         [Test]
+        public void DealThree_CritChance_Plus15OnRifleMacheteAndRocket()
+        {
+            // Arrange
+            var go = new GameObject("DealThreeTarget");
+            Rifle rifle = go.AddComponent<Rifle>();
+            Machete machete = go.AddComponent<Machete>();
+            RocketLauncher rocket = go.AddComponent<RocketLauncher>();
+            float enemySpeed = Enemy.SpeedMultiplier;
+
+            // Act
+            DealEffects.Apply(_deals[2], new DealTargets { Rifle = rifle, Machete = machete, Rocket = rocket });
+
+            // Assert
+            Assert.AreEqual(0.20f, rifle.CritChance, 1e-5f, "rifle 5 % → 20 %");
+            Assert.AreEqual(0.20f, machete.CritChance, 1e-5f, "machete 5 % → 20 %");
+            Assert.AreEqual(0.20f, rocket.CritChance, 1e-5f, "rocket 5 % → 20 %");
+            Assert.AreEqual(2, rifle.PierceCount, "pierce kept");
+            StringAssert.Contains("kritik", _deals[2].LedgerTaken);
+            Enemy.SpeedMultiplier = enemySpeed; // contract 3 also speeds enemies up (static)
+            Object.DestroyImmediate(go);
+        }
+
+        [Test]
         public void DealSix_OffersNoChoice_OthersDo()
         {
             for (int i = 0; i < 5; i++) Assert.IsTrue(_deals[i].OffersChoice, $"deal {i + 1}");

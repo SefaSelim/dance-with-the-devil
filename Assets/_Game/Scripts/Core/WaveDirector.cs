@@ -113,11 +113,11 @@ namespace DanceWithTheDevil
 
         [Header("Pacing (F10, F34)")]
         [Tooltip("A window's packs are released evenly over this many seconds from its start.")]
-        [SerializeField, Min(0f)] private float _windowSpread = 18f;
+        [SerializeField, Min(0f)] private float _windowSpread = 9f;
         [Tooltip("Pack size = the window's active cap × this, rounded, then clamped to Min/Max Pack Size.")]
         [SerializeField, Min(0f)] private float _packSizePerCap = 0.4f;
         [SerializeField, Min(1)] private int _minPackSize = 2;
-        [SerializeField, Min(1)] private int _maxPackSize = 4;
+        [SerializeField, Min(1)] private int _maxPackSize = 6;
         [Tooltip("Members of one pack leave their entrance this many seconds apart.")]
         [SerializeField, Min(0f)] private float _packStagger = 0.25f;
         [Tooltip("While the active cap has room, packs due within this many seconds are released early (steady stream).")]
@@ -128,9 +128,9 @@ namespace DanceWithTheDevil
 
         [Header("After the schedule (K-15)")]
         [Tooltip("Added to the last authored window for every window past it (Start Time is ignored).")]
-        [SerializeField] private WaveWindow _lateGrowth = new WaveWindow(0f, 1, 1, 1, 1);
+        [SerializeField] private WaveWindow _lateGrowth = new WaveWindow(0f, 2, 2, 2, 2);
         [Tooltip("The active cap never goes above this.")]
-        [SerializeField, Min(1)] private int _maxActiveCap = 16;
+        [SerializeField, Min(1)] private int _maxActiveCap = 32;
 
         // GDD §10 budget, retuned 2026-10-24 (F2, F10, F26, owner decisions D2/K-15 and D4/K-17). Imp and brute are
         // cut (K-11), so the windows are written directly in Chasers / Runners / Shooters.
@@ -158,19 +158,25 @@ namespace DanceWithTheDevil
         //   no revive invulnerability a 4:30-level wave kills in ~29 s and a 6:00-level wave in ~20 s.
         // Pack size = round(cap × 0.4) clamped 2-4: cap 4-6 → 2, 7-8 → 3, 9-11 → 4. Packs per window and spacing are
         // noted per line (26 s spread).
+        // SUPERSEDED 2026-10-25 (bullet-hell pass, production/design/crit-difficulty.md §5): counts and caps ×2, cap
+        // max 32, packs 2-6 over 9 s, Late Growth +2/+2/+2/cap +2. The arithmetic above describes the old table; the
+        // new one is meant to kill (first death ~0:20-0:35 by the design estimate). Calibrate with RunBot.
+        // Editor: Dance/Arena/Apply Difficulty writes these values into a scene (DifficultySetup).
         [Header("Schedule (GDD §10; K-17: counts keep rising after 3:00)")]
         [SerializeField] private List<WaveWindow> _schedule = new List<WaveWindow>
         {
-            new WaveWindow(0f, 18, 0, 0, 6),    // ×1.5 counts, cap +2 after three bot runs (2026-10-24: ×1.35 → first death 1:47; ×1.75 → 0:33 and 1:14; this sits between): 12 TP, dmg 43,  6 packs of 2 every 4.3 s (was 8 C, cap 3)
-            new WaveWindow(30f, 21, 12, 0, 8),   // ×1.5 counts, cap +2 after three bot runs (2026-10-24: ×1.35 → first death 1:47; ×1.75 → 0:33 and 1:14; this sits between): 22 TP, dmg 68, 11 packs of 2 every 2.4 s (was 14 TP, cap 5)
-            new WaveWindow(60f, 17, 8, 4, 9),   // ×1.5 counts, cap +2 after three bot runs (2026-10-24: ×1.35 → first death 1:47; ×1.75 → 0:33 and 1:14; this sits between): 23 TP, dmg 77,  7 packs of 3 every 3.7 s; first shooters
-            new WaveWindow(90f, 17, 8, 4, 10),   // ×1.5 counts, cap +2 after three bot runs (2026-10-24: ×1.35 → first death 1:47; ×1.75 → 0:33 and 1:14; this sits between): 23 TP, dmg 77,  7 packs of 3
-            new WaveWindow(120f, 15, 8, 5, 10),  // ×1.5 counts, cap +2 after three bot runs (2026-10-24: ×1.35 → first death 1:47; ×1.75 → 0:33 and 1:14; this sits between): 24 TP, dmg 82,  7 packs of 3
-            new WaveWindow(150f, 15, 10, 5, 11),  // ×1.5 counts, cap +2 after three bot runs (2026-10-24: ×1.35 → first death 1:47; ×1.75 → 0:33 and 1:14; this sits between): 25 TP, dmg 84,  6 packs of 4 every 4.3 s
-            new WaveWindow(180f, 17, 10, 5, 11),  // ×1.5 counts, cap +2 after three bot runs (2026-10-24: ×1.35 → first death 1:47; ×1.75 → 0:33 and 1:14; this sits between): 26 TP, dmg 87,  6 packs of 4
-            new WaveWindow(210f, 17, 12, 5, 12), // ×1.5 counts, cap +2 after three bot runs (2026-10-24: ×1.35 → first death 1:47; ×1.75 → 0:33 and 1:14; this sits between): 27 TP, dmg 90,  6 packs of 4 (K-5 had 20 TP here; K-17 keeps rising)
-            new WaveWindow(240f, 18, 12, 8, 12), // ×1.5 counts, cap +2 after three bot runs (2026-10-24: ×1.35 → first death 1:47; ×1.75 → 0:33 and 1:14; this sits between): 30 TP, dmg 101, 7 packs of 4
-            new WaveWindow(270f, 18, 14, 8, 13), // ×1.5 counts, cap +2 after three bot runs (2026-10-24: ×1.35 → first death 1:47; ×1.75 → 0:33 and 1:14; this sits between): 31 TP, dmg 103, 7 packs of 4; then Late Growth every 30 s
+            // Bullet-hell pass 2026-10-25 (production/design/crit-difficulty.md §5): every count and cap ×2 of the
+            // 2026-10-24 table, HP unchanged. Pack size = round(cap × 0.4) clamped 2-6; packs spread over 9 s.
+            new WaveWindow(0f, 36, 0, 0, 12),     // was 18/0/0 cap 6:   8 packs of 5
+            new WaveWindow(30f, 42, 24, 0, 16),   // was 21/12/0 cap 8: 11 packs of 6
+            new WaveWindow(60f, 34, 16, 8, 18),   // was 17/8/4 cap 9:  10 packs of 6; first shooters
+            new WaveWindow(90f, 34, 16, 8, 20),   // was 17/8/4 cap 10
+            new WaveWindow(120f, 30, 16, 10, 20), // was 15/8/5 cap 10
+            new WaveWindow(150f, 30, 20, 10, 22), // was 15/10/5 cap 11
+            new WaveWindow(180f, 34, 20, 10, 22), // was 17/10/5 cap 11
+            new WaveWindow(210f, 34, 24, 10, 24), // was 17/12/5 cap 12
+            new WaveWindow(240f, 36, 24, 16, 24), // was 18/12/8 cap 12
+            new WaveWindow(270f, 36, 28, 16, 26), // was 18/14/8 cap 13; then Late Growth every 30 s
         };
 
         private readonly List<Enemy> _active = new List<Enemy>(32);

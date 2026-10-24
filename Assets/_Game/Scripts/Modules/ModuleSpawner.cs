@@ -6,8 +6,9 @@ namespace DanceWithTheDevil
 {
     /// <summary>
     /// Offer director (MAIN_GDD §7 Sıklık; first GDD §11-12): offers at ~8, ~25 and ~42 s of run time, then every
-    /// 14-20 s after the previous one; never while an offer is unresolved (it waits). Types come from a shuffled bag
-    /// of every <see cref="ModuleType"/> (four with Hız), no repeat before the bag empties. The offer appears ≥4 m from the player on free floor that the
+    /// 14-20 s after the previous one; never while an offer is unresolved or every slot is full (it waits). Types come
+    /// from a shuffled bag of every <see cref="ModuleType"/> (five with Hız and Keskin Göz), no repeat before the bag
+    /// empties; types already equipped are skipped (no "TAKILI" duplicates, user decision 2026-10-25). The offer appears ≥4 m from the player on free floor that the
     /// camera sees and the player has line of sight to. Scaled time: stops during hitstop and the contract screen.
     /// </summary>
     [DisallowMultipleComponent]
@@ -122,7 +123,7 @@ namespace DanceWithTheDevil
                 return;
             }
 
-            ModuleType type = NextType();
+            if (!NextType(out ModuleType type)) return;
             if (_modules.PresentOffer(type, point))
             {
                 _offersSpawned++;
@@ -132,23 +133,44 @@ namespace DanceWithTheDevil
             }
         }
 
-        private ModuleType NextType()
+        /// <summary>
+        /// Next type from the shuffled bag, skipping equipped types. Returns false if every type is equipped
+        /// (<see cref="PlayerModules.CanPresentOffer"/> already rules that out).
+        /// </summary>
+        private bool NextType(out ModuleType type)
         {
-            if (_bagIndex >= _bag.Length)
+            // Two passes over a bag are enough to find any unequipped type.
+            for (int draw = 0; draw < _bag.Length * 2; draw++)
             {
-                for (int i = 0; i < _bag.Length; i++) _bag[i] = (ModuleType)i;
-                for (int i = _bag.Length - 1; i > 0; i--)
-                {
-                    int j = _random.Next(i + 1);
-                    (_bag[i], _bag[j]) = (_bag[j], _bag[i]);
-                }
-                // No back-to-back repeat across bag boundaries either.
-                if ((int)_bag[0] == _lastType) (_bag[0], _bag[_bag.Length - 1]) = (_bag[_bag.Length - 1], _bag[0]);
-                _bagIndex = 0;
+                if (_bagIndex >= _bag.Length) RefillBag();
+                ModuleType candidate = _bag[_bagIndex++];
+                if (_modules != null && _modules.IsEquipped(candidate)) continue;
+                _lastType = (int)candidate;
+                type = candidate;
+                return true;
             }
-            ModuleType type = _bag[_bagIndex++];
-            _lastType = (int)type;
-            return type;
+            type = default;
+            return false;
+        }
+
+        private void RefillBag()
+        {
+            for (int i = 0; i < _bag.Length; i++) _bag[i] = (ModuleType)i;
+            for (int i = _bag.Length - 1; i > 0; i--)
+            {
+                int j = _random.Next(i + 1);
+                (_bag[i], _bag[j]) = (_bag[j], _bag[i]);
+            }
+            // No back-to-back repeat across bag boundaries either.
+            if ((int)_bag[0] == _lastType) (_bag[0], _bag[_bag.Length - 1]) = (_bag[_bag.Length - 1], _bag[0]);
+            _bagIndex = 0;
+        }
+
+        /// <summary>Tests: the next type the spawner would offer now (consumes it from the bag).</summary>
+        public bool DrawTypeForTests(out ModuleType type)
+        {
+            if (_random == null) _random = _seed != 0 ? new System.Random(_seed) : new System.Random();
+            return NextType(out type);
         }
 
         private bool TryFindPoint(Vector3 playerPosition, out Vector3 point)

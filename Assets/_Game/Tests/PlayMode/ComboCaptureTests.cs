@@ -44,6 +44,19 @@ namespace DanceWithTheDevil.Tests
             yield return Capture(folder, "02_combo_tier1_settled");
             yield return Feed(tracker, hit, 15);
             yield return Capture(folder, "03_combo_tier2");
+
+            // Defne dies → the Devil leans in with his first card (hand-drawn art, EVET on his fingertip).
+            var health = player.GetComponent<Health>();
+            health.TakeDamage(new DamageInfo(9999f, player.transform.position, Vector3.forward, null, DamageKind.Contact));
+            yield return Wait(4.5f);
+            yield return Capture(folder, "04_devil_line");
+            // Advance the Devil's line as [Enter] would (the screen's AdvancePressed event), then the card shows.
+            var screen = Object.FindAnyObjectByType<DevilScreen>();
+            var field = typeof(DevilScreen).GetField("AdvancePressed",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            (field?.GetValue(screen) as System.Action)?.Invoke();
+            yield return Wait(2.5f);
+            yield return Capture(folder, "05_devil_card");
         }
 
         private static IEnumerator Feed(ComboTracker tracker, DamageInfo hit, int count)

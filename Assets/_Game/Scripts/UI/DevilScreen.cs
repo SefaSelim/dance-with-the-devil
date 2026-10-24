@@ -1,4 +1,6 @@
 using System;
+using DG.Tweening;
+using DG.Tweening.Core;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -17,6 +19,11 @@ namespace DanceWithTheDevil
     /// on EVET, for <see cref="_yesHoldSeconds"/> (a bar fills); HAYIR = H / pad East / a click on HAYIR; lines =
     /// Enter / pad South / a click on the bubble (the first press finishes the typing). Presses that started before a
     /// prompt's input lock are ignored, and the choices fade in during the card lock. Unscaled time.
+    /// Art: the serialized sprite, else the theme's hand-drawn Devil (UiTheme.DevilSprite, Dance/UI/Build Devil Art),
+    /// else blocks. The drawn Devil is sized to the image aspect and fills the right side; EVET (with its stakes line)
+    /// rides on his reaching fingertip (<see cref="_handPoint"/> in the art), following his lean-in and idle sway every
+    /// frame; the idle sway calms while the pointer is on EVET. Motion (DOTween, unscaled): lean-in, card and EVET
+    /// pop-in, bubble pop. ReduceMotion skips them.
     /// No monitor frame is drawn (open design question).
     /// TODO(Burak): should right click (the in-combat "no") also mean HAYIR on the card (K-2)? Not decided.
     /// TODO(Burak): monitor frame around the game image for the Devil to lean over (GDD §3, §13)? Not decided.
@@ -53,9 +60,24 @@ namespace DanceWithTheDevil
         [Tooltip("Idle bob amplitude, canvas units (texels).")]
         [SerializeField, Range(0f, 6f)] private float _bobUnits = 2f;
 
-        private static readonly Vector2 DevilSize = new Vector2(210f, 330f);
-        private static readonly Vector2 DevilInPosition = new Vector2(50f, -20f);   // partly past the right edge
-        private static readonly Vector2 DevilOutPosition = new Vector2(280f, -20f);
+        [Header("Drawn Devil")]
+        [Tooltip("His reaching fingertip in the art, 0..1 from the bottom-left of the image (EVET sits there).")]
+        [SerializeField] private Vector2 _handPoint = new Vector2(0.51f, 0.41f);
+        [Tooltip("Height of the drawn Devil, canvas units (the game image is 360 high; a little is cut at the bottom).")]
+        [SerializeField, Min(50f)] private float _artHeight = 400f;
+        [Tooltip("Lean-in angle for the drawn Devil (the block Devil uses Lean Angle), degrees.")]
+        [SerializeField, Range(0f, 10f)] private float _artLeanAngle = 3f;
+
+        // Block Devil (no art): size, rest position (partly past the right edge), hand point (claws, left side).
+        private static readonly Vector2 BlockDevilSize = new Vector2(210f, 330f);
+        private static readonly Vector2 BlockDevilIn = new Vector2(50f, -20f);
+        private static readonly Vector2 BlockHandPoint = new Vector2(0.02f, 0.47f);
+        // Drawn Devil: his right edge a little past the frame, feet below it.
+        private const float ArtRightOverhang = 20f;
+        private const float ArtBottom = -30f;
+        // EVET rests on the fingertip: bottom-centre of the button at the tip, 2 units up.
+        private static readonly Vector2 YesOnHandOffset = new Vector2(0f, 2f);
+        private static readonly Vector2 YesSize = new Vector2(140f, 36f);
         private static readonly Color YesColor = new Color(0.95f, 0.22f, 0.15f, 1f);
         private static readonly Color YesHover = new Color(1f, 0.42f, 0.3f, 1f);
         // HAYIR is a text button: dim label, brighter on hover.
@@ -67,6 +89,16 @@ namespace DanceWithTheDevil
         private RectTransform _root;
         private Image _dim;
         private RectTransform _devil;
+        private RectTransform _handAnchor;
+        private RectTransform _yesAnchor;
+        private RectTransform _cardRect;
+        private RectTransform _speechRect;
+        private Vector2 _devilIn, _devilOut;
+        private float _lean;
+        private float _enter;
+        private Tween _enterTween;
+        private DOGetter<float> _enterGetter;
+        private DOSetter<float> _enterSetter;
         private RectTransform _eyeL, _eyeR, _mouth;
         private GameObject _speech;
         private Text _speechText;
@@ -87,7 +119,6 @@ namespace DanceWithTheDevil
         private enum Mode { Hidden, Entering, Line, Card }
         private Mode _mode = Mode.Hidden;
         private bool _cardHasChoice;
-        private float _enterTime;
         private float _promptShownAt;
         private float _clock;
         private float _idleWeight;
@@ -120,7 +151,18 @@ namespace DanceWithTheDevil
         /// <summary>0..1 progress of the EVET hold.</summary>
         public float YesHoldProgress => _yesProgress;
 
-        private void Awake() => Build();
+        private void Awake()
+        {
+            _enterGetter = () => _enter;
+            _enterSetter = v => _enter = v;
+            Build();
+        }
+
+        private void OnDisable()
+        {
+            _enterTween?.Kill();
+            _enterTween = null;
+        }
 
         private void Start() => UiKit.EnsureEventSystem();
 
@@ -130,19 +172,46 @@ namespace DanceWithTheDevil
             _root.gameObject.SetActive(true);
             _speech.SetActive(false);
             _card.SetActive(false);
-            _enterTime = 0f;
             _idleWeight = 0f;
             _mode = Mode.Entering;
             _promptShownAt = Time.unscaledTime;
             _typing = false;
-            ApplyEnter(EnterDuration <= 0f ? 1f : 0f);
+            _enterTween?.Kill();
+            _enterTween = null;
+            if (EnterDuration <= 0f)
+            {
+                _enter = 1f;
+            }
+            else
+            {
+                _enter = 0f;
+                _enterTween = DOTween.To(_enterGetter, _enterSetter, 1f, EnterDuration).SetEase(Ease.OutCubic)
+                    .SetUpdate(true).SetLink(gameObject);
+            }
+            ApplyPose();
+        }
+
+        /// <summary>Ends the lean-in at once (a line or the card arrived).</summary>
+        private void FinishEnter()
+        {
+            _enterTween?.Kill();
+            _enterTween = null;
+            _enter = 1f;
+        }
+
+        /// <summary>The speech bubble pops when it appears (not again while it stays up).</summary>
+        private void ShowSpeech()
+        {
+            if (_speech.activeSelf) return;
+            _speech.SetActive(true);
+            UiKit.PopIn(_speechRect, 0f, 0.9f, 0.18f);
         }
 
         public void ShowLine(string line)
         {
             if (_mode == Mode.Hidden) Enter();
-            ApplyEnter(1f);
-            _speech.SetActive(true);
+            FinishEnter();
+            ShowSpeech();
             _card.SetActive(false);
             _mode = Mode.Line;
             StartTyping(line);
@@ -152,14 +221,20 @@ namespace DanceWithTheDevil
         public void ShowCard(DealDefinition deal, bool offersChoice)
         {
             if (_mode == Mode.Hidden) Enter();
-            ApplyEnter(1f);
-            _speech.SetActive(true);
+            FinishEnter();
+            ShowSpeech();
             _giveText.text = "<color=#FFD24D><b>" + GameTexts.CardGive + "</b></color> " + deal.UpgradeText;
             _costTitle.text = GameTexts.CardTake + " " + deal.CostName;
             _takeText.text = GameTexts.CardCostVisible + " " + deal.CostVisibleText + "\n"
                 + GameTexts.CardCostMechanical + " " + deal.CostMechanicalText;
             _choices.SetActive(offersChoice);
+            bool wasShown = _card.activeSelf;
             _card.SetActive(true);
+            if (!wasShown)
+            {
+                UiKit.PopIn(_cardRect, 0f, 0.82f, 0.28f);
+                if (offersChoice) UiKit.PopIn(_yesAnchor, 0.25f, 0.6f, 0.3f);
+            }
             _cardHasChoice = offersChoice;
             _mode = Mode.Card;
             StartTyping(deal.OfferLine);
@@ -171,6 +246,10 @@ namespace DanceWithTheDevil
         {
             _mode = Mode.Hidden;
             _typing = false;
+            _enterTween?.Kill();
+            _enterTween = null;
+            _speech.SetActive(false);
+            _card.SetActive(false);
             _root.gameObject.SetActive(false);
         }
 
@@ -191,15 +270,14 @@ namespace DanceWithTheDevil
             float dt = Time.unscaledDeltaTime;
             _clock += dt;
 
-            if (_mode == Mode.Entering)
+            if (_mode != Mode.Entering)
             {
-                _enterTime += dt;
-                ApplyEnter(EnterDuration > 0f ? _enterTime / EnterDuration : 1f);
+                // The sway calms while the pointer is on EVET, so it does not slide out from under the cursor.
+                bool onYes = _yesButton != null && _choices.activeInHierarchy && (_yesButton.IsHovered || _yesButton.IsHeld);
+                float target = UiKit.ReduceMotion ? 0f : onYes ? 0.2f : 1f;
+                _idleWeight = Mathf.MoveTowards(_idleWeight, target, dt * 2f);
             }
-            else
-            {
-                AnimateIdle();
-            }
+            ApplyPose();
             TickTyping(dt);
             AnimateFace(dt);
 
@@ -371,30 +449,21 @@ namespace DanceWithTheDevil
 
         // ------------------------------------------------------------ Devil motion
 
-        private void ApplyEnter(float t)
+        /// <summary>
+        /// Lean-in (<see cref="_enter"/>, tweened 0 to 1) plus the slow idle sway and bob (whole texels, so the blocks
+        /// stay crisp), the dim overlay, and EVET placed on his fingertip.
+        /// </summary>
+        private void ApplyPose()
         {
-            float e = UiKit.EaseOut(t);
-            _devil.anchoredPosition = Vector2.LerpUnclamped(DevilOutPosition, DevilInPosition, e);
-            _devil.localRotation = Quaternion.Euler(0f, 0f, _leanAngle * e);
-            Color c = _dim.color;
-            c.a = _dimAlpha * Mathf.Clamp01(t);
-            _dim.color = c;
-        }
-
-        /// <summary>Slow sway and bob once he is in (whole texels, so the blocks stay crisp).</summary>
-        private void AnimateIdle()
-        {
-            if (UiKit.ReduceMotion)
-            {
-                _devil.anchoredPosition = DevilInPosition;
-                _devil.localRotation = Quaternion.Euler(0f, 0f, _leanAngle);
-                return;
-            }
-            _idleWeight = Mathf.MoveTowards(_idleWeight, 1f, Time.unscaledDeltaTime * 2f);
+            float e = _enter;
             float sway = Mathf.Sin(_clock * 1.3f) * _swayDegrees * _idleWeight;
             float bob = Mathf.Round(Mathf.Sin(_clock * 2.1f) * _bobUnits * _idleWeight);
-            _devil.anchoredPosition = DevilInPosition + new Vector2(0f, bob);
-            _devil.localRotation = Quaternion.Euler(0f, 0f, _leanAngle + sway);
+            _devil.anchoredPosition = Vector2.LerpUnclamped(_devilOut, _devilIn, e) + new Vector2(0f, bob);
+            _devil.localRotation = Quaternion.Euler(0f, 0f, _lean * e + sway);
+            Color c = _dim.color;
+            c.a = _dimAlpha * Mathf.Clamp01(e);
+            _dim.color = c;
+            if (_yesAnchor != null && _handAnchor != null) _yesAnchor.position = _handAnchor.position;
         }
 
         /// <summary>Blinks every few seconds; the mouth moves while the line types.</summary>
@@ -445,11 +514,32 @@ namespace DanceWithTheDevil
             _dim.color = new Color(0f, 0f, 0f, 0f);
             _dim.raycastTarget = false;
 
-            _devil = UiKit.Rect(_root, "Devil", new Vector2(1f, 0f), new Vector2(1f, 0f), DevilOutPosition, DevilSize);
-            if (_devilSprite != null)
+            Sprite sprite = _devilSprite != null ? _devilSprite : UiKit.Theme != null ? UiKit.Theme.DevilSprite : null;
+            Vector2 size;
+            Vector2 hand;
+            if (sprite != null)
+            {
+                Rect r = sprite.rect;
+                float aspect = r.height > 0f ? r.width / r.height : 0.75f;
+                size = new Vector2(Mathf.Round(_artHeight * aspect), _artHeight);
+                _devilIn = new Vector2(ArtRightOverhang, ArtBottom);
+                _lean = _artLeanAngle;
+                hand = _handPoint;
+            }
+            else
+            {
+                size = BlockDevilSize;
+                _devilIn = BlockDevilIn;
+                _lean = _leanAngle;
+                hand = BlockHandPoint;
+            }
+            _devilOut = _devilIn + new Vector2(size.x * 0.75f + 40f, 0f);
+
+            _devil = UiKit.Rect(_root, "Devil", new Vector2(1f, 0f), new Vector2(1f, 0f), _devilOut, size);
+            if (sprite != null)
             {
                 Image art = UiKit.Stretch(_devil, "Art").gameObject.AddComponent<Image>();
-                art.sprite = _devilSprite;
+                art.sprite = sprite;
                 art.preserveAspect = true;
                 art.raycastTarget = false;
             }
@@ -457,6 +547,8 @@ namespace DanceWithTheDevil
             {
                 BuildPlaceholderDevil(_devil);
             }
+            // The fingertip: an empty point in the art's rect, so it follows the lean and sway.
+            _handAnchor = UiKit.Rect(_devil, "Fingertip", hand, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
 
             BuildSpeechBubble(font);
             BuildCard(font);
@@ -467,10 +559,12 @@ namespace DanceWithTheDevil
         private void BuildSpeechBubble(Font font)
         {
             Vector2 br = new Vector2(1f, 0f);
+            // Left of his head (the drawn Devil's face is near x 0.68, y 0.75 of the art), above the card.
             Image fill = UiKit.Framed(_root, "Speech", UiKit.Cream, new Color(0.04f, 0.03f, 0.05f, 0.95f), br,
-                new Vector2(1f, 0.5f), new Vector2(-186f, 262f), new Vector2(300f, 66f), 1f);
+                new Vector2(1f, 0.5f), new Vector2(-150f, 268f), new Vector2(300f, 66f), 1f);
             Image border = fill.transform.parent.GetComponent<Image>();
             _speech = border.gameObject;
+            _speechRect = border.rectTransform;
             _bubbleButton = UiKit.MakeHoldButton(border);
 
             // Tail: a cream diamond with the bubble colour inside, on the right edge.
@@ -497,9 +591,11 @@ namespace DanceWithTheDevil
             Vector2 top = new Vector2(0.5f, 1f);
             Vector2 bottom = new Vector2(0.5f, 0f);
 
-            Image card = UiKit.Framed(_root, "Card", UiKit.DevilRed, UiKit.Panel, mid, mid, new Vector2(-80f, -54f),
+            // Left of the Devil so his reaching hand (and EVET on it) stays clear of the text.
+            Image card = UiKit.Framed(_root, "Card", UiKit.DevilRed, UiKit.Panel, mid, mid, new Vector2(-100f, -54f),
                 new Vector2(384f, 200f));
             _card = card.transform.parent.gameObject;
+            _cardRect = (RectTransform)card.transform.parent;
             Transform c = card.transform;
 
             _giveText = UiKit.Label(c, "Give", font, 12, Color.white, TextAnchor.UpperLeft, top, top,
@@ -514,11 +610,13 @@ namespace DanceWithTheDevil
             _choices = choices.gameObject;
             _choicesGroup = _choices.AddComponent<CanvasGroup>();
 
-            // EVET: big and bright (K-2), hold to sign; a bar fills along its bottom. Synty main button prefab (its
-            // plates tinted red) driven by UiHoldButton; the keys line sits under the word, smaller.
-            RectTransform yes = (RectTransform)UiKit.PrefabHoldButton(choices, UiKit.ButtonPrefab,
-                GameTexts.Yes + "\n<size=55%><color=#EDE0BD>" + GameTexts.YesKeys + "</color></size>", bottom, bottom,
-                new Vector2(-70f, 24f), new Vector2(180f, 44f), out TMP_Text yesLabel, 18f, "Yes").transform;
+            // EVET: big and bright (K-2), hold to sign; a gold bar fills along its bottom. It rides on the Devil's
+            // fingertip: an anchor in the card's choices (so it fades and hides with them) placed on the hand every
+            // frame (ApplyPose); the stakes line sits just above the button.
+            _yesAnchor = UiKit.Rect(choices, "YesOnHand", mid, mid, Vector2.zero, Vector2.zero);
+            RectTransform yes = (RectTransform)UiKit.PrefabHoldButton(_yesAnchor, UiKit.ButtonPrefab,
+                GameTexts.Yes + "\n<size=55%><color=#EDE0BD>" + GameTexts.YesKeys + "</color></size>", mid, bottom,
+                YesOnHandOffset, YesSize, out TMP_Text yesLabel, 16f, "Yes").transform;
             _yesButton = yes.GetComponent<UiHoldButton>();
             if (yesLabel != null) yesLabel.color = Color.white;
             _yesPlates = UiKit.PlateImages(yes.gameObject);
@@ -531,16 +629,17 @@ namespace DanceWithTheDevil
                 new Vector2(inset, inset), new Vector2(0f, 4f / s));
             yesFill.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
             _yesFill = yesFill.rectTransform;
-            Text yesStakes = UiKit.Label(choices, "YesStakes", font, 10, UiKit.Cream, TextAnchor.MiddleCenter,
-                bottom, bottom, new Vector2(-70f, 6f), new Vector2(220f, 14f));
+            Text yesStakes = UiKit.Label(_yesAnchor, "YesStakes", font, 10, UiKit.Cream, TextAnchor.MiddleCenter,
+                mid, bottom, YesOnHandOffset + new Vector2(0f, YesSize.y + 2f), new Vector2(220f, 14f));
             yesStakes.text = GameTexts.YesStakes;
+            UiKit.AddShadow(yesStakes);
 
             // HAYIR: small and dim, but readable and always selectable (K-2). Synty small text button prefab.
             _noButton = UiKit.PrefabHoldButton(choices, UiKit.SmallButtonPrefab, GameTexts.No + " " + GameTexts.NoKeys,
-                bottom, bottom, new Vector2(110f, 36f), new Vector2(84f, 20f), out _noLabel, 10f, "No");
+                bottom, bottom, new Vector2(0f, 30f), new Vector2(96f, 20f), out _noLabel, 10f, "No");
             if (_noLabel != null) _noLabel.color = NoColor;
             Text noStakes = UiKit.Label(choices, "NoStakes", font, 10, UiKit.Light, TextAnchor.MiddleCenter,
-                bottom, bottom, new Vector2(110f, 18f), new Vector2(130f, 14f));
+                bottom, bottom, new Vector2(0f, 12f), new Vector2(220f, 14f));
             noStakes.text = GameTexts.NoStakes;
         }
 

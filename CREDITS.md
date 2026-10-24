@@ -37,6 +37,9 @@ The Dance with the Devil team, Women Game Jam 2026.
   `Assets/_Game/ThirdParty/KenneyParticlePack` (converted to white + alpha, see its License.txt). Particle shader
   `VFX_ParticleUnlit` from the `unity-vfx-game-feel` skill (toolkit licence).
 - All sound effects and the music loop are synthesized by `Dance/Audio/Bake All` (no external assets).
-- The Devil on the Devil screen is a placeholder made of coloured blocks; the team's own drawing replaces it.
+- The Devil on the Devil screen: hand-drawn by the team (`Assets/Devil-handdraw.jpeg`; keyed copy
+  `Assets/_Game/Art/UI/devil_handdraw.png` made by `Dance/UI/Build Devil Art`).
+- DOTween (Demigiant, free version), `Assets/Plugins/Demigiant/DOTween`: UI tweens. Free for commercial use under
+  Demigiant's licence (dotween.demigiant.com/license.php).
 - Main menu Devil (placeholder): Gustave Doré, illustration of Satan for Milton's *Paradise Lost* (1866), public domain,
   via Wikimedia Commons; `Assets/_Game/Art/UI/devil_placeholder_dore.jpg`.

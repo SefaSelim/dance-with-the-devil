@@ -5,6 +5,8 @@ namespace DanceWithTheDevil
     /// <summary>
     /// The main menu's 3D stage (design/ux/main-menu.md §2): Defne sways slowly on her plinth (±8°), the Devil engraving
     /// behind her breathes and his red back light flickers like a candle. All motion is skipped with UiKit.ReduceMotion.
+    /// The engraving is a RectTransform on a screen-space backdrop canvas (MainMenuBuilder.BuildBackdrop) whose rest
+    /// scale is above 1, so the breath (±2.5%) never shrinks it below the view height.
     /// </summary>
     public sealed class MainMenuStage : MonoBehaviour
     {

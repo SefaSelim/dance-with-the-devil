@@ -48,6 +48,9 @@ namespace DanceWithTheDevil
         // Contract 3.
         public const int ExtraPierce = 2;
         public const float EnemySpeedFactor = 1.15f;
+        // Contract 3 crit (user decision 2026-10-25, production/design/crit-difficulty.md §4): +15 % crit chance on the
+        // rifle, machete (and wave) and rocket, added to each weapon's chance.
+        public const float CritChanceBonus = 0.15f;
         // Contract 4. A-10 is open (is +10% a deliberately empty promise?). Implemented as written: all weapons ×1.1.
         public const float AllDamageFactor = 1.1f;
         // Contract 4 attack speed (user decision 2026-10-24, production/design/combo-haste.md §3): rifle 6 → 7.5
@@ -90,6 +93,9 @@ namespace DanceWithTheDevil
 
                 case 3:
                     if (t.Rifle != null) t.Rifle.PierceCount += ExtraPierce;
+                    if (t.Rifle != null) t.Rifle.ContractCritChance += CritChanceBonus;
+                    if (t.Machete != null) t.Machete.ContractCritChance += CritChanceBonus;
+                    if (t.Rocket != null) t.Rocket.ContractCritChance += CritChanceBonus;
                     Enemy.SpeedMultiplier *= EnemySpeedFactor;
                     break;
 

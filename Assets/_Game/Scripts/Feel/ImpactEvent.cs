@@ -21,6 +21,7 @@ public struct ImpactEvent
     public Transform hitTransform;  // for parenting decals to movers / target flash
     public GameObject instigator;
     public bool instigatorIsLocalPlayer;
+    public bool isCrit;         // the hit was a critical hit (Bullet/Melee per target; Explosion: any target critted)
 }
 
 public static class ImpactBus

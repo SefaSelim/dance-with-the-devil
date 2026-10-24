@@ -4,13 +4,15 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 namespace DanceWithTheDevil.Editor
 {
     /// <summary>
     /// Builds the UI theme asset (Synty Interface Dark Fantasy HUD sprites, Pirata One / Markazi fonts) and the
     /// MainMenu scene (design/ux/main-menu.md): Defne on a plinth between two candelabra, the Devil engraving behind
-    /// her, cold key light and a red back light, and the code-built menu UI. Sets the build list to
+    /// her on a screen-space backdrop canvas (full view height for any aspect, feathered edges, behind the 3D stage),
+    /// cold key light and a red back light, and the code-built menu UI. Sets the build list to
     /// MainMenu (0) then Arena (1).
     /// </summary>
     public static class MainMenuBuilder
@@ -51,10 +53,14 @@ namespace DanceWithTheDevil.Editor
             theme.GlowSprite = AssetDatabase.LoadAssetAtPath<Sprite>(Synty + "/Sprites/FX/SPR_FX_DarkFantasy_Glow_01.png");
             theme.SigilSprite = AssetDatabase.LoadAssetAtPath<Sprite>(Synty + "/Sprites/HUD/SPR_FX_DarkFantasy_Sigil_Ring_Large_01.png");
             theme.VignetteSprite = AssetDatabase.LoadAssetAtPath<Sprite>(Synty + "/Sprites/FX/SPR_FX_DarkFantasy_Vignette_Damage_Tendrils_01.png");
-            theme.ButtonPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                Synty + "/Prefabs/Objectives_Story_Location/_Parts/HUD_DarkFantasy_Button_DialogueResponse_01.prefab");
-            theme.SmallButtonPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
-                Synty + "/Prefabs/Buttons/HUD_DarkFantasy_Button_Simple_01.prefab");
+            // Minimal buttons: one prefab for both sizes (dark parchment bar, centred label) + a thin frame.
+            var button = AssetDatabase.LoadAssetAtPath<GameObject>(
+                Synty + "/Prefabs/Buttons/HUD_DarkFantasy_Button_WorldSpace_Item_01.prefab");
+            theme.ButtonPrefab = button;
+            theme.SmallButtonPrefab = button;
+            theme.ButtonFrameSprite = Sprite("Frame_Box_Small_01");
+            var devilArt = AssetDatabase.LoadAssetAtPath<Sprite>(DevilArtBuilder.OutputPath);
+            if (devilArt != null) theme.DevilSprite = devilArt;
             EditorUtility.SetDirty(theme);
             AssetDatabase.SaveAssets();
             if (theme.ButtonPrefab == null || theme.SmallButtonPrefab == null)
@@ -155,8 +161,8 @@ namespace DanceWithTheDevil.Editor
             }
             else Debug.LogWarning("MainMenuBuilder: char_defne.prefab missing; run Dance/Character/Build Defne first.");
 
-            // The Devil: the engraving on a tall quad behind her, multiplied deep red; fog fades its edges.
-            Transform devil = BuildDevilQuad();
+            // The Devil: the engraving on a screen-space backdrop behind the whole stage, multiplied deep red.
+            Transform devil = BuildBackdrop(cam);
 
             // Candelabra either side of the plinth (decor: colliders removed).
             Place(Polygon + "/Props/SM_Prop_Candelabra_01.prefab", new Vector3(-0.35f, 0f, 0.9f), 20f, scene);
@@ -180,31 +186,45 @@ namespace DanceWithTheDevil.Editor
             Debug.Log("MainMenuBuilder: main menu scene saved at " + MenuScenePath);
         }
 
-        private static Transform BuildDevilQuad()
+        /// <summary>
+        /// The Devil engraving as a backdrop that always fills the view height (any aspect ratio): a Screen Space -
+        /// Camera canvas on the menu camera, drawn at 30 m so the whole 3D stage stands in front of it. The image
+        /// (feathered on all four sides, DevilArtBuilder.BuildMenuBackdrop) is 112% of the view height, right of
+        /// centre so his face sits above Defne, and its width follows its aspect; beyond its soft edges the camera's
+        /// dark clear colour shows, so no rectangle edge is ever visible. MainMenuStage breathes its scale (rest 1.04).
+        /// </summary>
+        private static Transform BuildBackdrop(Camera cam)
         {
-            var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(DevilImagePath);
-            var quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
-            quad.name = "DevilEngraving";
-            Object.DestroyImmediate(quad.GetComponent<Collider>());
-            float height = 5.8f;
-            float aspect = tex != null ? (float)tex.width / tex.height : 0.88f;
-            quad.transform.position = new Vector3(1.6f, 2.0f, 4.2f); // his face lands just above Defne's head
-            quad.transform.localScale = new Vector3(height * aspect, height, 1f);
-            EnsureFolder(MaterialsFolder);
-            string path = MaterialsFolder + "/mat_menu_devil.mat";
-            var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
-            if (mat == null)
-            {
-                mat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
-                AssetDatabase.CreateAsset(mat, path);
-            }
-            mat.shader = Shader.Find("Universal Render Pipeline/Unlit");
-            mat.SetTexture("_BaseMap", tex);
-            mat.SetColor("_BaseColor", new Color(0.62f, 0.13f, 0.11f));
-            EditorUtility.SetDirty(mat);
-            quad.GetComponent<Renderer>().sharedMaterial = mat;
-            quad.GetComponent<Renderer>().shadowCastingMode = ShadowCastingMode.Off;
-            return quad.transform;
+            Sprite sprite = DevilArtBuilder.BuildMenuBackdrop();
+            var canvasGo = new GameObject("DevilBackdrop", typeof(RectTransform));
+            var canvas = canvasGo.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceCamera;
+            canvas.worldCamera = cam;
+            canvas.planeDistance = 30f;
+            canvas.sortingOrder = -100;
+            var scaler = canvasGo.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            scaler.matchWidthOrHeight = 1f;
+
+            var artGo = new GameObject("DevilEngraving", typeof(RectTransform));
+            var rect = (RectTransform)artGo.transform;
+            rect.SetParent(canvasGo.transform, false);
+            rect.anchorMin = new Vector2(0.62f, -0.06f);
+            rect.anchorMax = new Vector2(0.62f, 1.06f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            rect.localScale = Vector3.one * 1.04f;
+            var image = artGo.AddComponent<Image>();
+            image.sprite = sprite;
+            image.color = sprite != null ? new Color(0.62f, 0.13f, 0.11f, 1f) : new Color(0f, 0f, 0f, 0f);
+            image.raycastTarget = false;
+            var fitter = artGo.AddComponent<AspectRatioFitter>();
+            fitter.aspectMode = AspectRatioFitter.AspectMode.HeightControlsWidth;
+            fitter.aspectRatio = sprite != null && sprite.rect.height > 0f ? sprite.rect.width / sprite.rect.height : 0.88f;
+            return rect;
         }
 
         private static Material StoneMaterial()

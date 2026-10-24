@@ -39,6 +39,22 @@ namespace DanceWithTheDevil
             UiKit.EnsureEventSystem();
             Build();
             Select(_startButton.gameObject);
+            PlayIntro();
+        }
+
+        /// <summary>Title and buttons pop in one after another (DOTween, unscaled; ReduceMotion = shown at once).</summary>
+        private void PlayIntro()
+        {
+            int i = 0;
+            foreach (Transform child in _mainColumn.transform)
+            {
+                var rect = (RectTransform)child;
+                Button button = child.GetComponent<Button>();
+                // Prefab buttons keep their fitted scale as the rest scale.
+                float rest = button != null ? child.localScale.x : 1f;
+                UiKit.PopIn(rect, 0.05f + i * 0.06f, 0.9f, 0.25f, rest);
+                i++;
+            }
         }
 
         private void Update()
@@ -95,6 +111,7 @@ namespace DanceWithTheDevil
             _settingsPanel.SetActive(panel == _settingsPanel);
             _creditsPanel.SetActive(panel == _creditsPanel);
             _mainGroup.interactable = false;
+            UiKit.PopIn((RectTransform)panel.transform);
         }
 
         private void ClosePanels()
@@ -181,7 +198,7 @@ namespace DanceWithTheDevil
                 divider.preserveAspect = true;
             }
 
-            // Synty DialogueResponse prefab (selected = lit plate, hover selects through UiSelectNudge).
+            // Minimal Synty prefab (focus = gold frame + gold label; hover selects through UiSelectNudge).
             GameObject prefab = UiKit.ButtonPrefab;
             Vector2 buttonSize = new Vector2(150f, 30f);
             const float buttonFont = 16f;

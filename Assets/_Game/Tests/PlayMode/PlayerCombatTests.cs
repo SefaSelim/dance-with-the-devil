@@ -137,6 +137,7 @@ namespace DanceWithTheDevil.Tests
         {
             var swingerPosition = new Vector3(100f, 0f, 0f);
             Machete machete = Spawn("Swinger", swingerPosition).AddComponent<Machete>();
+            machete.BaseCritChance = 0f; // exact damage: no 5 % crit
             Health front = SpawnTarget("Front", swingerPosition + new Vector3(0f, 1f, 1.5f));
             Health behind = SpawnTarget("Behind", swingerPosition + new Vector3(0f, 1f, -1.5f));
             Physics.SyncTransforms();

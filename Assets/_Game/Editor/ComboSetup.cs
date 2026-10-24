@@ -11,8 +11,9 @@ namespace DanceWithTheDevil.Editor
     /// <summary>
     /// Installs the combo (design: production/design/combo-haste.md §2) into an arena scene without hand edits:
     /// the base post-processing profile <see cref="ProfilePath"/> on a global Volume, and a "Combo" object with
-    /// <see cref="ComboTracker"/>, <see cref="ComboFeel"/> and <see cref="ComboHud"/>, wired by SerializedObject; the
-    /// scene's <see cref="ScoreKeeper"/> gets the tracker. Idempotent: an earlier "Combo" / "PostVolume" root is replaced.
+    /// <see cref="ComboTracker"/>, <see cref="ComboFeel"/> and <see cref="WorldPopups"/> (crit and combo popups in the
+    /// world; the old top-right ComboHud counter is no longer installed), wired by SerializedObject; the scene's
+    /// <see cref="ScoreKeeper"/> gets the tracker and its <see cref="GameHud"/> too (multiplier on the score line). Idempotent: an earlier "Combo" / "PostVolume" root is replaced.
     /// Usage: <c>ComboSetup.Install(scene);</c> after PlaceholderBuilder built the Devil and UI objects (the caller
     /// saves the scene), or menu Dance/Combo/Install In Active Scene (saves it).
     /// </summary>
@@ -82,11 +83,22 @@ namespace DanceWithTheDevil.Editor
             fso.FindProperty("_rig").objectReferenceValue = rig;
             fso.ApplyModifiedPropertiesWithoutUndo();
 
-            var hud = comboGo.AddComponent<ComboHud>();
-            var hso = new SerializedObject(hud);
-            hso.FindProperty("_combo").objectReferenceValue = tracker;
-            hso.FindProperty("_devil").objectReferenceValue = devil;
-            hso.ApplyModifiedPropertiesWithoutUndo();
+            var popups = comboGo.AddComponent<WorldPopups>();
+            var pso = new SerializedObject(popups);
+            pso.FindProperty("_combo").objectReferenceValue = tracker;
+            pso.FindProperty("_waves").objectReferenceValue = waves;
+            pso.FindProperty("_devil").objectReferenceValue = devil;
+            pso.FindProperty("_rig").objectReferenceValue = rig;
+            pso.ApplyModifiedPropertiesWithoutUndo();
+
+            var gameHud = Find<GameHud>(scene);
+            if (gameHud != null)
+            {
+                var gso = new SerializedObject(gameHud);
+                SerializedProperty comboProp = gso.FindProperty("_combo");
+                if (comboProp != null) comboProp.objectReferenceValue = tracker;
+                gso.ApplyModifiedPropertiesWithoutUndo();
+            }
 
             if (score != null)
             {

@@ -1,5 +1,7 @@
 using System;
 using System.Text;
+using DG.Tweening;
+using DG.Tweening.Core;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -13,7 +15,9 @@ namespace DanceWithTheDevil
     /// always-yes: a grey shell that crumbles block by block), the "Aldıkların / Verdiklerin" ledger ("Defne'den"
     /// over Verdiklerin; the fixed empty-ledger line for HAYIR at death 1), "Küçük hayırların: N" (K-9), the small
     /// first-GDD score at the bottom and "Tekrar dene" (click, R, gamepad Start). Display only: raises
-    /// <see cref="RestartPressed"/>. Unscaled time.
+    /// <see cref="RestartPressed"/>. Unscaled time. Entrance (DOTween): title, portrait and ledger pop in, the ledger
+    /// lines appear one by one (taken and given side by side), then the closing lines and the button; ReduceMotion =
+    /// everything at once. Input is unaffected by the animation.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class EndingScreen : MonoBehaviour
@@ -33,6 +37,18 @@ namespace DanceWithTheDevil
         private RectTransform _portraitHolder;
         private DefnePortrait _portraitView;
         private float _crumbleWait = -1f;
+        private RectTransform _portraitRect, _ledgerRect, _retryRect;
+        private float _retryScale = 1f;
+        private readonly string[] _takenSteps = new string[8];
+        private readonly string[] _givenSteps = new string[8];
+        private int _ledgerLines;
+        private int _ledgerShown;
+        private float _ledgerProgress;
+        private Tween _ledgerTween;
+        private DOGetter<float> _ledgerGetter;
+        private DOSetter<float> _ledgerSetter;
+        private const string Hidden = "<color=#00000000>";
+        private const string HiddenEnd = "</color>";
         private float _shownTime;
         private bool _visible;
 
@@ -76,6 +92,7 @@ namespace DanceWithTheDevil
                     break;
             }
 
+            _ledgerLines = 0;
             bool empty = summary.YesCount == 0;
             _ledgerEmpty.gameObject.SetActive(empty);
             _ledgerColumns.SetActive(!empty);
@@ -92,6 +109,7 @@ namespace DanceWithTheDevil
                 }
                 _takenList.text = taken.ToString();
                 _givenList.text = given.ToString();
+                PrepareLedgerSteps(_takenList.text, _givenList.text);
             }
 
             _smallNos.text = string.Format(GameTexts.SmallNosFormat, summary.SmallNoCount);
@@ -101,10 +119,13 @@ namespace DanceWithTheDevil
             _root.gameObject.SetActive(true);
             _visible = true;
             _shownTime = 0f;
+            PlayEntrance();
         }
 
         public void Hide()
         {
+            _ledgerTween?.Kill();
+            _ledgerTween = null;
             _visible = false;
             _root.gameObject.SetActive(false);
         }
@@ -136,6 +157,77 @@ namespace DanceWithTheDevil
                     _crumbleWait = 0.6f; // the grey shell holds a beat, then falls apart
                     break;
             }
+        }
+
+        // ------------------------------------------------------------ entrance (DOTween, unscaled)
+
+        /// <summary>
+        /// Step k of the ledger: the first k lines shown, the rest transparent (the layout never jumps). Strings are
+        /// built once per Show, never per frame.
+        /// </summary>
+        private void PrepareLedgerSteps(string taken, string given)
+        {
+            string[] t = taken.TrimEnd('\n').Split('\n');
+            string[] g = given.TrimEnd('\n').Split('\n');
+            int n = Mathf.Min(Mathf.Max(t.Length, g.Length), _takenSteps.Length - 1);
+            for (int k = 0; k <= n; k++)
+            {
+                _takenSteps[k] = Step(t, k);
+                _givenSteps[k] = Step(g, k);
+            }
+            _ledgerLines = n;
+        }
+
+        private static string Step(string[] lines, int shown)
+        {
+            var sb = new StringBuilder(128);
+            for (int i = 0; i < lines.Length; i++)
+            {
+                if (i == shown) sb.Append(Hidden);
+                sb.Append(lines[i]).Append('\n');
+            }
+            if (shown < lines.Length) sb.Append(HiddenEnd);
+            return sb.ToString();
+        }
+
+        private void SetLedgerProgress(float v)
+        {
+            _ledgerProgress = v;
+            int k = Mathf.Clamp(Mathf.FloorToInt(v + 0.001f), 0, _ledgerLines);
+            if (k == _ledgerShown) return;
+            _ledgerShown = k;
+            _takenList.text = _takenSteps[k];
+            _givenList.text = _givenSteps[k];
+        }
+
+        private void PlayEntrance()
+        {
+            _ledgerTween?.Kill();
+            _ledgerTween = null;
+            UiKit.PopIn(_title.rectTransform, 0f, 0.8f, 0.3f);
+            UiKit.PopIn(_body.rectTransform, 0.08f, 0.95f, 0.25f);
+            UiKit.PopIn(_portraitRect, 0.12f, 0.85f, 0.25f);
+            UiKit.PopIn(_ledgerRect, 0.2f, 0.9f, 0.25f);
+            float linesEnd = 0.45f;
+            if (_ledgerLines > 0)
+            {
+                _ledgerShown = -1;
+                if (UiKit.ReduceMotion)
+                {
+                    SetLedgerProgress(_ledgerLines);
+                }
+                else
+                {
+                    SetLedgerProgress(0f);
+                    float per = 0.22f;
+                    _ledgerTween = DOTween.To(_ledgerGetter, _ledgerSetter, _ledgerLines, per * _ledgerLines)
+                        .SetEase(Ease.Linear).SetDelay(0.45f).SetUpdate(true).SetLink(gameObject);
+                    linesEnd += per * _ledgerLines;
+                }
+            }
+            UiKit.PopIn(_closing.rectTransform, linesEnd, 0.95f, 0.25f);
+            UiKit.PopIn(_smallNos.rectTransform, linesEnd + 0.1f, 0.95f, 0.25f);
+            UiKit.PopIn(_retryRect, linesEnd + 0.2f, 0.85f, 0.25f, _retryScale);
         }
 
         private void Update()
@@ -195,11 +287,15 @@ namespace DanceWithTheDevil
                 new Vector2(-250f, -100f), new Vector2(118f, 118f));
             _portraitBack = portrait;
             _portraitBorder = portrait.transform.parent.GetComponent<Image>();
+            _portraitRect = _portraitBorder.rectTransform;
             _portraitHolder = UiKit.Stretch(portrait.transform, "Defne");
 
             // Ledger.
             Image ledger = UiKit.Framed(_root, "Ledger", UiKit.Cream, UiKit.Panel, top, top, new Vector2(56f, -100f),
                 new Vector2(400f, 140f));
+            _ledgerRect = (RectTransform)ledger.transform.parent;
+            _ledgerGetter = () => _ledgerProgress;
+            _ledgerSetter = SetLedgerProgress;
             _ledgerEmpty = UiKit.Label(ledger.transform, "Empty", font, 12, UiKit.Cream, TextAnchor.MiddleCenter,
                 new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(380f, 40f));
             _ledgerEmpty.text = GameTexts.LedgerEmpty;
@@ -227,11 +323,13 @@ namespace DanceWithTheDevil
             _smallNos = UiKit.Label(_root, "SmallNos", font, 12, UiKit.Turquoise, TextAnchor.MiddleCenter, top, top,
                 new Vector2(0f, -270f), new Vector2(400f, 16f));
 
-            // Synty main button prefab. Navigation None: R / pad Start stay the only keys (a click must not make
+            // Minimal Synty button prefab. Navigation None: R / pad Start stay the only keys (a click must not make
             // Enter restart).
             Button retry = UiKit.PrefabButton(_root, UiKit.ButtonPrefab, GameTexts.Retry + "  " + GameTexts.RetryKeys,
                 top, top, new Vector2(0f, -292f), new Vector2(160f, 28f), out _, 14f, "Retry");
             retry.navigation = new Navigation { mode = Navigation.Mode.None };
+            _retryRect = (RectTransform)retry.transform;
+            _retryScale = _retryRect.localScale.x;
             retry.onClick.AddListener(RaiseRestart);
 
             Vector2 bottom = new Vector2(0.5f, 0f);
