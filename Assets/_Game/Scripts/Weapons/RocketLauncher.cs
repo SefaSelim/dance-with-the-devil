@@ -11,7 +11,7 @@ namespace DanceWithTheDevil
     [DisallowMultipleComponent]
     public sealed class RocketLauncher : MonoBehaviour
     {
-        private const int MaxOverlaps = 64;
+        private const int MaxOverlaps = 256;
 
         [Header("References")]
         [Tooltip("Rocket pool. If empty, one is added to this GameObject (runtime cubes).")]

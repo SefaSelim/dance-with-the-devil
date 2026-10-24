@@ -60,13 +60,12 @@ namespace DanceWithTheDevil
             _current = Mathf.Max(0f, _current - info.Amount);
             if (_invulnerabilityAfterHit > 0f) SetInvulnerable(_invulnerabilityAfterHit);
 
-            Damaged?.Invoke(info, _current);
+            // Mark death before notifying, so damage dealt by a Damaged subscriber cannot raise Died twice.
+            bool killed = _current <= 0f;
+            if (killed) _isDead = true;
 
-            if (_current <= 0f)
-            {
-                _isDead = true;
-                Died?.Invoke(info);
-            }
+            Damaged?.Invoke(info, _current);
+            if (killed) Died?.Invoke(info);
             return true;
         }
 

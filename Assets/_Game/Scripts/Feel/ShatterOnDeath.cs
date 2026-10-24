@@ -21,20 +21,23 @@ namespace DanceWithTheDevil
         [SerializeField, Min(0f)] private float _explosionForce = 1.6f;
 
         private Health _health;
+        private MeshRenderer[] _renderers;
         private Transform[] _parts;
+        private Transform[] _visibleParts;
         private Color[] _colors;
+        private Color[] _visibleColors;
 
         private void Awake()
         {
             _health = GetComponent<Health>();
             Transform root = _model != null ? _model : transform;
-            MeshRenderer[] renderers = root.GetComponentsInChildren<MeshRenderer>(true);
-            _parts = new Transform[renderers.Length];
-            _colors = new Color[renderers.Length];
-            for (int i = 0; i < renderers.Length; i++)
+            _renderers = root.GetComponentsInChildren<MeshRenderer>(true);
+            _parts = new Transform[_renderers.Length];
+            _colors = new Color[_renderers.Length];
+            for (int i = 0; i < _renderers.Length; i++)
             {
-                _parts[i] = renderers[i].transform;
-                _colors[i] = PixelImpactFeedback.PartColor(renderers[i]);
+                _parts[i] = _renderers[i].transform;
+                _colors[i] = PixelImpactFeedback.PartColor(_renderers[i]);
             }
         }
 
@@ -52,8 +55,27 @@ namespace DanceWithTheDevil
                 DamageKind.Melee => _meleeForce,
                 _ => _bulletForce,
             };
+            // Only parts that are showing (e.g. not a hidden swing visual, not voxels already lost to a contract).
+            int visible = 0;
+            for (int i = 0; i < _renderers.Length; i++)
+            {
+                if (_renderers[i].gameObject.activeInHierarchy) visible++;
+            }
+            if (_visibleParts == null || _visibleParts.Length != visible)
+            {
+                _visibleParts = new Transform[visible];
+                _visibleColors = new Color[visible];
+            }
+            for (int i = 0, j = 0; i < _renderers.Length; i++)
+            {
+                if (!_renderers[i].gameObject.activeInHierarchy) continue;
+                _visibleParts[j] = _parts[i];
+                _visibleColors[j] = _colors[i];
+                j++;
+            }
+
             Vector3 point = info.Point.sqrMagnitude > 0f ? info.Point : transform.position + Vector3.up;
-            feedback.Shatter(_parts, _colors, point, info.Direction, force);
+            feedback.Shatter(_visibleParts, _visibleColors, point, info.Direction, force);
         }
     }
 }

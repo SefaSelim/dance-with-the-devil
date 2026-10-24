@@ -279,7 +279,8 @@ namespace DanceWithTheDevil
         private void UpdateShake()
         {
             _trauma = Mathf.Max(0f, _trauma - _traumaDecay * Time.unscaledDeltaTime);
-            float shake = _trauma * _trauma * _maxShakeTexels * GlobalShakeScale;
+            // Clamped so remainder (≤0.5) + shake always stays inside the border.
+            float shake = Mathf.Min(_trauma * _trauma * _maxShakeTexels * GlobalShakeScale, Border - 0.6f);
             if (shake <= 0f)
             {
                 _shakeTexels = Vector2.zero;

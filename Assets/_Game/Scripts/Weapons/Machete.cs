@@ -12,7 +12,7 @@ namespace DanceWithTheDevil
     [DisallowMultipleComponent]
     public sealed class Machete : MonoBehaviour
     {
-        private const int MaxOverlaps = 32;
+        private const int MaxOverlaps = 128;
         private const int MaxLineHits = 16;
 
         [Header("References")]
@@ -133,7 +133,7 @@ namespace DanceWithTheDevil
                 if (IsBlockedByWall(origin, hitDirection, flatDistance)) continue;
 
                 _hitThisSwing.Add(target);
-                target.TakeDamage(new DamageInfo(_damage, targetPoint, hitDirection, source, DamageKind.Melee));
+                if (!target.TakeDamage(new DamageInfo(_damage, targetPoint, hitDirection, source, DamageKind.Melee))) continue;
                 ImpactBus.Raise(new ImpactEvent
                 {
                     kind = ImpactKind.Melee,

@@ -250,7 +250,8 @@ namespace DanceWithTheDevil
                     emit.velocity = dir * (Random.Range(_shatterSpeed.x, _shatterSpeed.y) * force);
                     emit.startSize = cell * Random.Range(0.85f, 1f);
                     emit.startLifetime = Random.Range(_shatterLifetime.x, _shatterLifetime.y);
-                    emit.startColor = color * Random.Range(0.85f, 1.05f);
+                    float shade = Random.Range(0.85f, 1.05f);
+                    emit.startColor = new Color(color.r * shade, color.g * shade, color.b * shade, 1f);
                     emit.rotation3D = new Vector3(0f, Random.Range(0f, 360f), 0f);
                     _cubes.Emit(emit, 1);
                     emitted++;

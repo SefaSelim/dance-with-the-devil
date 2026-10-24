@@ -139,6 +139,7 @@ namespace DanceWithTheDevil
 
         private void Update()
         {
+            if (_health.IsDead) return; // the Devil's contract (Phase 5) decides what happens next
             float dt = Time.deltaTime;
             TickDodgeRefill(dt);
             UpdateAim();

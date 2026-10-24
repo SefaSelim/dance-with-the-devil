@@ -26,6 +26,11 @@ namespace DanceWithTheDevil
         public DamageKind Kind;
         /// <summary>Extra damageables passed through. 0 = stop on the first damageable.</summary>
         public int PierceCount;
+        /// <summary>
+        /// Optional (enemy shots): if set, only damageables under this root are hit; other damageables (enemies) are
+        /// flown through. Colliders without a damageable (walls) still stop it. Null = hit any damageable.
+        /// </summary>
+        public Transform DamageOnlyUnder;
         public float HitIntensity;
         public float WallHitIntensity;
 
@@ -149,6 +154,7 @@ namespace DanceWithTheDevil
                     return true;
                 }
 
+                if (_launch.DamageOnlyUnder != null && !collider.transform.IsChildOf(_launch.DamageOnlyUnder)) continue;
                 if (_alreadyHit.Contains(target)) continue;
                 _alreadyHit.Add(target);
 

@@ -1,6 +1,6 @@
 # MAIN GDD — Dance with the Devil (Bir Şey Olmaz)
 
-**Son güncelleme: 2026-10-24 04:40 (UTC+3)**
+**Son güncelleme: 2026-10-24 04:58 (UTC+3)**
 
 > **Bu dosya projenin tek ve yaşayan Game Design Document'ıdır.** Sürüm numarası yoktur (GDD2, GDD3…
 > diye gitmez). Yeni bir mekanik eklendiğinde, var olan bir mekanik değiştiğinde ya da bir tasarım kararı
@@ -119,7 +119,7 @@ sarsıntısı üretir. Tüfek hafif (sarsıntı yok denecek kadar az, duraklama 
 roket ağır (büyük parlama, ışık, güçlü sarsıntı, 0,1 sn duraklama). Ekran sarsıntısı görüntüyü kaydırır, kamerayı
 çevirmez; erişilebilirlik için genel bir sarsıntı çarpanı vardır.
 
-## 6. Düşmanlar — ⬜
+## 6. Düşmanlar — 🟡 (Takipçi, Koşucu ve Nişancı oyunda; patlayan imp ve kalkanlı iri Minimum kapsam dışında)
 
 Canlar dalgalarla artmaz. Ön işaret süreleri hiçbir sözleşmeden etkilenmez (okunabilirlik). Görsel: voksel şeytanlar ve yaratıklar.
 
@@ -202,7 +202,7 @@ halkası 5–6 m, iki L arası en az 11,7 m; merkezde kuzey–güney ve doğu–
 vardır. Açık merkez ~14 × 12 m çıktı (ilk GDD ~12 × 10 m), halkayı ≥5 m ve 6 m diriliş şokuna yer bırakmak için.
 Dört giriş kenarların ortasında, içe bakan şeritli zemin plakalarıdır; doğuş noktaları oyuncu başlangıcından 12–14 m uzaktadır.
 
-## 10. Dalgalar ve zorluk — ⬜
+## 10. Dalgalar ve zorluk — 🟡 (dalga yöneticisi çalışıyor; ölüm takvimi henüz dengelenmedi)
 
 İlk GDD §10 bütçe mantığı korunur: 30 sn'lik pencereler, pencere başında kısa alt gruplar, aynı anda aktif düşman sınırı,
 sınır doluysa doğuş bekler, geç kalanlar topluca boşaltılmaz. **Değişen:** bütçe adet yerine **tehdit puanıyla** tutulur
@@ -231,6 +231,17 @@ sınır doluysa doğuş bekler, geç kalanlar topluca boşaltılmaz. **Değişen
 - Takvim yalnızca orta beceri için tutar; usta oyuncu daha geç ölür; zorluk saate bağlı kalır (karar K-6). Faz 4'teki "yerinde durup ateş eden bot"
   insandan çok daha erken ölür; sonuçları alt sınır olarak okunur.
 - Sözleşme 2 (+1 kaçınma) ve 5 (bekleme ×2) sonrası sürekli kaçınma hızı tabanla aynıdır; yalnız arka arkaya 2 kaçınma kalır.
+
+**Uygulanan hâli (Minimum kapsam, K-11):** imp ve iri olmadığı için tablodaki her imp yerine 1 Takipçi + 1 Koşucu,
+her iri yerine 2 Nişancı doğar; pencerelerin tehdit puanı aynı kalır. Her pencerenin bütçesi 0., 4. ve 8. saniyelerde
+üç alt gruba bölünür. Nişancılar 3 sn içinde en fazla 2 farklı girişten gelir. Uyarı süresindeki doğuş da aktif sınıra
+sayılır; oyuncu uyarı sırasında girişe 9 m'den fazla yaklaşırsa doğuş başka girişe kayar. Yeni doğuşlar 5:00'te durur.
+
+**İlk bot ölçümü (2026-10-24, 🧪 tahmini veri):** yerinde durup ±12° ıskalayan, 0,35 sn tepki süreli, kaçınmayan bir
+bot; her ölümde tam canla dirilip 2 sn dokunulmazlık ve 6 m şok dalgası alıyor, sözleşme etkileri yok. Ölümler:
+1:07, 1:21, 1:43, 2:16, 2:38, 2:48, 3:14, 3:26, 3:39, 4:09, 4:22, 4:34 (12 ölüm). Okuma: ilk ölüm hedeften (0:50) geç,
+sonrakiler hedeften çok sık. Bot hareket etmediği ve kaçınmadığı için bu bir alt sınırdır; takvim insan oyun testiyle
+ayarlanacak.
 
 ## 11. Sonlar ve sonuç ekranı — ⬜
 
@@ -338,3 +349,4 @@ savaş içi fısıltı modülleri.
 - 2026-10-24 04:14 — Burak (Claude Code) — Faz 1 başlangıcı: yer tutucu blok arena (§9 yerleşimi) ve sabit pikselli izometrik kamera (§13) kuruldu.
 - 2026-10-24 04:30 — Burak (Claude Code) — Faz 2: hareket, nişan, kaçınma, tüfek, roket, pala ve vuruş hissi oynanır hâle geldi (§4, §5 🟡); pala beklemesi vuruş bitince başlar.
 - 2026-10-24 04:40 — Burak (Claude Code) — Faz 3 (Minimum): ölen hedeflerin küplere dağılması eklendi (§13).
+- 2026-10-24 04:58 — Burak (Claude Code) — Faz 4 (Minimum): Takipçi, Koşucu, Nişancı, dalga yöneticisi ve doğuş güvenliği eklendi; imp/iri yerine konan dağılım ve ilk bot ölçümü yazıldı (§6, §10).

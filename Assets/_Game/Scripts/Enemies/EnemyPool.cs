@@ -1,0 +1,104 @@
+using UnityEngine;
+
+namespace DanceWithTheDevil
+{
+    /// <summary>
+    /// Pool of one enemy prefab. Instances live under a scene-root container. <see cref="Get"/> spawns an instance at a
+    /// position; a dead enemy returns itself one frame after death (<see cref="Enemy.Despawn"/>).
+    /// </summary>
+    public sealed class EnemyPool : MonoBehaviour
+    {
+        [Tooltip("Enemy prefab (root has Enemy, Health, NavMeshAgent, a brain and colliders).")]
+        [SerializeField] private Enemy _prefab;
+        [Tooltip("Instances created up front on first use.")]
+        [SerializeField, Min(0)] private int _prewarm = 6;
+        [Tooltip("Maximum pooled (inactive) instances kept.")]
+        [SerializeField, Min(1)] private int _maxSize = 32;
+
+        private UnityEngine.Pool.ObjectPool<Enemy> _pool;
+        private Transform _container;
+
+        public Enemy Prefab => _prefab;
+        public int CountActive => _pool != null ? _pool.CountActive : 0;
+        public int CountInactive => _pool != null ? _pool.CountInactive : 0;
+
+        /// <summary>Set the prefab before first use (code-built setups). Ignored once the pool exists.</summary>
+        public void Configure(Enemy prefab, int prewarm = 0)
+        {
+            if (_pool != null) return;
+            _prefab = prefab;
+            _prewarm = Mathf.Max(0, prewarm);
+        }
+
+        /// <summary>Takes an instance and spawns it at <paramref name="position"/> facing <paramref name="rotation"/>.</summary>
+        public Enemy Get(Vector3 position, Quaternion rotation, Transform target)
+        {
+            EnsurePool();
+            if (_pool == null) return null;
+            Enemy enemy = _pool.Get();
+            enemy.Spawn(position, rotation, target);
+            return enemy;
+        }
+
+        public void Release(Enemy enemy)
+        {
+            if (enemy == null) return;
+            if (_pool == null)
+            {
+                Destroy(enemy.gameObject);
+                return;
+            }
+            _pool.Release(enemy);
+        }
+
+        private void OnDestroy()
+        {
+            if (_pool != null)
+            {
+                _pool.Clear();
+                _pool = null;
+            }
+            if (_container != null) Destroy(_container.gameObject); // also removes active instances
+        }
+
+        private void EnsurePool()
+        {
+            if (_pool != null) return;
+            if (_prefab == null)
+            {
+                Debug.LogError($"{nameof(EnemyPool)} '{name}': no prefab set.", this);
+                return;
+            }
+
+            _container = new GameObject(name + "_Enemies").transform;
+            _pool = new UnityEngine.Pool.ObjectPool<Enemy>(Create, OnGet, OnRelease, OnDestroyItem,
+                collectionCheck: false, defaultCapacity: Mathf.Max(1, _prewarm), maxSize: _maxSize);
+
+            if (_prewarm <= 0) return;
+            var warm = new Enemy[_prewarm];
+            for (int i = 0; i < warm.Length; i++) warm[i] = _pool.Get();
+            for (int i = 0; i < warm.Length; i++) _pool.Release(warm[i]);
+        }
+
+        private Enemy Create()
+        {
+            Enemy enemy = Instantiate(_prefab, _container);
+            enemy.name = _prefab.name;
+            enemy.gameObject.SetActive(false);
+            enemy.BindPool(this);
+            return enemy;
+        }
+
+        private static void OnGet(Enemy enemy)
+        {
+            // Activated by Enemy.Spawn so it is placed before its agent is enabled.
+        }
+
+        private static void OnRelease(Enemy enemy) => enemy.gameObject.SetActive(false);
+
+        private static void OnDestroyItem(Enemy enemy)
+        {
+            if (enemy != null) Destroy(enemy.gameObject);
+        }
+    }
+}

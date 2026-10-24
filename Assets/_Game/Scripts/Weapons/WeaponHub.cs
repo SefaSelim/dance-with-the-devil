@@ -37,7 +37,7 @@ namespace DanceWithTheDevil
 
         private void Update()
         {
-            if (_input == null || _player == null) return;
+            if (_input == null || _player == null || _player.Health.IsDead) return;
             if (_player.IsDodging) return;
 
             Vector3 aim = _player.AimDirection;

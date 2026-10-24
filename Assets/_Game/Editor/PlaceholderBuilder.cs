@@ -2,7 +2,9 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEditor.SceneManagement;
+using Unity.AI.Navigation;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
@@ -21,6 +23,9 @@ namespace DanceWithTheDevil.Editor
         private const string ArenaScenePath = "Assets/_Game/Scenes/Arena.unity";
         private const string DefnePrefabPath = PrefabsFolder + "/char_defne_placeholder.prefab";
         private const string ChaserPrefabPath = PrefabsFolder + "/char_chaser_placeholder.prefab";
+        private const string RunnerPrefabPath = PrefabsFolder + "/char_runner_placeholder.prefab";
+        private const string ShooterPrefabPath = PrefabsFolder + "/char_shooter_placeholder.prefab";
+        private const string NavMeshPath = "Assets/_Game/Scenes/Arena_NavMesh.asset";
         private const string SimpleLitShader = "Universal Render Pipeline/Simple Lit";
 
         private struct Part
@@ -59,6 +64,13 @@ namespace DanceWithTheDevil.Editor
             ("chaser_hips", "#7A1E2A", false),
             ("chaser_horns", "#F0D9A0", false),
             ("chaser_eyes", "#FFE14D", true),
+            ("runner_body", "#E0563A", false),
+            ("runner_dark", "#7A2A1E", false),
+            ("shooter_body", "#8E2A55", false),
+            ("shooter_dark", "#4A1830", false),
+            ("enemy_shot", "#FF7A1A", true),
+            ("enemy_tell", "#FF5A1F", true),
+            ("env_spawn_warning", "#FF4433", true),
             ("vfx_shot_player", "#5FFFF0", true),
             ("vfx_rocket", "#FFD08A", true),
             ("vfx_machete", "#F2F2F2", true),
@@ -101,6 +113,34 @@ namespace DanceWithTheDevil.Editor
             new Part("Horn_R", "chaser_horns", new Vector3(0.16f, 1.31f, 0.12f), new Vector3(0.08f, 0.22f, 0.08f)),
             new Part("Arm_L", "chaser_body", new Vector3(-0.45f, 0.62f, 0.06f), new Vector3(0.18f, 0.62f, 0.20f)),
             new Part("Arm_R", "chaser_body", new Vector3(0.45f, 0.62f, 0.06f), new Vector3(0.18f, 0.62f, 0.20f)),
+        };
+
+        // Runner: a lean, low Chaser variant in hotter red, legs apart for speed (GDD §6, ~1.1 m).
+        private static readonly Part[] RunnerParts =
+        {
+            new Part("Leg_L", "runner_dark", new Vector3(-0.14f, 0.18f, -0.04f), new Vector3(0.14f, 0.36f, 0.18f)),
+            new Part("Leg_R", "runner_dark", new Vector3(0.14f, 0.18f, 0.04f), new Vector3(0.14f, 0.36f, 0.18f)),
+            new Part("Body", "runner_body", new Vector3(0f, 0.56f, 0.04f), new Vector3(0.46f, 0.40f, 0.40f)),
+            new Part("Head", "runner_body", new Vector3(0f, 0.84f, 0.22f), new Vector3(0.32f, 0.26f, 0.32f)),
+            new Part("Eyes", "chaser_eyes", new Vector3(0f, 0.86f, 0.39f), new Vector3(0.24f, 0.05f, 0.04f)),
+            new Part("Horn_L", "chaser_horns", new Vector3(-0.12f, 1.03f, 0.16f), new Vector3(0.06f, 0.14f, 0.06f)),
+            new Part("Horn_R", "chaser_horns", new Vector3(0.12f, 1.03f, 0.16f), new Vector3(0.06f, 0.14f, 0.06f)),
+            new Part("Arm_L", "runner_body", new Vector3(-0.31f, 0.52f, 0.06f), new Vector3(0.12f, 0.40f, 0.14f)),
+            new Part("Arm_R", "runner_body", new Vector3(0.31f, 0.52f, 0.06f), new Vector3(0.12f, 0.40f, 0.14f)),
+        };
+
+        // Shooter: tall and upright, wine coloured, with a glowing orange "gun" arm (GDD §6, ~1.6 m).
+        private static readonly Part[] ShooterParts =
+        {
+            new Part("Legs", "shooter_dark", new Vector3(0f, 0.30f, 0f), new Vector3(0.44f, 0.60f, 0.28f)),
+            new Part("Body", "shooter_body", new Vector3(0f, 0.86f, 0f), new Vector3(0.56f, 0.52f, 0.36f)),
+            new Part("Head", "shooter_body", new Vector3(0f, 1.30f, 0.02f), new Vector3(0.36f, 0.34f, 0.34f)),
+            new Part("Eyes", "chaser_eyes", new Vector3(0f, 1.32f, 0.20f), new Vector3(0.26f, 0.06f, 0.04f)),
+            new Part("Horn_L", "chaser_horns", new Vector3(-0.13f, 1.56f, 0f), new Vector3(0.07f, 0.18f, 0.07f)),
+            new Part("Horn_R", "chaser_horns", new Vector3(0.13f, 1.56f, 0f), new Vector3(0.07f, 0.18f, 0.07f)),
+            new Part("Arm_L", "shooter_body", new Vector3(-0.36f, 0.84f, 0f), new Vector3(0.14f, 0.48f, 0.16f)),
+            new Part("Arm_R", "shooter_body", new Vector3(0.36f, 1.0f, 0.24f), new Vector3(0.14f, 0.16f, 0.50f)),
+            new Part("Gun", "enemy_shot", new Vector3(0.36f, 1.0f, 0.52f), new Vector3(0.10f, 0.10f, 0.08f)),
         };
 
         // Arena layout (level-designer plan, GDD §9): play area x -16..16, z -14..14, floor top at y = 0.
@@ -203,6 +243,11 @@ namespace DanceWithTheDevil.Editor
             EnsureFolder(PrefabsFolder);
             SaveCharacterPrefab("char_defne_placeholder", DefneParts, DefnePrefabPath);
             SaveCharacterPrefab("char_chaser_placeholder", ChaserParts, ChaserPrefabPath);
+            SaveCharacterPrefab("char_runner_placeholder", RunnerParts, RunnerPrefabPath);
+            SaveCharacterPrefab("char_shooter_placeholder", ShooterParts, ShooterPrefabPath);
+            SaveEnemyPrefab("enemy_chaser", ChaserParts, EnemyType.Chaser, 1.42f);
+            SaveEnemyPrefab("enemy_runner", RunnerParts, EnemyType.Runner, 1.1f);
+            SaveEnemyPrefab("enemy_shooter", ShooterParts, EnemyType.Shooter, 1.65f);
             AssetDatabase.SaveAssets();
         }
 
@@ -290,27 +335,8 @@ namespace DanceWithTheDevil.Editor
             player.transform.SetPositionAndRotation(Vector3.zero, Quaternion.Euler(0f, 180f, 0f));
             SetUpPlayer(player, rig);
 
-            // Test targets only (🧪): shot, rocketed and slashed in Phase 2 until real enemies spawn in Phase 4.
-            var chaserPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(ChaserPrefabPath);
-            var dummies = new GameObject("TrainingDummies");
-            Vector3[] dummyPositions = { new Vector3(3f, 0f, 5f), new Vector3(-4f, 0f, -4f), new Vector3(6f, 0f, 1f), new Vector3(4.5f, 0f, 5.5f) };
-            for (int i = 0; i < dummyPositions.Length; i++)
-            {
-                var dummy = (GameObject)PrefabUtility.InstantiatePrefab(chaserPrefab, scene);
-                dummy.name = $"Dummy_{i}";
-                dummy.transform.SetParent(dummies.transform, false);
-                dummy.transform.SetPositionAndRotation(dummyPositions[i], Quaternion.Euler(0f, 210f, 0f));
-                var box = dummy.AddComponent<BoxCollider>();
-                box.center = new Vector3(0f, 0.7f, 0f);
-                box.size = new Vector3(0.9f, 1.4f, 0.6f);
-                var health = dummy.AddComponent<Health>();
-                var hso = new SerializedObject(health);
-                hso.FindProperty("_maxHealth").floatValue = 30f;
-                hso.FindProperty("_invulnerabilityAfterHit").floatValue = 0f;
-                hso.ApplyModifiedPropertiesWithoutUndo();
-                dummy.AddComponent<TrainingDummy>();
-                dummy.AddComponent<ShatterOnDeath>();
-            }
+            BakeNavMesh(arena);
+            BuildWaves(player, spawns.transform, arena.transform);
 
             var feel = new GameObject("ImpactFeedback");
             var router = feel.AddComponent<PixelImpactFeedback>();
@@ -329,6 +355,134 @@ namespace DanceWithTheDevil.Editor
 
             AddArenaToBuildSettings();
             Debug.Log($"PlaceholderBuilder: arena scene saved to {ArenaScenePath}.");
+        }
+
+        // Enemy = art model + Enemy/Health/NavMeshAgent/ShatterOnDeath + a brain (GDD §6, minimum scope K-11).
+        private static void SaveEnemyPrefab(string name, Part[] parts, EnemyType type, float height)
+        {
+            var root = new GameObject(name);
+            var model = new GameObject("Model");
+            model.transform.SetParent(root.transform, false);
+            foreach (Part part in parts) CreateBlock(part, model.transform, keepCollider: false);
+
+            var capsule = root.AddComponent<CapsuleCollider>();
+            capsule.radius = 0.35f;
+            capsule.height = height;
+            capsule.center = new Vector3(0f, height * 0.5f, 0f);
+
+            var health = root.AddComponent<Health>();
+            var hso = new SerializedObject(health);
+            hso.FindProperty("_invulnerabilityAfterHit").floatValue = 0f;
+            hso.ApplyModifiedPropertiesWithoutUndo();
+
+            var agent = root.AddComponent<NavMeshAgent>();
+            agent.radius = 0.35f;
+            agent.height = height;
+            agent.baseOffset = 0f;
+
+            var enemy = root.AddComponent<Enemy>();
+            var eso = new SerializedObject(enemy);
+            eso.FindProperty("_type").enumValueIndex = (int)type;
+            eso.FindProperty("_model").objectReferenceValue = model.transform;
+            eso.ApplyModifiedPropertiesWithoutUndo();
+
+            var shatter = root.AddComponent<ShatterOnDeath>();
+            var sso = new SerializedObject(shatter);
+            sso.FindProperty("_model").objectReferenceValue = model.transform;
+            sso.ApplyModifiedPropertiesWithoutUndo();
+
+            Material tell = LoadMaterial("enemy_tell");
+            if (type == EnemyType.Shooter)
+            {
+                var brain = root.AddComponent<ShooterBrain>();
+                var bso = new SerializedObject(brain);
+                bso.FindProperty("_projectileMaterial").objectReferenceValue = LoadMaterial("enemy_shot");
+                bso.FindProperty("_aimLineMaterial").objectReferenceValue = tell;
+                bso.ApplyModifiedPropertiesWithoutUndo();
+            }
+            else
+            {
+                var brain = root.AddComponent<ChaserBrain>();
+                var bso = new SerializedObject(brain);
+                bso.FindProperty("_telegraphMaterial").objectReferenceValue = tell;
+                if (type == EnemyType.Runner)
+                {
+                    bso.FindProperty("_tellStyle").enumValueIndex = (int)ChaserBrain.TellStyle.CrouchAndLine;
+                    bso.FindProperty("_markerWidth").floatValue = 0.15f;
+                }
+                bso.ApplyModifiedPropertiesWithoutUndo();
+            }
+
+            PrefabUtility.SaveAsPrefabAsset(root, $"{PrefabsFolder}/{name}.prefab");
+            Object.DestroyImmediate(root);
+        }
+
+        private static void BakeNavMesh(GameObject arena)
+        {
+            var surface = arena.AddComponent<NavMeshSurface>();
+            surface.collectObjects = CollectObjects.Children;
+            surface.useGeometry = NavMeshCollectGeometry.PhysicsColliders;
+            surface.BuildNavMesh();
+            AssetDatabase.DeleteAsset(NavMeshPath);
+            AssetDatabase.CreateAsset(surface.navMeshData, NavMeshPath);
+        }
+
+        private static void BuildWaves(GameObject player, Transform spawns, Transform arena)
+        {
+            var enemies = new GameObject("Enemies");
+            EnemyPool MakePool(string name)
+            {
+                var go = new GameObject($"Pool_{name}");
+                go.transform.SetParent(enemies.transform, false);
+                var pool = go.AddComponent<EnemyPool>();
+                var pso = new SerializedObject(pool);
+                pso.FindProperty("_prefab").objectReferenceValue =
+                    AssetDatabase.LoadAssetAtPath<Enemy>($"{PrefabsFolder}/enemy_{name}.prefab");
+                pso.ApplyModifiedPropertiesWithoutUndo();
+                return pool;
+            }
+
+            EnemyPool chasers = MakePool("chaser");
+            EnemyPool runners = MakePool("runner");
+            EnemyPool shooters = MakePool("shooter");
+
+            // One glowing warning plate per entrance, same order as the spawn points (0.8 s warning).
+            var warnings = new GameObject[Entrances.Length];
+            var points = new Transform[Entrances.Length];
+            for (int i = 0; i < Entrances.Length; i++)
+            {
+                var (name, plate, plateSize, _) = Entrances[i];
+                points[i] = spawns.Find($"Spawn_{name}");
+                var warning = CreateBlock(new Part($"Warning_{name}", "env_spawn_warning",
+                    plate + Vector3.up * 0.03f, new Vector3(plateSize.x, 0.02f, plateSize.z)), arena, keepCollider: false);
+                warning.SetActive(false);
+                warnings[i] = warning;
+            }
+
+            var directorGo = new GameObject("WaveDirector");
+            var director = directorGo.AddComponent<WaveDirector>();
+            var dso = new SerializedObject(director);
+            dso.FindProperty("_player").objectReferenceValue = player.transform;
+            dso.FindProperty("_chaserPool").objectReferenceValue = chasers;
+            dso.FindProperty("_runnerPool").objectReferenceValue = runners;
+            dso.FindProperty("_shooterPool").objectReferenceValue = shooters;
+            SerializedProperty spawnArray = dso.FindProperty("_spawnPoints");
+            SerializedProperty warningArray = dso.FindProperty("_warnings");
+            spawnArray.arraySize = points.Length;
+            warningArray.arraySize = warnings.Length;
+            for (int i = 0; i < points.Length; i++)
+            {
+                spawnArray.GetArrayElementAtIndex(i).objectReferenceValue = points[i];
+                warningArray.GetArrayElementAtIndex(i).objectReferenceValue = warnings[i];
+            }
+            dso.ApplyModifiedPropertiesWithoutUndo();
+
+            // Test tool: Phase 4 exit-test bot, off by default (enable it for an automatic 5-minute run).
+            var bot = player.AddComponent<RunBot>();
+            var bso = new SerializedObject(bot);
+            bso.FindProperty("_director").objectReferenceValue = director;
+            bso.ApplyModifiedPropertiesWithoutUndo();
+            bot.enabled = false;
         }
 
         // Player components live on the scene instance so the character prefab stays art-only.
