@@ -134,6 +134,7 @@ namespace DanceWithTheDevil
             if (UiKit.AdvancePressed())
             {
                 _promptTime = 0f;
+                UiKit.NotifyClick();
                 AdvancePressed?.Invoke();
             }
         }

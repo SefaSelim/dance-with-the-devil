@@ -89,6 +89,11 @@ namespace DanceWithTheDevil
 
         public bool IsSwinging => Time.time < _swingEndTime;
         public bool IsReady => Time.time >= _readyTime;
+
+        /// <summary>Raised when a swing starts, hit or miss (audio; the wave has no sound of its own).</summary>
+        public static event System.Action<Machete> SwingStarted;
+        /// <summary>Raised once per swing whose blade damaged at least one target (audio).</summary>
+        public static event System.Action<Machete> SwingHit;
         public float Damage => _damage * _damageMultiplier;
         public float WaveDamage => _waveDamage * _damageMultiplier;
 
@@ -155,7 +160,9 @@ namespace DanceWithTheDevil
             _readyTime = _swingEndTime + _cooldown;
             _swingRotation = Quaternion.LookRotation(direction, Vector3.up);
 
-            ApplyHits(direction);
+            bool hit = ApplyHits(direction);
+            SwingStarted?.Invoke(this);
+            if (hit) SwingHit?.Invoke(this);
             if (_waveEnabled) StartWave(direction);
             UpdateVisual();
             return true;
@@ -292,8 +299,9 @@ namespace DanceWithTheDevil
             }
         }
 
-        private void ApplyHits(Vector3 direction)
+        private bool ApplyHits(Vector3 direction)
         {
+            bool any = false;
             Vector3 origin = transform.position + Vector3.up * _originHeight;
             float halfArc = _arcDegrees * 0.5f;
             GameObject source = _owner != null ? _owner.gameObject : gameObject;
@@ -323,6 +331,7 @@ namespace DanceWithTheDevil
 
                 _hitThisSwing.Add(target);
                 if (!target.TakeDamage(new DamageInfo(Damage, targetPoint, hitDirection, source, DamageKind.Melee))) continue;
+                any = true;
                 ImpactBus.Raise(new ImpactEvent
                 {
                     kind = ImpactKind.Melee,
@@ -336,6 +345,7 @@ namespace DanceWithTheDevil
                     instigatorIsLocalPlayer = isPlayer,
                 });
             }
+            return any;
         }
 
         /// <summary>True if a non-damageable collider (not the owner) lies between the origin and the target centre.</summary>

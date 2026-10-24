@@ -122,6 +122,8 @@ namespace DanceWithTheDevil
         public event Action<Enemy> EnemySpawned;
         /// <summary>Raised when a spawned enemy dies (any cause).</summary>
         public event Action<Enemy> EnemyKilled;
+        /// <summary>Raised when an entrance's spawn warning starts, with the entrance position (audio).</summary>
+        public event Action<Vector3> SpawnWarningStarted;
 
         /// <summary>Seconds of run clock since <see cref="Begin"/>.</summary>
         public float Elapsed => _elapsed;
@@ -391,6 +393,8 @@ namespace DanceWithTheDevil
             if (type == EnemyType.Shooter) _shooterUses.Add(new ShooterUse { Entrance = entrance, Time = _elapsed });
             _warningSpawns.Add(new WarningSpawn { Type = type, Entrance = entrance, SpawnTime = _elapsed + _warningTime });
             RefreshWarning(entrance);
+            Transform point = entrance >= 0 && entrance < _spawnPoints.Length ? _spawnPoints[entrance] : null;
+            SpawnWarningStarted?.Invoke(point != null ? point.position : transform.position);
             if (_warningTime <= 0f) FinishWarnings();
         }
 

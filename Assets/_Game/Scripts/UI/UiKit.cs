@@ -21,6 +21,11 @@ namespace DanceWithTheDevil
         /// <summary>Accessibility: multiplies every font size at build time (no settings menu yet).</summary>
         public static float TextScale = 1f;
 
+        /// <summary>Raised on every UI click/advance (audio "ui_click").</summary>
+        public static event System.Action Clicked;
+
+        public static void NotifyClick() => Clicked?.Invoke();
+
         // Palette (placeholder, GDD §13: dark cold base, cream edge, plum hair, petrol overalls, turquoise detail).
         public static readonly Color Ink = new Color(0.06f, 0.05f, 0.08f, 1f);
         public static readonly Color Panel = new Color(0.08f, 0.06f, 0.09f, 0.92f);
@@ -142,6 +147,7 @@ namespace DanceWithTheDevil
             colors.fadeDuration = 0.05f;
             button.colors = colors;
             button.targetGraphic = block;
+            button.onClick.AddListener(NotifyClick);
             var navigation = new Navigation { mode = Navigation.Mode.None };
             button.navigation = navigation;
             return button;

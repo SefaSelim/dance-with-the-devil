@@ -1,6 +1,6 @@
 # MAIN GDD — Dance with the Devil (Bir Şey Olmaz)
 
-**Son güncelleme: 2026-10-24 05:23 (UTC+3)**
+**Son güncelleme: 2026-10-24 05:40 (UTC+3)**
 
 > **Bu dosya projenin tek ve yaşayan Game Design Document'ıdır.** Sürüm numarası yoktur (GDD2, GDD3…
 > diye gitmez). Yeni bir mekanik eklendiğinde, var olan bir mekanik değiştiğinde ya da bir tasarım kararı
@@ -284,7 +284,12 @@ Kendin kaldın."
   ölüm olursa sonrakiler daha iri küplerle dağılır. Çevre kırılması ve delikler henüz yok (İsteğe bağlı katman).
 - **Karakterler:** parçalı voksel (baş, gövde, kollar, bacaklar), yordamsal animasyon (yürüme sallanması, nişan, geri tepme).
 - **Şeytan:** ekranın sağ kenarından, monitör çerçevesinin dışından eğilen 2B çizim; ekibin kendi çizimiyle değişecek.
-- **Ses:** kısa okunur SFX, karanlık tek müzik döngüsü; Sözleşme 2 bir müzik katmanını susturur.
+- **Ses:** 🟡 kısa okunur SFX, karanlık tek müzik döngüsü; Sözleşme 2 bir müzik katmanını susturur. Bütün sesler ve müzik
+  koddan üretilir (dış kaynak yok). Müzik Re minör, 90 BPM, 8 ölçülük (~21 sn) kesintisiz döngü; iki katman: taban (drone,
+  bas nabız, kalp atışı) ve melodi (müzik kutusu, yankı). Sözleşme 2: Defne'nin sesleri susar, melodi katmanı 1,5 sn'de
+  kısılır; oyun işaretleri (vuruş, uyarı, kaçınma hazır, kabul/ret) kalır (K-8). Ses tasarımında geçici seçimler: Koşucu
+  uyarısı Takipçi uyarısının tiz hâli; fırlatılan modül patlaması roket patlamasının tiz ve kısık hâli; kaçınma sesi oyun
+  sesi sayılır.
 - **Yer tutucular 🧪:** son modeller gelene kadar küplerden Defne (16 parça) ve Takipçi (8 parça) kullanılır. Yer tutucu
   renkler: koyu soğuk zemin ve duvarlar, krem sekme kenarı, erik rengi saç, petrol tulum, turkuaz detay, kırmızı Takipçi.
 
@@ -361,3 +366,4 @@ seçenek seçerse değiştirilir:
 - 2026-10-24 04:40 — Burak (Claude Code) — Faz 3 (Minimum): ölen hedeflerin küplere dağılması eklendi (§13).
 - 2026-10-24 04:58 — Burak (Claude Code) — Faz 4 (Minimum): Takipçi, Koşucu, Nişancı, dalga yöneticisi ve doğuş güvenliği eklendi; imp/iri yerine konan dağılım ve ilk bot ölçümü yazıldı (§6, §10).
 - 2026-10-24 05:23 — Burak (Claude Code) — Faz 5: Şeytan'ın ölüm sözleşmeleri, görünür bedeller, üç son, defter, HUD ve fısıltı modülleri oynanır hâle geldi (§3, §7, §8, §11, §12 🟡); açık sorularda geçici seçimler 🧪 listelendi (§15).
+- 2026-10-24 05:40 — Burak (Claude Code) — Faz 6: koddan üretilen sesler ve iki katmanlı müzik eklendi; Sözleşme 2 ses bedeli çalışıyor (§13).

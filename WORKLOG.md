@@ -107,3 +107,13 @@ Every change to this project goes here — from people and from AI tools. Git sh
 - Why: Phase 5 of the plan.
 - Status: committed locally, not pushed (Phase 5: Devil contracts, costs, endings, HUD and whisper modules)
 - Notes / risks: compiled clean; EditMode 5/5, PlayMode 16/16. Driven through MCP in play mode: YES at deaths 1–5 (max HP 100→100→80→80→60, desaturation, portrait gone, vignette, enemy speed ×1.15), forced deal 6 (input delay 0.25 s) and the always-YES ending with the ledger; restart + NO at death 1 ("Kaybettin ama kendin kaldın"); restart + YES, YES, NO at death 3 ("Eksildin ama ayaktasın", Rengi · Sesi). Known: the module offer banner shows faintly behind the Devil's line; first-minute hints (GDD §11) not done; the "PlayerLoop called recursively" warnings appeared only when MCP took a synchronous screenshot at play start. Text uses the built-in legacy font (no TMP resources imported).
+
+### 2026-10-24 — Burak (Claude Code) — branch claude/project-thread-yuc0gi
+- Changed: Phase 6 (audio), no downloaded assets.
+  - Spec by the sound-designer agent (29 events, D minor 90 BPM two-stem loop). Code by the gameplay-programmer agent: `Scripts/Audio/{SoundBank,GameAudio}.cs`, `Editor/AudioBaker.cs` (menu Dance/Audio/Bake All, synthesizes WAVs and the SoundBank), `Tests/PlayMode/AudioTests.cs` (2 tests). New events only (no behaviour change) in `PlayerController.cs` (DodgeStarted, DodgeReady), `Rifle.cs` (Fired), `RocketLauncher.cs` (Launched, Exploded), `Machete.cs` (SwingStarted, SwingHit; ApplyHits returns bool), `Projectile.cs` (Bounced), `ChaserBrain.cs` / `ShooterBrain.cs` (TellStarted, TellCancelled), `WaveDirector.cs` (SpawnWarningStarted), `DevilDirector.cs` (ContractChosen), `UiKit.cs` (Clicked, NotifyClick), `DevilScreen.cs` (click on advance).
+  - Baked assets: 31 WAVs in `Assets/_Game/Audio/Sfx/`, `music_base.wav` and `music_melody.wav` in `Assets/_Game/Audio/Music/`, `Assets/_Game/Audio/SoundBank.asset`.
+  - `PlaceholderBuilder.cs`: adds GameAudio. `Arena.unity` rebuilt: new GameAudio object (GameAudio: bank, player, waves, devil, camera rig). No AudioMixer: buses are AudioSource pools in GameAudio (a mixer asset cannot be created from script cleanly), Contract 2 mutes the Voice bus and fades the melody stem.
+  - New `CREDITS.md`. `MAIN_GDD.md` §13 Ses.
+- Why: Phase 6 of the plan.
+- Status: committed locally, not pushed (Phase 6: synthesized SFX, two-stem music and audio hooks)
+- Notes / risks: compiled clean, bake took 13.5 s, PlayMode 18/18 passed; in play mode both music stems play and the rifle triggers its sound. Nobody has listened to it yet: the team needs a listening pass (levels, fatigue of rifle_shot, music loop seam).

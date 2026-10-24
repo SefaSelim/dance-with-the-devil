@@ -113,6 +113,9 @@ namespace DanceWithTheDevil
         public bool IsActive => _active;
         /// <summary>True after the first wall bounce of this flight.</summary>
         public bool HasBounced => _bounced;
+
+        /// <summary>Raised on every wall bounce with the bounce point (Echo "çın" audio cue).</summary>
+        public static event System.Action<Vector3> Bounced;
         /// <summary>Distance travelled this flight (bounces keep counting toward the max range).</summary>
         public float Travelled => _travelled;
         public Vector3 Direction => _direction;
@@ -286,6 +289,7 @@ namespace DanceWithTheDevil
             transform.SetPositionAndRotation(centerAtHit + flatNormal * BounceSkin,
                 Quaternion.LookRotation(_direction, Vector3.up));
             if (_launch.HasBounceTint) SetTint(_launch.BounceTint);
+            Bounced?.Invoke(centerAtHit);
             return true;
         }
 

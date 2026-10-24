@@ -79,6 +79,11 @@ namespace DanceWithTheDevil
             _muzzle != null ? _muzzle.position : transform.position + Vector3.up * _fallbackMuzzleHeight;
         public bool IsBlocked => _owner != null && _owner.IsDodging;
 
+        /// <summary>Raised when a rocket is launched (audio).</summary>
+        public static event System.Action<RocketLauncher> Launched;
+        /// <summary>Raised after a rocket explosion with its point (audio).</summary>
+        public static event System.Action<Vector3> Exploded;
+
         /// <summary>Multiplies explosion damage (contracts). Min 0.</summary>
         public float DamageMultiplier
         {
@@ -170,6 +175,7 @@ namespace DanceWithTheDevil
                 OnDetonate = _onDetonate,
             });
 
+            Launched?.Invoke(this);
             ImpactBus.Raise(new ImpactEvent
             {
                 kind = ImpactKind.MuzzleFire,
@@ -229,6 +235,7 @@ namespace DanceWithTheDevil
                 instigator = source,
                 instigatorIsLocalPlayer = _owner != null,
             });
+            Exploded?.Invoke(point);
         }
     }
 }

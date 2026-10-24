@@ -97,6 +97,11 @@ namespace DanceWithTheDevil
         public Vector3 MoveDirection => _moveDirection;
 
         public bool IsDodging => _dodgeTimeRemaining > 0f;
+
+        /// <summary>Raised when a dodge starts (audio cue).</summary>
+        public event System.Action DodgeStarted;
+        /// <summary>Raised each time a dodge charge finishes refilling (K-8 "kaçınma hazır" cue).</summary>
+        public event System.Action DodgeReady;
         public int DodgeCharges => _dodgeChargesAvailable;
         public int MaxDodgeCharges => _dodgeCharges;
         /// <summary>0..1 progress of the charge currently refilling; 0 when all charges are full.</summary>
@@ -201,6 +206,7 @@ namespace DanceWithTheDevil
             _dodgeVelocity = direction * (_dodgeDistance / _dodgeDuration);
             _dodgeTimeRemaining = _dodgeDuration;
             if (_health != null) _health.SetInvulnerable(_dodgeDuration);
+            DodgeStarted?.Invoke();
             return true;
         }
 
@@ -282,6 +288,7 @@ namespace DanceWithTheDevil
             {
                 _dodgeRefillTimer -= cooldown;
                 _dodgeChargesAvailable++;
+                DodgeReady?.Invoke();
             }
             if (_dodgeChargesAvailable >= _dodgeCharges) _dodgeRefillTimer = 0f;
         }

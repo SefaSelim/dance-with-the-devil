@@ -83,6 +83,11 @@ namespace DanceWithTheDevil
         public bool IsTelling => _state == State.Tell;
         public bool IsLunging => _state == State.Lunge;
 
+        /// <summary>Raised when a tell starts (audio). Bool: Runner style (crouch and line).</summary>
+        public static event System.Action<Enemy, bool> TellStarted;
+        /// <summary>Raised when a tell ends without its lunge (death or reset).</summary>
+        public static event System.Action<Enemy> TellCancelled;
+
         private void Awake()
         {
             _enemy = GetComponent<Enemy>();
@@ -120,6 +125,7 @@ namespace DanceWithTheDevil
 
         private void OnDied(Enemy enemy)
         {
+            if (_state == State.Tell) TellCancelled?.Invoke(_enemy);
             ResetPose();
             _state = State.Idle;
         }
@@ -230,6 +236,7 @@ namespace DanceWithTheDevil
 
         private void Enter(State state)
         {
+            if (_state == State.Tell && state != State.Lunge) TellCancelled?.Invoke(_enemy);
             _state = state;
             _stateStart = Time.time;
             EnemyStats stats = _enemy.Stats;
@@ -250,6 +257,7 @@ namespace DanceWithTheDevil
                     if (agent.enabled) agent.updateRotation = false;
                     ShowMarker();
                     ApplyTellPose(0f);
+                    TellStarted?.Invoke(_enemy, _tellStyle == TellStyle.CrouchAndLine);
                     break;
 
                 case State.Lunge:

@@ -145,6 +145,9 @@ namespace DanceWithTheDevil
         /// <summary>True while dodging or swinging the machete.</summary>
         public bool IsBlocked => (_owner != null && _owner.IsDodging) || (_machete != null && _machete.IsSwinging);
 
+        /// <summary>Raised once per salvo (audio). Bool: Triple Shot salvo.</summary>
+        public static event System.Action<Rifle, bool> Fired;
+
         private void Awake()
         {
             if (_owner == null) _owner = GetComponentInParent<PlayerController>();
@@ -214,6 +217,7 @@ namespace DanceWithTheDevil
             // One push per salvo, never per bullet (GDD §7 Üçlü Atış).
             if (_recoilSpeed > 0f && _owner != null) _owner.AddExternalVelocity(-direction * _recoilSpeed);
 
+            Fired?.Invoke(this, _tripleShot);
             ImpactBus.Raise(new ImpactEvent
             {
                 kind = ImpactKind.MuzzleFire,

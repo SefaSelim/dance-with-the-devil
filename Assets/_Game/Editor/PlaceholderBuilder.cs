@@ -546,6 +546,19 @@ namespace DanceWithTheDevil.Editor
             dso.FindProperty("_endingScreen").objectReferenceValue = ending;
             dso.FindProperty("_hud").objectReferenceValue = hud;
             dso.ApplyModifiedPropertiesWithoutUndo();
+
+            // Phase 6: synthesized SFX and the two-stem music loop (run Dance/Audio/Bake All first).
+            var bank = AssetDatabase.LoadAssetAtPath<SoundBank>("Assets/_Game/Audio/SoundBank.asset");
+            if (bank == null) Debug.LogWarning("PlaceholderBuilder: SoundBank.asset missing; run Dance/Audio/Bake All.");
+            var audioGo = new GameObject("GameAudio");
+            var audio = audioGo.AddComponent<GameAudio>();
+            var aso = new SerializedObject(audio);
+            aso.FindProperty("_bank").objectReferenceValue = bank;
+            aso.FindProperty("_player").objectReferenceValue = player.GetComponent<PlayerController>();
+            aso.FindProperty("_waves").objectReferenceValue = waves;
+            aso.FindProperty("_devil").objectReferenceValue = devil;
+            aso.FindProperty("_cameraRig").objectReferenceValue = rig;
+            aso.ApplyModifiedPropertiesWithoutUndo();
         }
 
         // Player components live on the scene instance so the character prefab stays art-only.

@@ -84,6 +84,8 @@ namespace DanceWithTheDevil
         public DealDefinition CurrentDeal { get; private set; }
 
         public event Action<DevilState> StateChanged;
+        /// <summary>Raised when EVET (true) or HAYIR (false) is taken on a card with a choice (audio).</summary>
+        public event Action<bool> ContractChosen;
 
         private void Awake()
         {
@@ -142,13 +144,17 @@ namespace DanceWithTheDevil
         /// <summary>EVET on the card. Ignored unless the card offers a choice.</summary>
         public void ChooseYes()
         {
-            if (State == DevilState.Offer && _choice == 0) _choice = 1;
+            if (State != DevilState.Offer || _choice != 0) return;
+            _choice = 1;
+            ContractChosen?.Invoke(true);
         }
 
         /// <summary>HAYIR on the card. Ignored unless the card offers a choice.</summary>
         public void ChooseNo()
         {
-            if (State == DevilState.Offer && _choice == 0) _choice = -1;
+            if (State != DevilState.Offer || _choice != 0) return;
+            _choice = -1;
+            ContractChosen?.Invoke(false);
         }
 
         /// <summary>Skips the current wait (slide-in, a line, the forced card, the crumble).</summary>

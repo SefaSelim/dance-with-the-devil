@@ -87,6 +87,11 @@ namespace DanceWithTheDevil
         public bool IsTelling => _state == State.Tell;
         public bool IsLocked => _state == State.Tell && _locked;
 
+        /// <summary>Raised when the 0.8 s aim tell starts (audio).</summary>
+        public static event System.Action<Enemy> TellStarted;
+        /// <summary>Raised when a tell ends without its shot (death, lost line of sight); the tell sound stops.</summary>
+        public static event System.Action<Enemy> TellCancelled;
+
         private void Awake()
         {
             _enemy = GetComponent<Enemy>();
@@ -123,6 +128,7 @@ namespace DanceWithTheDevil
 
         private void OnDied(Enemy enemy)
         {
+            if (_state == State.Tell) TellCancelled?.Invoke(_enemy);
             HideLine();
             _state = State.Idle;
         }
@@ -273,6 +279,7 @@ namespace DanceWithTheDevil
 
         private void Enter(State state)
         {
+            if (_state == State.Tell && state != State.Recover) TellCancelled?.Invoke(_enemy);
             _state = state;
             _stateStart = Time.time;
             var agent = _enemy.Agent;
@@ -288,6 +295,7 @@ namespace DanceWithTheDevil
                 case State.Tell:
                     _enemy.StopMoving();
                     _locked = false;
+                    TellStarted?.Invoke(_enemy);
                     _aimDirection = transform.forward;
                     if (_aimLine != null)
                     {
