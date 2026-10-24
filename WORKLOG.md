@@ -128,3 +128,8 @@ Every change to this project goes here — from people and from AI tools. Git sh
 - Why: Phase 7 of the plan.
 - Status: committed locally, not pushed (Phase 7: tutorial hints, HUD fixes, QA checklist, Windows build)
 - Notes / risks: tests still green (EditMode 5/5, PlayMode 18/18 before this phase's UI-only changes). Not done: a frame-time measurement inside the build (Editor showed ~113 fps with 3000 cubes), the human playtest and listening pass in the checklist, balancing the death schedule, the 1 px outline and toon shader, .vox importer, imp and brute. Assets/Scenes/aaaa.unity (Burak's) is still untracked and untouched.
+
+### 2026-10-24 — Burak (Claude Code) — branch claude/project-thread-yuc0gi
+- Changed: settings Unity re-wrote while making the Windows build (no hand edits): `ProjectSettings/ProjectSettings.asset` › preloadedAssets ([] → InputSystem_Actions input settings); `ProjectSettings/GraphicsSettings.asset` › new default graphics-state-collection fields; `Assets/Settings/PC_RPAsset.asset` › shader prefiltering modes (additional light 4 → 0, additional light shadows 0 → 2) and new default fields; `Assets/Settings/UniversalRenderPipelineGlobalSettings.asset` and `DefaultVolumeProfile.asset` › new default fields.
+- Why: the build's shader-stripping/prefiltering pass and the Input System serialize these automatically.
+- Status: committed locally, not pushed (Unity settings re-serialized by the Windows build)
