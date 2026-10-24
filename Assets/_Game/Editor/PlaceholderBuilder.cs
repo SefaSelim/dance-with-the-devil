@@ -309,6 +309,7 @@ namespace DanceWithTheDevil.Editor
                 hso.FindProperty("_invulnerabilityAfterHit").floatValue = 0f;
                 hso.ApplyModifiedPropertiesWithoutUndo();
                 dummy.AddComponent<TrainingDummy>();
+                dummy.AddComponent<ShatterOnDeath>();
             }
 
             var feel = new GameObject("ImpactFeedback");

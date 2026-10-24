@@ -88,11 +88,30 @@ namespace DanceWithTheDevil
             LightIntensity = 8f, LightRange = 9f,
         };
 
+        [Header("Shatter (death bursts)")]
+        [Tooltip("Voxel edge length used to cut a dying model into cubes (metres).")]
+        [SerializeField, Min(0.02f)] private float _shatterCell = 0.12f;
+        [Tooltip("Most cubes one death may emit; larger models use coarser cubes.")]
+        [SerializeField, Min(8)] private int _maxCubesPerShatter = 400;
+        [Tooltip("Most cubes all shatters may emit in one frame; later kills that frame use coarser cubes.")]
+        [SerializeField, Min(8)] private int _maxCubesPerFrame = 1500;
+        [Tooltip("Shatter cube speed range (m/s).")]
+        [SerializeField] private Vector2 _shatterSpeed = new Vector2(2f, 6f);
+        [Tooltip("Shatter cube lifetime range (s): they bounce, settle, then shrink away.")]
+        [SerializeField] private Vector2 _shatterLifetime = new Vector2(1.2f, 2.4f);
+
         [Header("Limits")]
         [Tooltip("Hard cap on live cubes from this router.")]
-        [SerializeField, Min(16)] private int _maxCubes = 1500;
+        [SerializeField, Min(16)] private int _maxCubes = 8000;
+
+        /// <summary>The scene's feedback router (one per scene).</summary>
+        public static PixelImpactFeedback Instance { get; private set; }
+
+        private const int MinCubesPerShatter = 16;
 
         private ParticleSystem _cubes;
+        private int _shatterFrame = -1;
+        private int _shatterCubesThisFrame;
         private FlashShape[] _flashes;
         private int _nextFlash;
         private MaterialPropertyBlock _block;
@@ -101,12 +120,18 @@ namespace DanceWithTheDevil
 
         private void Awake()
         {
+            Instance = this;
             _block = new MaterialPropertyBlock();
             if (HitStop.Instance == null) gameObject.AddComponent<HitStop>();
             BuildCubeSystem();
             BuildFlashes(6);
             _smallLight = BuildLight("MuzzleLight");
             _bigLight = BuildLight("ExplosionLight");
+        }
+
+        private void OnDestroy()
+        {
+            if (Instance == this) Instance = null;
         }
 
         private void OnEnable() => ImpactBus.OnImpact += Handle;
@@ -168,6 +193,78 @@ namespace DanceWithTheDevil
                 emit.rotation3D = new Vector3(Random.Range(0f, 360f), Random.Range(0f, 360f), 0f);
                 _cubes.Emit(emit, 1);
             }
+        }
+
+        /// <summary>
+        /// Cuts each part (a unit cube scaled by its transform, as the placeholder models are built) into a grid of
+        /// cubes in the part's colour and throws them away from <paramref name="point"/>, biased along
+        /// <paramref name="direction"/>. Coarser cubes are used when a model or the frame would exceed its budget.
+        /// </summary>
+        public void Shatter(Transform[] parts, Color[] colors, Vector3 point, Vector3 direction, float force = 1f)
+        {
+            if (parts == null || parts.Length == 0) return;
+            if (_shatterFrame != Time.frameCount)
+            {
+                _shatterFrame = Time.frameCount;
+                _shatterCubesThisFrame = 0;
+            }
+
+            // Every death still bursts: once the frame budget is spent, later kills get a few coarse cubes.
+            int frameBudget = _maxCubesPerFrame - _shatterCubesThisFrame;
+            int budget = Mathf.Clamp(frameBudget, MinCubesPerShatter, _maxCubesPerShatter);
+
+            float volume = 0f;
+            for (int i = 0; i < parts.Length; i++)
+            {
+                Vector3 size = parts[i].lossyScale;
+                volume += Mathf.Abs(size.x * size.y * size.z);
+            }
+
+            // Grow the cell until the model fits the budget (LOD by cube size instead of dropping parts).
+            float cell = _shatterCell;
+            while (volume / (cell * cell * cell) > budget) cell *= 1.26f; // ×2 volume per step
+
+            Vector3 push = direction.sqrMagnitude > 0.0001f ? direction.normalized : Vector3.zero;
+            var emit = new ParticleSystem.EmitParams { applyShapeToPosition = false };
+            int emitted = 0;
+            for (int i = 0; i < parts.Length && emitted < budget; i++)
+            {
+                Transform part = parts[i];
+                Vector3 size = part.lossyScale;
+                int nx = Mathf.Max(1, Mathf.RoundToInt(Mathf.Abs(size.x) / cell));
+                int ny = Mathf.Max(1, Mathf.RoundToInt(Mathf.Abs(size.y) / cell));
+                int nz = Mathf.Max(1, Mathf.RoundToInt(Mathf.Abs(size.z) / cell));
+                Color color = i < colors.Length ? colors[i] : Color.white;
+
+                for (int x = 0; x < nx && emitted < budget; x++)
+                for (int y = 0; y < ny && emitted < budget; y++)
+                for (int z = 0; z < nz && emitted < budget; z++)
+                {
+                    var local = new Vector3((x + 0.5f) / nx - 0.5f, (y + 0.5f) / ny - 0.5f, (z + 0.5f) / nz - 0.5f);
+                    Vector3 pos = part.TransformPoint(local);
+                    Vector3 away = pos - point;
+                    away.y = Mathf.Abs(away.y) + 0.3f;
+                    Vector3 dir = (away.normalized + push * 0.8f + Random.insideUnitSphere * 0.5f).normalized;
+
+                    emit.position = pos;
+                    emit.velocity = dir * (Random.Range(_shatterSpeed.x, _shatterSpeed.y) * force);
+                    emit.startSize = cell * Random.Range(0.85f, 1f);
+                    emit.startLifetime = Random.Range(_shatterLifetime.x, _shatterLifetime.y);
+                    emit.startColor = color * Random.Range(0.85f, 1.05f);
+                    emit.rotation3D = new Vector3(0f, Random.Range(0f, 360f), 0f);
+                    _cubes.Emit(emit, 1);
+                    emitted++;
+                }
+            }
+
+            _shatterCubesThisFrame += emitted;
+        }
+
+        /// <summary>Base colour of a renderer's shared material (placeholder flat materials).</summary>
+        public static Color PartColor(Renderer renderer)
+        {
+            Material material = renderer != null ? renderer.sharedMaterial : null;
+            return material != null && material.HasProperty(BaseColorId) ? material.GetColor(BaseColorId) : Color.gray;
         }
 
         private void SpawnFlash(Vector3 position, float size, float grow, float fade, Color color)

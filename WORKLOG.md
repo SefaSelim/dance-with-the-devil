@@ -76,3 +76,13 @@ Every change to this project goes here — from people and from AI tools. Git sh
 - Why: Phase 2 of the plan.
 - Status: committed (Phase 2: player controller, rifle, rocket, machete and pixel game feel)
 - Notes / risks: verified through MCP: console clean, PlayMode tests 5/5 passed, scripted shots in play mode (rifle −10 on a dummy, rocket killed dummies in 2.5 m), ~137 fps in the editor. Keyboard/mouse play was not driven by a script; Burak should try WASD, mouse, left click, E, F and Space. Player death does nothing yet (Phase 5 Devil flow). Sound hookup skipped: there are no SFX assets yet (Phase 6).
+
+### 2026-10-24 — Burak (Claude Code) — branch claude/project-thread-yuc0gi
+- Changed: Phase 3, minimum scope (ParticleSystem fallback instead of the Burst + RenderMeshIndirect debris system, no wall carving).
+  - `Scripts/Feel/PixelImpactFeedback.cs`: `Instance`, `Shatter(parts, colors, point, direction, force)` cuts each cube part into a 0.12 m grid of coloured cubes (≤400 per death, ≤1500 per frame, then coarser cubes; at least 16 cubes per death), `PartColor`; cube cap 1500 → 8000.
+  - New `Scripts/Feel/ShatterOnDeath.cs`: on Health.Died, shatters the model's MeshRenderer parts; force by damage kind.
+  - `PlaceholderBuilder.cs`: dummies get ShatterOnDeath. `Arena.unity` rebuilt: TrainingDummies › Dummy_0…3 › + ShatterOnDeath. `mat_chaser_eyes_flat.mat`, `mat_vfx_machete_flat.mat` re-saved by Unity.
+  - `MAIN_GDD.md` §13 parçalanma status.
+- Why: Phase 3 of the plan at the approved minimum scope (K-11).
+- Status: committed (Phase 3: shatter dying targets into coloured cubes)
+- Notes / risks: MCP stress test in play mode: 100 dummies killed in one frame → 2988 cubes, the kill frame's work took 9.6 ms (incl. emitting), ~0 KB managed allocation measured, editor ~113 fps afterwards. Measured in the Editor, not a build.
