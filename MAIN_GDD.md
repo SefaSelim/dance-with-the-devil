@@ -1,6 +1,6 @@
 # MAIN GDD — Dance with the Devil (Bir Şey Olmaz)
 
-**Son güncelleme: 2026-10-24 12:45 (UTC+3)**
+**Son güncelleme: 2026-10-24 20:57 (UTC+3)**
 
 > **Bu dosya projenin tek ve yaşayan Game Design Document'ıdır.** Sürüm numarası yoktur (GDD2, GDD3…
 > diye gitmez). Yeni bir mekanik eklendiğinde, var olan bir mekanik değiştiğinde ya da bir tasarım kararı
@@ -124,7 +124,7 @@ roket ağır (büyük parlama, ışık, güçlü sarsıntı, 0,1 sn duraklama). 
 
 ## 6. Düşmanlar — 🟡 (Takipçi, Koşucu ve Nişancı oyunda; patlayan imp ve kalkanlı iri Minimum kapsam dışında)
 
-Canlar dalgalarla artmaz. Ön işaret süreleri hiçbir sözleşmeden etkilenmez (okunabilirlik). Görsel: voksel şeytanlar ve yaratıklar.
+Canlar dalgalarla artmaz. Ön işaret süreleri hiçbir sözleşmeden etkilenmez (okunabilirlik). Görsel hedef: iskelet ve mumya; kullanıcı onayıyla Takipçi ve Koşucu iskelet, Nişancı mumya seslerini kullanır. Mevcut yer tutucu modeller bu ses görevinde değiştirilmez.
 
 | Tür | Can | Hız | Davranış ve ön işaret | Hasar | Tehdit puanı |
 |---|---|---|---|---|---|
@@ -297,6 +297,8 @@ ret ya da sönmeyle biter); ilk kabulden sonra 6 sn "Q basılı + sağ tık: mod
 
 ## 13. Görsel ve ses yönü — 🟡 (takip kamerası, pikselli görüntü, dış çizgi, animasyon ve vuruş efektleri var; toon ışık yok)
 
+- **Ses hedefi ve uygulama — 🟡:** gizemli Antik Mısır atmosferi, iskelet/mumya düşmanları. İskelet ve mumyanın hareket, hasar, ölüm ve saldırı uyarıları ayrıdır. Hareket sesi yalnız yürürken mesafe aralıklarıyla, sınırlı eşzamanlılıkla çalar; ölümcül vuruş ayrıca hasar sesi üretmez. Roket, patlama, pala, duvar isabeti, kaçınma/hazır, doğuş uyarısı, Şeytan belirmesi ve Defne hasarı kullanıcı kayıtlarını kullanır. Defne sesi ikinci sözleşmede susar. Tüfeğin temel ses perdesi 0,95 çarpanlıdır; atış hızı değişmez.
+
 - **Görünüm:** Defne'yi takip eden ortografik izometrik kamera (35° eğim, 45° dönüş, metre başına ~20 piksel, K-14); karakterlerde 1 piksellik koyu dış çizgi; karakterler sahnenin en parlak ve en doygun şeyleri, zemin ve duvarlar koyu ve sakin; düşük çözünürlükte (640×360) çizilip nokta filtresiyle büyütülen, hafif
   pikselli voksel görünüm; düz gölgeli toon ışık; 1 px dış çizgi; kamera kayarken titreme olmaz.
 - **Parçalanma:** vurulan her şey, düşmanlar ve çevre, piksellerine (küplere) dağılır. Roket geniş, pala düzlemsel kesik,
@@ -305,8 +307,7 @@ ret ya da sönmeyle biter); ilk kabulden sonra 6 sn "Q basılı + sağ tık: mod
   ölüm olursa sonrakiler daha iri küplerle dağılır. Çevre kırılması ve delikler henüz yok (İsteğe bağlı katman).
 - **Karakterler:** 🟡 parçalı voksel (baş, gövde, kollar, bacaklar); yordamsal animasyon var: yürüme salınımı, eğilme, nişan pozu, geri tepme, vurulunca sarsılma. Defne'nin elinde küplerden bir tüfek var.
 - **Şeytan:** ekranın sağ kenarından, monitör çerçevesinin dışından eğilen 2B çizim; ekibin kendi çizimiyle değişecek.
-- **Ses:** 🟡 kısa okunur SFX, karanlık tek müzik döngüsü; Sözleşme 2 bir müzik katmanını susturur. Bütün sesler ve müzik
-  koddan üretilir (dış kaynak yok). Müzik Re minör, 90 BPM, 8 ölçülük (~21 sn) kesintisiz döngü; iki katman: taban (drone,
+- **Ses:** 🟡 kısa okunur SFX, karanlık tek müzik döngüsü; Sözleşme 2 bir müzik katmanını susturur. 17 efekt kullanıcının düzenlenmiş kayıtlarından, tüfek atışı morganpurkis kaydından gelir; kalan efektler ve müzik koddan üretilir. Müzik Re minör, 90 BPM, 8 ölçülük (~21 sn) kesintisiz döngü; iki katman: taban (drone,
   bas nabız, kalp atışı) ve melodi (müzik kutusu, yankı). Sözleşme 2: Defne'nin sesleri susar, melodi katmanı 1,5 sn'de
   kısılır; oyun işaretleri (vuruş, uyarı, kaçınma hazır, kabul/ret) kalır (K-8). Ses tasarımında geçici seçimler: Koşucu
   uyarısı Takipçi uyarısının tiz hâli; fırlatılan modül patlaması roket patlamasının tiz ve kısık hâli; kaçınma sesi oyun
@@ -395,3 +396,4 @@ seçenek seçerse değiştirilir:
 - 2026-10-24 05:56 — Burak (Claude Code) — Faz 7: ilk dakika ipuçları eklendi (§12); Sözleşme 1 satırı geçici 3,5 m yarıçapla uyumlu yazıldı (§8); Windows build alındı.
 - 2026-10-24 11:23 — Burak (Claude Code) — Oyun incelemesinden sonra Burak dört öneriyi onayladı: K-14 takip eden kamera, K-15 5:00 sonrası tırmanan dalgalar, K-16 bütün arenayı silen şok dalgası, K-17 3:00 sonrası artan düşman sayısı.
 - 2026-10-24 12:45 — Burak (Claude Code) — İnceleme sonrası düzeltmeler: takip kamerası (K-14), animasyon ve silah, nişan, vuruş efektleri, paketli dalgalar ve tırmanan zorluk (K-15, K-17), şok dalgası (K-16), kart ve HUD açıklığı, Esc menüsü (§4, §5, §6, §8, §9, §10, §11, §13).
+- 2026-10-24 20:57 — Duygu (Codex) — kullanıcı kayıtlarından 17 efekt, tüfek kaydı ve türe göre düşman sesleri main için entegre edildi (§6, §13).

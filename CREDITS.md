@@ -16,5 +16,7 @@ The Dance with the Devil team, Women Game Jam 2026.
 ## Art and audio
 
 - All current models are placeholder cube parts built by `Dance/Placeholders/Rebuild All` (no external assets).
-- All sound effects and the music loop are synthesized by `Dance/Audio/Bake All` (no external assets).
+- Rifle shot: "Simple Gunshot Reverb Test.wav" by morganpurkis, Freesound sound 399267 (https://freesound.org/s/399267/), CC0; used as rifle_shot.mp3.
+- Team-provided recordings: 17 edited effects in Assets/_Game/Audio/Recorded, supplied by the user.
+- Remaining effects and music are synthesized by Dance/Audio/Bake All. Recorded sounds are reapplied after baking; external rifle assignment is preserved.
 - The Devil image is a placeholder made of coloured blocks; the team's own drawing replaces it.

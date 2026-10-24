@@ -148,3 +148,10 @@ Every change to this project goes here — from people and from AI tools. Git sh
 - Why: the owner's verdict; audit findings F1–F40.
 - Status: committed locally, not pushed (Post-audit fixes: follow camera, animation, aim, feel, pacing, UI)
 - Notes / risks: PlayMode 18/18 passed after the lanes landed (before the last wave tuning). Not done (need Burak or later): pixel font (needs a CC0 download), monitor frame for the Devil, Shooter vs Defne hair both magenta, decor collision (A-12), grace period after revive (F19 rest), dodge-through-enemies (F23 rest). Final difficulty needs a human playtest.
+
+### 2026-10-24 — Duygu (Codex) — branch main
+- Changed: Assets/_Game/Audio/Recorded — 17 WAV/meta; rifle_shot.wav/meta yerine rifle_shot.mp3/meta; SoundBank 9 olay değişikliği ve 8 yeni tür olayı (toplam 37). GameAudio: türe göre hasar/ölüm/uyarı ve mesafe bazlı hareket, tüfek temel pitch 0,95. Enemy: DamageTaken ses bildirimi. AudioBaker ve yeni RecordedAudioInstaller: kayıt bağlantıları korunur. CREDITS ve MAIN_GDD güncellendi.
+- Why: Kullanıcının ses çalışmasını GitHub main dalına gönderme isteği.
+- Status: committed (Integrate recorded combat and enemy audio)
+- Verification: Yerel entegrasyonda 17 kayıt referansı, sıfır null klip; canlı iskelet/mumya hasar ve ölüm sesleri doğrulandı. İki AudioTests testi geçti. Birleşik character sürümünde toplam 23 testten 22 geçti; kalan hata namlu VFX konumuyla ilgiliydi. Main tabanına ses kodu ayrı taşınıp derleme ve referans kontrolleri yapıldı.
+- Notes / risks: Scene, Prefab, ProjectSettings, paket ayarları ve character dalının diğer commitleri bu ses commitine dahil değil. Synty paketleri dahil değil; orijinal çalışma klasörü ve stash yedekleri korunuyor.

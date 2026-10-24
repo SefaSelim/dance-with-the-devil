@@ -72,6 +72,8 @@ namespace DanceWithTheDevil
         public event Action<Enemy> Spawned;
         /// <summary>Raised once per life when health reaches 0.</summary>
         public event Action<Enemy> Died;
+        /// <summary>Applied damage for audio; lethal hits use the separate death cue.</summary>
+        public static event Action<Enemy, float> DamageTaken;
 
         public EnemyType Type => _type;
         public EnemyStats Stats => _stats;
@@ -267,6 +269,7 @@ namespace DanceWithTheDevil
 
         private void OnDamaged(DamageInfo info, float remaining)
         {
+            if (_alive) DamageTaken?.Invoke(this, remaining);
             if (!_alive || remaining <= 0f) return;
             if (_flashDuration > 0f)
             {
