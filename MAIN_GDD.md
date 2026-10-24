@@ -1,6 +1,6 @@
 # MAIN GDD — Dance with the Devil (Bir Şey Olmaz)
 
-**Son güncelleme: 2026-10-24 04:58 (UTC+3)**
+**Son güncelleme: 2026-10-24 05:23 (UTC+3)**
 
 > **Bu dosya projenin tek ve yaşayan Game Design Document'ıdır.** Sürüm numarası yoktur (GDD2, GDD3…
 > diye gitmez). Yeni bir mekanik eklendiğinde, var olan bir mekanik değiştiğinde ya da bir tasarım kararı
@@ -60,7 +60,7 @@ sade bot, küçük turkuaz detaylar.
 
 **Giriş metni (koşu başında, tek satır):** Defne bu gece de her şeye evet dedi. "Bir şey olmaz."
 
-## 3. Temel döngü (~5 dk) — ⬜
+## 3. Temel döngü (~5 dk) — 🟡 (ölüm → Şeytan → EVET/HAYIR döngüsü oynanıyor; takvim henüz dengelenmedi)
 
 **Saniyelik döngü (ilk GDD §4):** yer aç → nişan al ve ateş et → düşman ön işaretini oku → fısıltıyı değerlendir →
 kabul et / reddet / sök → yeni hareket alanına göre konumlan.
@@ -136,7 +136,7 @@ Canlar dalgalarla artmaz. Ön işaret süreleri hiçbir sözleşmeden etkilenmez
 **Doğuş güvenliği (ilk GDD §9):** dört kenardaki işaretli girişlerden; oyuncuya en az 9 m; 0,8 sn ön işaret; uygun giriş
 yoksa doğuş ertelenir. Nişancılar aynı anda her yönü kapatacak biçimde doğmaz.
 
-## 7. Fısıltı modülleri: kabul, ret, sökme — ⬜
+## 7. Fısıltı modülleri: kabul, ret, sökme — 🟡 (üç modül, temasla kabul, ret, Q ile sökme kodda; elle oyun testi bekliyor)
 
 Savaş sırasında Şeytan'ın "fısıltıları" yüzen modüller olarak gelir. Kurallar ilk GDD §6–7'deki gibidir. Bunlar
 **geri alınabilir** evetlerdir; ölüm sözleşmeleri (§8) **geri alınamaz**.
@@ -161,7 +161,7 @@ Savaş sırasında Şeytan'ın "fısıltıları" yüzen modüller olarak gelir. 
 Sökülünce etkiler tek noktadan kalkar (ilk GDD §6): Üçlü tekleşir ve geri tepme durur; Yoğunluk gövdeyi ve hasarı
 tabana döndürür; Yankı'nın havadaki mermileri oyuncuya zararsız olur. Ölümde takılı modüllerin ne olacağı ❓ A-11b.
 
-## 8. Şeytan'ın ölüm sözleşmeleri — ⬜
+## 8. Şeytan'ın ölüm sözleşmeleri — 🟡 (altı sözleşme, kart ve bütün görünür bedeller oynanıyor; A-4, A-9, A-10 için geçici seçimler var)
 
 **Eğri:** vaat küçülür, bedel büyür. Eğri sabittir, hikâye için yazılmıştır, rastgele değildir. Her bedel görünür ve
 mekaniktir. Ölümde zaman donar, ekran solar, Şeytan sağ kenardan eğilir ve sözleşme kartı açılır: EVET / HAYIR.
@@ -243,7 +243,7 @@ bot; her ölümde tam canla dirilip 2 sn dokunulmazlık ve 6 m şok dalgası al�
 sonrakiler hedeften çok sık. Bot hareket etmediği ve kaçınmadığı için bu bir alt sınırdır; takvim insan oyun testiyle
 ayarlanacak.
 
-## 11. Sonlar ve sonuç ekranı — ⬜
+## 11. Sonlar ve sonuç ekranı — 🟡 (üç son, defter ve küçük hayır sayısı oynanıyor; skorun yalnız düşman kalemi sayılıyor)
 
 | Durum | Metin |
 |---|---|
@@ -268,7 +268,7 @@ Kendin kaldın."
 
 **Skor (ilk GDD §10):** düşman +100, isabetli modül fırlatma +25, hızlı temizleme bonusu, hasardan kaçınma (❓ A-16).
 
-## 12. Arayüz ve öğretim — ⬜
+## 12. Arayüz ve öğretim — 🟡 (HUD, modül yuvaları, teklif satırı ve giriş metni var; ilk dakika ipuçları yok)
 
 İlk GDD §11 korunur: üstte can, süre ve skor; altta üç sabit modül yuvası ile ret/kaçınma hazır göstergeleri; teklif
 üzerinde tek satır avantaj, tek satır bedel. Ek olarak HUD'da Defne'nin küçük fotoğrafı (Sözleşme 3 bedeli) ve roket
@@ -326,6 +326,16 @@ savaş içi fısıltı modülleri.
 
 ### Açık sorular (❓ AÇIK — kullanıcı kararı bekler)
 
+Oyunun oynanabilmesi için bazılarında **geçici bir seçim 🧪** uygulandı. Bunlar karar değildir; kullanıcı başka bir
+seçenek seçerse değiştirilir:
+- **A-4 (6. ölüm):** kart seçimsiz çıkar ("Son anlaşma: neyin kaldıysa." / "Bu sefer sormuyorum."), Defne griye döner,
+  kontroller 0,25 sn gecikir, oyun sürer; bir sonraki ölümde hep-EVET sonu gelir.
+- **A-9 (roket ×2):** alan ×2 uygulandı (yarıçap 2,5 → 3,5 m); kart bu gerçek değeri yazar.
+- **A-10 (Sözleşme 4):** yazıldığı gibi +%10, üç silaha birden.
+- **A-11b (ölümde modüller):** takılı modüller dirilişte kalır.
+- **A-15 (R):** yalnız sonuç ekranında çalışır.
+- **A-16 (skor):** şimdilik yalnız düşman başına +100 sayılır; diğer kalemler 0.
+
 | # | Soru | Seçenekler |
 |---|---|---|
 | A-4 | 6. ölümde ne olur? | Seçimsiz, doğrudan son / gri ve gecikmeli kısa oynanış, sonraki ölümde son / kart çıkar ama HAYIR grileşmiş |
@@ -350,3 +360,4 @@ savaş içi fısıltı modülleri.
 - 2026-10-24 04:30 — Burak (Claude Code) — Faz 2: hareket, nişan, kaçınma, tüfek, roket, pala ve vuruş hissi oynanır hâle geldi (§4, §5 🟡); pala beklemesi vuruş bitince başlar.
 - 2026-10-24 04:40 — Burak (Claude Code) — Faz 3 (Minimum): ölen hedeflerin küplere dağılması eklendi (§13).
 - 2026-10-24 04:58 — Burak (Claude Code) — Faz 4 (Minimum): Takipçi, Koşucu, Nişancı, dalga yöneticisi ve doğuş güvenliği eklendi; imp/iri yerine konan dağılım ve ilk bot ölçümü yazıldı (§6, §10).
+- 2026-10-24 05:23 — Burak (Claude Code) — Faz 5: Şeytan'ın ölüm sözleşmeleri, görünür bedeller, üç son, defter, HUD ve fısıltı modülleri oynanır hâle geldi (§3, §7, §8, §11, §12 🟡); açık sorularda geçici seçimler 🧪 listelendi (§15).

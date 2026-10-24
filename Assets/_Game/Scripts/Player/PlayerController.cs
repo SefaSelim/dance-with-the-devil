@@ -8,6 +8,10 @@ namespace DanceWithTheDevil
     /// horizontal plane at muzzle height; the body turns (yaw only) instantly toward the aim point.
     /// Dodge: fixed distance over a fixed time, invulnerable for its duration, charges refill one at a time.
     /// Expects the root pivot at the feet (set the CharacterController center to about half its height).
+    /// External velocity (Triple Shot recoil, GDD §7): added on top of running, capped, decays, and the part blocked
+    /// by a wall is dropped so it never builds up against walls (the player slides along them instead).
+    /// Body radius scale (Density, GDD §7): the model widens and the CharacterController (= hurt capsule) radius grows
+    /// together; height, speed, dodge and camera stay unchanged.
     /// </summary>
     [RequireComponent(typeof(CharacterController), typeof(Health))]
     [DisallowMultipleComponent]
@@ -20,6 +24,8 @@ namespace DanceWithTheDevil
         [SerializeField] private PixelCameraRig _cameraRig;
         [Tooltip("Input reader. If empty, taken from this GameObject. Without it the player only moves through code.")]
         [SerializeField] private PlayerInputReader _input;
+        [Tooltip("Visual root scaled by the body radius scale (Density). If empty: child named \"Model\", else this transform.")]
+        [SerializeField] private Transform _model;
 
         [Header("Movement")]
         [Tooltip("Run speed in m/s (GDD §4: 6).")]
@@ -43,6 +49,12 @@ namespace DanceWithTheDevil
         [Tooltip("Maximum dodge charges.")]
         [SerializeField, Min(1)] private int _dodgeCharges = 1;
 
+        [Header("External velocity (Triple Shot recoil, GDD §7)")]
+        [Tooltip("Largest external speed added to movement, m/s (GDD §7: at most 2.5).")]
+        [SerializeField, Min(0f)] private float _maxExternalSpeed = 2.5f;
+        [Tooltip("External speed lost per second, m/s².")]
+        [SerializeField, Min(0f)] private float _externalDecay = 8f;
+
         private CharacterController _characterController;
         private Health _health;
 
@@ -58,6 +70,11 @@ namespace DanceWithTheDevil
 
         private float _moveSpeedMultiplier = 1f;
         private float _dodgeCooldownMultiplier = 1f;
+
+        private Vector3 _externalVelocity;
+        private float _bodyRadiusScale = 1f;
+        private float _baseControllerRadius;
+        private Vector3 _baseModelScale = Vector3.one;
 
         public CharacterController CharacterController => _characterController;
         public Health Health => _health;
@@ -102,11 +119,39 @@ namespace DanceWithTheDevil
 
         private float CurrentDodgeCooldown => _dodgeCooldown * _dodgeCooldownMultiplier;
 
+        /// <summary>Current external velocity (flat, m/s) added to running.</summary>
+        public Vector3 ExternalVelocity => _externalVelocity;
+        public float MaxExternalSpeed => _maxExternalSpeed;
+
+        /// <summary>The visual root that the body radius scale widens.</summary>
+        public Transform Model => _model;
+
+        /// <summary>
+        /// Body radius scale (Density ×1.5, GDD §7): widens the model (x/z) and multiplies the CharacterController
+        /// radius, which is also the hurt capsule. 1 = base. Min 0.1.
+        /// </summary>
+        public float BodyRadiusScale
+        {
+            get => _bodyRadiusScale;
+            set
+            {
+                _bodyRadiusScale = Mathf.Max(0.1f, value);
+                ApplyBodyScale();
+            }
+        }
+
         private void Awake()
         {
             _characterController = GetComponent<CharacterController>();
             _health = GetComponent<Health>();
             if (_input == null) _input = GetComponent<PlayerInputReader>();
+            if (_model == null)
+            {
+                Transform child = transform.Find("Model");
+                _model = child != null ? child : transform;
+            }
+            _baseControllerRadius = _characterController.radius;
+            _baseModelScale = _model.localScale;
 
             _dodgeChargesAvailable = _dodgeCharges;
             _aimDirection = Flatten(transform.forward, Vector3.forward);
@@ -119,6 +164,28 @@ namespace DanceWithTheDevil
             _dodgeCharges = Mathf.Max(1, count);
             _dodgeChargesAvailable = Mathf.Min(_dodgeChargesAvailable, _dodgeCharges);
             if (_dodgeChargesAvailable >= _dodgeCharges) _dodgeRefillTimer = 0f;
+        }
+
+        /// <summary>
+        /// Adds a flat push (m/s) to the external velocity, capped at <see cref="MaxExternalSpeed"/>. It decays over
+        /// time and is not applied during a dodge.
+        /// </summary>
+        public void AddExternalVelocity(Vector3 velocity)
+        {
+            velocity.y = 0f;
+            _externalVelocity = Vector3.ClampMagnitude(_externalVelocity + velocity, _maxExternalSpeed);
+        }
+
+        /// <summary>Stops any remaining external push (e.g. Triple Shot removed).</summary>
+        public void ClearExternalVelocity() => _externalVelocity = Vector3.zero;
+
+        private void ApplyBodyScale()
+        {
+            if (_characterController == null || _model == null) return;
+            float s = _bodyRadiusScale;
+            _model.localScale = new Vector3(_baseModelScale.x * s, _baseModelScale.y, _baseModelScale.z * s);
+            // A scaled root already scales the controller; only a separate model needs the radius change.
+            _characterController.radius = _model == transform ? _baseControllerRadius : _baseControllerRadius * s;
         }
 
         /// <summary>
@@ -160,7 +227,7 @@ namespace DanceWithTheDevil
             }
             else
             {
-                horizontal = _moveDirection * (_moveSpeed * _moveSpeedMultiplier);
+                horizontal = _moveDirection * (_moveSpeed * _moveSpeedMultiplier) + _externalVelocity;
             }
 
             if (_characterController.isGrounded && _verticalVelocity <= 0f)
@@ -170,7 +237,35 @@ namespace DanceWithTheDevil
 
             Vector3 velocity = horizontal;
             velocity.y = _verticalVelocity;
-            if (_characterController.enabled) _characterController.Move(velocity * dt);
+            Vector3 before = transform.position;
+            CollisionFlags flags = CollisionFlags.None;
+            if (_characterController.enabled) flags = _characterController.Move(velocity * dt);
+            TickExternalVelocity(dt, flags, transform.position - before);
+        }
+
+        /// <summary>
+        /// Drops the blocked part of the external push after a wall contact (keeps only what actually moved the
+        /// player, so it slides along the wall and never accumulates), then decays it linearly.
+        /// </summary>
+        private void TickExternalVelocity(float dt, CollisionFlags flags, Vector3 moved)
+        {
+            if (_externalVelocity == Vector3.zero || dt <= 0f) return;
+
+            if ((flags & CollisionFlags.Sides) != 0 && !IsDodging)
+            {
+                moved.y = 0f;
+                if (moved.sqrMagnitude < 1e-8f)
+                {
+                    _externalVelocity = Vector3.zero;
+                    return;
+                }
+                Vector3 movedDirection = moved.normalized;
+                float along = Vector3.Dot(_externalVelocity, movedDirection);
+                _externalVelocity = along > 0f ? movedDirection * along : Vector3.zero;
+            }
+
+            float speed = _externalVelocity.magnitude - _externalDecay * dt;
+            _externalVelocity = speed > 0f ? _externalVelocity.normalized * speed : Vector3.zero;
         }
 
         private void TickDodgeRefill(float dt)

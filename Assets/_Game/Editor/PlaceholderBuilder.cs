@@ -336,7 +336,8 @@ namespace DanceWithTheDevil.Editor
             SetUpPlayer(player, rig);
 
             BakeNavMesh(arena);
-            BuildWaves(player, spawns.transform, arena.transform);
+            WaveDirector waves = BuildWaves(player, spawns.transform, arena.transform);
+            BuildDevilAndUi(player, rig, waves);
 
             var feel = new GameObject("ImpactFeedback");
             var router = feel.AddComponent<PixelImpactFeedback>();
@@ -427,7 +428,7 @@ namespace DanceWithTheDevil.Editor
             AssetDatabase.CreateAsset(surface.navMeshData, NavMeshPath);
         }
 
-        private static void BuildWaves(GameObject player, Transform spawns, Transform arena)
+        private static WaveDirector BuildWaves(GameObject player, Transform spawns, Transform arena)
         {
             var enemies = new GameObject("Enemies");
             EnemyPool MakePool(string name)
@@ -483,6 +484,68 @@ namespace DanceWithTheDevil.Editor
             bso.FindProperty("_director").objectReferenceValue = director;
             bso.ApplyModifiedPropertiesWithoutUndo();
             bot.enabled = false;
+            return director;
+        }
+
+        // Phase 5: whisper modules, the Devil's death contracts, costs, endings and the HUD (GDD §7, §8, §11, §12).
+        private static void BuildDevilAndUi(GameObject player, PixelCameraRig rig, WaveDirector waves)
+        {
+            var modules = player.AddComponent<PlayerModules>();
+            var mso = new SerializedObject(modules);
+            mso.FindProperty("_moduleMaterial").objectReferenceValue = LoadMaterial("env_floor");
+            mso.ApplyModifiedPropertiesWithoutUndo();
+            player.AddComponent<ModuleThrower>();
+            var defne = player.AddComponent<DefneCostVisuals>();
+
+            var spawnerGo = new GameObject("ModuleSpawner");
+            var spawner = spawnerGo.AddComponent<ModuleSpawner>();
+            var spso = new SerializedObject(spawner);
+            spso.FindProperty("_modules").objectReferenceValue = modules;
+            spso.FindProperty("_cameraRig").objectReferenceValue = rig;
+            spso.ApplyModifiedPropertiesWithoutUndo();
+
+            var ui = new GameObject("UI");
+            var grade = ui.AddComponent<DisplayGrade>();
+            var gso = new SerializedObject(grade);
+            gso.FindProperty("_rig").objectReferenceValue = rig;
+            gso.FindProperty("_shader").objectReferenceValue =
+                AssetDatabase.LoadAssetAtPath<Shader>("Assets/_Game/Art/Shaders/UI_DisplayGrade.shader");
+            gso.ApplyModifiedPropertiesWithoutUndo();
+
+            var health = player.GetComponent<Health>();
+            var devilGo = new GameObject("DevilDirector");
+            var score = devilGo.AddComponent<ScoreKeeper>();
+            var scso = new SerializedObject(score);
+            scso.FindProperty("_waves").objectReferenceValue = waves;
+            scso.ApplyModifiedPropertiesWithoutUndo();
+
+            var hud = ui.AddComponent<GameHud>();
+            var hso = new SerializedObject(hud);
+            hso.FindProperty("_playerHealth").objectReferenceValue = health;
+            hso.FindProperty("_controller").objectReferenceValue = player.GetComponent<PlayerController>();
+            hso.FindProperty("_rocket").objectReferenceValue = player.GetComponent<RocketLauncher>();
+            hso.FindProperty("_input").objectReferenceValue = player.GetComponent<PlayerInputReader>();
+            hso.FindProperty("_modules").objectReferenceValue = modules;
+            hso.FindProperty("_waves").objectReferenceValue = waves;
+            hso.FindProperty("_score").objectReferenceValue = score;
+            hso.ApplyModifiedPropertiesWithoutUndo();
+
+            ui.AddComponent<IntroLine>();
+            var screen = ui.AddComponent<DevilScreen>();
+            var ending = ui.AddComponent<EndingScreen>();
+
+            var devil = devilGo.AddComponent<DevilDirector>();
+            var dso = new SerializedObject(devil);
+            dso.FindProperty("_playerHealth").objectReferenceValue = health;
+            dso.FindProperty("_modules").objectReferenceValue = modules;
+            dso.FindProperty("_defne").objectReferenceValue = defne;
+            dso.FindProperty("_waves").objectReferenceValue = waves;
+            dso.FindProperty("_score").objectReferenceValue = score;
+            dso.FindProperty("_grade").objectReferenceValue = grade;
+            dso.FindProperty("_screen").objectReferenceValue = screen;
+            dso.FindProperty("_endingScreen").objectReferenceValue = ending;
+            dso.FindProperty("_hud").objectReferenceValue = hud;
+            dso.ApplyModifiedPropertiesWithoutUndo();
         }
 
         // Player components live on the scene instance so the character prefab stays art-only.

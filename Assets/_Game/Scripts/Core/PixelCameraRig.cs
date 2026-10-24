@@ -71,6 +71,7 @@ namespace DanceWithTheDevil
         private GameObject _displayCanvasObject;
         private RawImage _rawImage;
         private RectTransform _rawImageRect;
+        private Material _displayMaterial;
 
         private Rect _displayRect;           // screen pixels covered by the visible window
         private Vector2 _remainderTexels;    // snapped-away remainder, |r| <= 0.5
@@ -86,6 +87,20 @@ namespace DanceWithTheDevil
         /// <summary>Screen-pixel rect where the visible low-res window is drawn.</summary>
         public Rect DisplayRect => _displayRect;
         public Quaternion ViewRotation => Quaternion.Euler(_pitch, _yaw, 0f);
+
+        /// <summary>
+        /// Material of the full-screen display RawImage (e.g. the saturation/vignette grade). Null = default UI
+        /// material. May be set before Awake; it is applied when the display is created.
+        /// </summary>
+        public Material DisplayMaterial
+        {
+            get => _displayMaterial;
+            set
+            {
+                _displayMaterial = value;
+                if (_rawImage != null) _rawImage.material = value;
+            }
+        }
 
         private int RtWidth => _width + 2 * Border;
         private int RtHeight => _height + 2 * Border;
@@ -244,6 +259,7 @@ namespace DanceWithTheDevil
             _rawImage.texture = _renderTexture;
             _rawImage.raycastTarget = false;
             _rawImage.color = Color.white;
+            _rawImage.material = _displayMaterial;
 
             _rawImageRect = _rawImage.rectTransform;
             _rawImageRect.anchorMin = Vector2.zero;   // bottom-left anchored: anchoredPosition == screen pixels
