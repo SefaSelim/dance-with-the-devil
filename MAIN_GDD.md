@@ -1,6 +1,6 @@
 # MAIN GDD — Dance with the Devil (Bir Şey Olmaz)
 
-**Son güncelleme: 2026-10-24 03:57 (UTC+3)**
+**Son güncelleme: 2026-10-24 03:59 (UTC+3)**
 
 > **Bu dosya projenin tek ve yaşayan Game Design Document'ıdır.** Sürüm numarası yoktur (GDD2, GDD3…
 > diye gitmez). Yeni bir mekanik eklendiğinde, var olan bir mekanik değiştiğinde ya da bir tasarım kararı
@@ -49,7 +49,7 @@ alınabilir ya da küçük modülleri kalıcı yapan öneriler reddedilir.
 
 **Temanın mekanik dersi:** "Küçük hayırları öğrendin, ama büyük evetleri hiç sorgulamadın."
 
-## 2. Hikâye çerçevesi — ⬜ (❓ A-1: çerçeve henüz öneri)
+## 2. Hikâye çerçevesi — ⬜ (karar K-1: Şeytan oyuncuya konuşur)
 
 Defne her gece her şeye evet diyor: bir iş daha, bir iyilik daha, bir mesaj daha. Kendine hep aynı şeyi söylüyor:
 "Bir şey olmaz." Arena onun yorgunluğunun içi; üstüne gelen yaratıklar, yıllardır biriktirdiği talepler. Her düştüğünde
@@ -75,9 +75,9 @@ kabul et / reddet / sök → yeni hareket alanına göre konumlan.
 6. **HAYIR:** koşu biter ve gerçek sona gider.
 
 **Ölüm takvimi (hedef, orta beceri):** ~0:50, 1:40, 2:30, 3:15, 4:00 → 5 sözleşme. **6. ölümde** Şeytan **yalnızca alır**
-("Son anlaşma: neyin kaldıysa"). Ölümleri zorluk getirir: düşman canları sabittir; sayı ve tür karışımı büyür.
+("Son anlaşma: neyin kaldıysa"). Ölümleri zorluk getirir: düşman canları sabittir; sayı ve tür karışımı büyür. **Ölüm garantidir; ilk GDD'deki "5. dakikada dalga temizlenince kazanılır" koşulu kalkar** (karar K-4). Zorluk adil ve okunur kalmalıdır.
 
-**Diriliş (başlangıç önerisi, ❓ A-17):** can yeni azami değere dolar; 2,0 sn dokunulmazlık; şok dalgası 6 m içindeki
+**Diriliş (karar K-12):** can yeni azami değere dolar; 2,0 sn dokunulmazlık; şok dalgası 6 m içindeki
 bütün düşmanları parçalar; dalga saati kaldığı yerden sürer. Sözleşme ekranı açıkken dalga saati de durur.
 
 ## 4. Kontroller — ⬜
@@ -103,14 +103,14 @@ hasar alınmaz, kabul halkası ilerlemez, ateş ve pala kesilir; ret/sökme gird
 ## 5. Silahlar — ⬜
 
 Fısıltı modülleri (§7) ilk GDD'deki temel lazerin yerini alan **tüfeği** etkiler; roket ve palayı etkilemez
-(başlangıç önerisi, ❓ A-11).
+(karar K-7).
 
 | Silah | Değerler | Kaynak |
 |---|---|---|
 | **Tüfek** | 10 hasar, saniyede 6 atış, sınırsız cephane; mermi 40 m/sn, menzil 25 m; delme yok | Hasar/hız ilk GDD; gerisi başlangıç önerisi |
 | **Roket** | 2 şarj, şarj başına 6,0 sn dolum; mermi 18 m/sn; ilk temasta ya da 20 m sonra patlar; 2,5 m yarıçapta düz 40 hasar ve ~2 m savurma; kalkanı yok sayar; oyuncuya hasar vermez; iç duvar ve dekorları kırar, dış sınırı kırmaz | Başlangıç önerisi (kalkan ve çevre kuralı birleşik tasarım) |
 | **Pala** | 35 hasar, önde 120° yay, 2 m; vuruş 0,2 sn (bu sürede tüfek susar), bekleme 0,5 sn; kalkanı yok sayar; vurduğu yüzeyde düzlemsel kesik açar | Başlangıç önerisi |
-| **Pala dalgası** (Sözleşme 2 ile açılır, bkz. §8) | Her pala vuruşu öne bir dalga da çıkarır: 20 hasar, delip geçer, 8 m / 2,5 m genişlik / 20 m/sn; kalkanlı irinin önünden geçemez | Başlangıç önerisi (❓ A-18) |
+| **Pala dalgası** (Sözleşme 2 ile açılır, bkz. §8) | Her pala vuruşu öne bir dalga da çıkarır: 20 hasar, delip geçer, 8 m / 2,5 m genişlik / 20 m/sn; kalkanlı irinin önünden geçemez | Başlangıç önerisi; kalkan kuralı karar K-13 |
 
 ## 6. Düşmanlar — ⬜
 
@@ -152,19 +152,22 @@ Savaş sırasında Şeytan'ın "fısıltıları" yüzen modüller olarak gelir. 
 | **Yoğunluk** | Hasar ×1,6 | Gövde ve isabet yarıçapı ×1,5; hız değişmez | Daha sert vur. Biraz büyürsün, kimse fark etmez. |
 
 Sökülünce etkiler tek noktadan kalkar (ilk GDD §6): Üçlü tekleşir ve geri tepme durur; Yoğunluk gövdeyi ve hasarı
-tabana döndürür; Yankı'nın havadaki mermileri oyuncuya zararsız olur. Ölümde takılı modüllerin ne olacağı ❓ A-11.
+tabana döndürür; Yankı'nın havadaki mermileri oyuncuya zararsız olur. Ölümde takılı modüllerin ne olacağı ❓ A-11b.
 
 ## 8. Şeytan'ın ölüm sözleşmeleri — ⬜
 
 **Eğri:** vaat küçülür, bedel büyür. Eğri sabittir, hikâye için yazılmıştır, rastgele değildir. Her bedel görünür ve
 mekaniktir. Ölümde zaman donar, ekran solar, Şeytan sağ kenardan eğilir ve sözleşme kartı açılır: EVET / HAYIR.
+Kartta bedelin hem şiirsel adı hem tam mekanik etkisi yazar (K-3). HAYIR her zaman görünür ve seçilebilir; ama
+Şeytan'ın sunumu EVET'i öne çıkarır (büyük, parlak EVET; küçük, sönük HAYIR; Şeytan HAYIR'ı küçümser) (K-2).
+Şeytan oyuncuya "sen" der, Defne'den hep "o" diye söz eder: "Sana X, ondan Y" (K-10).
 
 | # | Vaat (yükseltme) | Bedel: görünür | Bedel: mekanik | Şeytan'ın teklifi |
 |---|---|---|---|---|
 | 1 | Roket hasarı/yarıçapı ×2 (40 → 80, 2,5 → 5 m*, ❓ A-9), atış hızı +%40 (dolum 6,0 → 4,3 sn) | **Rengin:** dünya %30 solar, saçındaki renk çekilir | Yok | Sana iki kat roket, daha hızlı ateş. Ondan? Biraz renk. Fark etmez bile. |
-| 2 | Pala dalgası açılır; kaçınma şarjı 1 → 2 | **Sesin:** karakter sesleri ve bir müzik katmanı susar (❓ A-13); can çubuğu kısalır | Azami can 100 → 80 | Sana pala dalgası, bir kaçış hakkı daha. Ondan sesini alıyorum. Zaten susuyordu. |
+| 2 | Pala dalgası açılır; kaçınma şarjı 1 → 2 | **Sesin:** Defne'nin sesleri ve bir müzik katmanı susar; oyun işaretleri (hasar, kaçınma hazır, kabul) kalır (K-8); can çubuğu kısalır | Azami can 100 → 80 | Sana pala dalgası, bir kaçış hakkı daha. Ondan sesini alıyorum. Zaten susuyordu. |
 | 3 | Tüfek mermileri delip geçer (2 ek düşman*, kalkanı delmez*) | **Arkadaşların:** HUD'daki küçük fotoğraf kaybolur | Düşmanlar %15 hızlı | Mermilerin delip geçsin. Ondan arkadaşlarını alıyorum. Onlara zaten vakti yoktu. |
-| 4 | Tüm hasar +%10 (❓ A-10) | **Yüzün:** modelden vokseller kalıcı olarak düşer (isabet alanı küçülmez*) | Azami can 80 → 60 | Yüzde on hasar. Ondan yüzünü alıyorum. Aynaya bakmıyordu nasılsa. |
+| 4 | Tüm hasar +%10 (❓ A-10) | **Yüzün:** modelden vokseller kalıcı olarak düşer (isabet alanı küçülmez, K-13) | Azami can 80 → 60 | Yüzde on hasar. Ondan yüzünü alıyorum. Aynaya bakmıyordu nasılsa. |
 | 5 | +1 roket şarjı (2 → 3) | **Zamanın:** ekran kenarları kararır (doğuş işaretleri kararmanın üstünde çizilir*) | Dirilişte dokunulmazlık yok; kaçınma beklemesi ×2 (1,6 → 3,2 sn) | Bir roket daha. Ondan zamanını alıyorum. |
 | 6 | — | **Kendin:** karakter griye döner | Kontroller gecikir (0,25 sn*), kaçınılmaz sona gider (❓ A-4) | Son anlaşma: neyin kaldıysa. / Bu sefer sormuyorum. |
 
@@ -211,8 +214,8 @@ sınır doluysa doğuş bekler, geç kalanlar topluca boşaltılmaz. **Değişen
 - İlk GDD'nin 3 / 6 / 10… bütçesi 0:50'de ölüm üretmez; ilk iki pencere ~2,5–4 kat daha kalabalık olmalı.
 - Azami can düştüğü için gereken hasar hızı aşağı yukarı sabittir (1,3–2,2 can/sn). Sözleşme 4–5 bedelleri işi kendisi
   yapar; bütçe büyümeye devam ederse 5. ve 6. ölüm ~3:40 ve ~4:05'e kayar. Bu yüzden 3:30'dan sonra adet düşer, karışım
-  ağırlaşır (❓ A-7).
-- Takvim yalnızca orta beceri için tutar; usta oyuncu daha geç ölür (❓ A-8). Faz 4'teki "yerinde durup ateş eden bot"
+  ağırlaşır (karar K-5).
+- Takvim yalnızca orta beceri için tutar; usta oyuncu daha geç ölür; zorluk saate bağlı kalır (karar K-6). Faz 4'teki "yerinde durup ateş eden bot"
   insandan çok daha erken ölür; sonuçları alt sınır olarak okunur.
 - Sözleşme 2 (+1 kaçınma) ve 5 (bekleme ×2) sonrası sürekli kaçınma hızı tabanla aynıdır; yalnız arka arkaya 2 kaçınma kalır.
 
@@ -223,6 +226,8 @@ sınır doluysa doğuş bekler, geç kalanlar topluca boşaltılmaz. **Değişen
 | **1. ölümde HAYIR** | **Kaybettin ama kendin kaldın.** Defne yere oturdu, nefes nefese. Saçı hâlâ kıvırcık, hâlâ renkli. *Yarın bir şeye hayır diyecek.* (Tam renkli Defne.) |
 | **2–5. ölümde HAYIR** | **Eksildin ama ayaktasın.** {evet sayısı} kez evet dedin. Defne'den gidenler: (verilenler alt alta: Rengi · Sesi · Arkadaşları · Yüzü · Zamanı) *Hayır demek geç oldu. Ama oldu.* |
 | **Hep EVET (6. ölüm)** | Şeytan: **"Bir şey olmadı, değil mi?"** Gri kabuk dağılır. Son kartı: **Hayır demek de bir seçenekti.** Düğme: *Tekrar dene* (yeni koşu). |
+
+**Küçük hayırlar:** defterde puansız tek satır: "Küçük hayırların: N" (savaşta reddedilen ve sökülen modüller, karar K-9).
 
 **Sonuç ekranı:** skor yerine **"Aldıkların / Verdiklerin"** defteri gösterilir ("Verdiklerin" üstünde küçük not: *Defne'den*).
 İlk GDD §10 skoru en altta, küçük kalır. 1. ölümde hayır denirse defter: "Aldıkların: Hiçbir şey · Verdiklerin: Hiçbir şey.
@@ -272,29 +277,39 @@ görsel gösteriş, sonra içerik çeşitliliği gider. Sözleşme → bedel →
 **Hiç kesilmez:** ölüm → Şeytan → EVET/HAYIR zinciri, her evetin görünür bedeli, HAYIR ve hep-EVET sonları, defter,
 savaş içi fısıltı modülleri.
 
-## 15. Açık sorular (❓ AÇIK — kullanıcı kararı bekler)
+## 15. Kararlar ve açık sorular
 
-| # | Soru | Seçenekler (öneri) |
+### Kararlar (Burak, 2026-10-24: "önerilerini uygula")
+
+| # | Karar |
+|---|---|
+| K-1 | Hikâye çerçevesi önerildiği gibidir: Şeytan **oyuncuya** konuşur; evetleri oyuncu verir, bedelini Defne öder. |
+| K-2 | HAYIR her sözleşmede görünür ve seçilebilir; Şeytan'ın sunumu EVET'i öne çıkarır. |
+| K-3 | Sözleşme kartı bedelin şiirsel adını ve tam mekanik etkisini birlikte gösterir (gizli ceza yok). |
+| K-4 | Ölüm garantidir; ilk GDD'nin 5. dakika kazanma koşulu kalkar. |
+| K-5 | Sözleşme 4'ten sonra (3:30 penceresinden itibaren) dalga adedi düşer, tür karışımı ağırlaşır. |
+| K-6 | Dalga zorluğu saate bağlıdır (ilk GDD mantığı). |
+| K-7 | Fısıltı modülleri yalnız tüfeği etkiler. |
+| K-8 | Sözleşme 2'nin "ses" bedeli yalnız Defne'nin seslerini ve bir müzik katmanını susturur; oyun işaretleri kalır. |
+| K-9 | Küçük hayırlar defterde puansız tek satırla sayılır. |
+| K-10 | Şeytan hep "ondan" der ("Sana X, ondan Y"). |
+| K-11 | Kapsam hedefi §14'teki **Minimum** katmandır; İsteğe bağlı ekler Minimum oynanır olunca başlar. |
+| K-12 | Diriliş: can yeni azami değere dolar, 2,0 sn dokunulmazlık (Sözleşme 5'ten sonra 0), şok dalgası 6 m içindeki bütün düşmanları (iri dahil) parçalar. |
+| K-13 | Pala dalgası kalkanı yok saymaz; Defne'den düşen vokseller isabet alanını küçültmez. |
+
+### Açık sorular (❓ AÇIK — kullanıcı kararı bekler)
+
+| # | Soru | Seçenekler |
 |---|---|---|
-| A-1 | Hikâye çerçevesi (planda öneri): Şeytan oyuncuya mı, Defne'ye mi konuşur? | Oyuncuya **(öneri)** / Defne'ye / belirsiz |
-| A-2 | Sözleşme kartında HAYIR nasıl sunulur? | Eşit / görünür ama Şeytan EVET'i öne çıkarır **(öneri)** / ilk sözleşmede yok |
-| A-3 | Bedel kartta ne kadar açık yazılır? | Şiirsel ad + tam mekanik etki **(öneri, "bedeli önceden göster")** / yalnız şiirsel ad |
 | A-4 | 6. ölümde ne olur? | Seçimsiz, doğrudan son / gri ve gecikmeli kısa oynanış, sonraki ölümde son / kart çıkar ama HAYIR grileşmiş |
-| A-5 | Ölmeden 5:00'e ulaşılırsa ne olur? İlk GDD'nin kazanma koşulu kalıyor mu? | Ölüm garanti, kazanma koşulu kalkar **(öneri)** / ayrı hayatta kalma sonu / Şeytan 5:00'te yine gelir |
-| A-6 | Küçük hayırlar (ret/sökme) deftere yansır mı? | Yansımaz / puansız tek satır "Küçük hayırların: N" **(öneri)** |
-| A-7 | Sözleşme 4'ten sonra dalga bütçesi ne olur? | Adet düşer, karışım ağırlaşır **(öneri)** / artmaya devam eder / 5 sözleşmeye inilir |
-| A-8 | Zorluk saate mi, ölüm sayısına mı bağlı? | Saate **(öneri, basit)** / her dirilişte sonraki can profili |
 | A-9 | "Roket ×2" yarıçap ×2 mi (alan ×4), alan ×2 mi (yarıçap 3,5 m)? | Alan ×2 dengeli / yarıçap ×2 harfiyen |
 | A-10 | Sözleşme 4'ün +%10'u bilerek boş vaat mi? Hiçbir öldürme eşiğini değiştirmiyor. | Bilerek boş / eşiği aşan değer (≥ +%34) |
-| A-11 | Modüller hangi silahı etkiler, ölümde takılı modüllere ne olur? | Yalnız tüfek **(öneri)** / üç silah; ölümde kalır / düşer |
-| A-12 | İç L duvarlar kırılabilir mi? Yankı'nın sekme yüzeyleri ve geçit ölçüleri değişir. | Sağlam kalır / kısmen kırılır (Faz 4 testi) |
-| A-13 | Sözleşme 2 "ses" bedeli oyun işaretlerini (hasar, kaçınma hazır, kabul) de susturur mu? | Yalnız karakter sesi ve müzik katmanı **(öneri)** / hepsi |
-| A-14 | Şeytan "senden" mi, "ondan" mı alır? | Hep "ondan" **(öneri)** / 1–2'de "senden", 3'ten sonra "ondan" |
+| A-11b | Ölümde takılı fısıltı modüllerine ne olur? | Dirilişte kalır / düşer |
+| A-12 | İç L duvarlar kırılabilir mi? Yankı'nın sekme yüzeyleri ve geçit ölçüleri değişir. Minimum'da sağlamdır. | Sağlam kalır / kısmen kırılır (Faz 4 testi) |
 | A-15 | R oyun içinde de mi çalışır? | Yalnız sonuç ekranı (ilk GDD) / her an (plan tablosu) |
 | A-16 | "Hasardan kaçınma" skoru zorunlu ölümlerle her koşuda 0 olur. Kalsın mı? | Kalsın / değişsin / çıkarılsın |
-| A-17 | Diriliş değerleri (can dolar, 2 sn dokunulmazlık, 6 m şok dalgası iriyi de öldürür) onaylanıyor mu? | Onay / değişiklik |
-| A-18 | Küçük kurallar: imp patlaması diğer düşmanlara vurur mu? Pala dalgası kalkanı yok sayar mı (öneri: hayır)? Voksel kaybı isabet alanını küçültür mü (öneri: hayır)? | — |
-| A-19 | Kişi başı iş dağılımı nedir? (Teslim tarihi kararlaştı: 2026-10-26 15:00, bkz. §14.) | — |
+| A-18 | İmp patlaması diğer düşmanlara vurur mu? | Evet / hayır |
+| A-19 | Kişi başı iş dağılımı nedir? (Teslim: 2026-10-26 15:00, bkz. §14.) | — |
 
 ---
 
@@ -303,3 +318,4 @@ savaş içi fısıltı modülleri.
 - 2026-10-23 — SefaSelim (Claude Code) — boş GDD iskeleti oluşturuldu.
 - 2026-10-24 03:40 — Burak (Claude Code) — ilk GDD ile birleşik tasarım (Şeytan sözleşmeleri, üç silah, beş düşman, ölüm takvimi, sonlar, defter, hikâye, replikler, kapsam) yazıldı; 19 açık soru listelendi.
 - 2026-10-24 03:57 — Burak (Claude Code) — jam teslim tarihi kaydedildi (2026-10-26 15:00).
+- 2026-10-24 03:59 — Burak (Claude Code) — Burak "önerilerini uygula" dedi: 13 açık soru öneriler doğrultusunda karara bağlandı (K-1…K-13, ör. ölüm garanti, modüller yalnız tüfekte, Minimum kapsam); 9 soru açık kaldı.

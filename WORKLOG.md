@@ -46,3 +46,8 @@ Every change to this project goes here — from people and from AI tools. Git sh
 - Changed: `MAIN_GDD.md` (jam deadline 2026-10-26 15:00 in §14 and A-19, Son güncelleme, Değişiklik geçmişi).
 - Why: Burak gave the deliverable date.
 - Status: committed (GDD: record jam deadline)
+
+### 2026-10-24 — Burak (Claude Code) — branch claude/project-thread-yuc0gi
+- Changed: `MAIN_GDD.md` §2, §3, §5, §8, §10, §11, §15: 13 open questions closed as decisions K-1…K-13 after Burak said "önerilerini uygula" (apply your recommendations); 9 stay open.
+- Why: user design decision.
+- Status: committed (GDD: apply recommended decisions)
