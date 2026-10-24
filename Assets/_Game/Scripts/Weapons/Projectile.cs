@@ -90,6 +90,11 @@ namespace DanceWithTheDevil
         [SerializeField, Min(0f)] private float _stretchTime = 0.02f;
         [Tooltip("Visual thickness = hit diameter × this.")]
         [SerializeField, Min(0.01f)] private float _thicknessScale = 1f;
+        [Tooltip("Stretch the visual by speed and hit size (runtime cube projectiles). Off for modelled projectiles " +
+                 "(bullet, rocket), which keep their authored size; their trails are cleared on every launch.")]
+        [SerializeField] private bool _stretchVisual = true;
+
+        private TrailRenderer[] _trails;
 
         private readonly RaycastHit[] _hits = new RaycastHit[MaxHits];
         private readonly List<IDamageable> _alreadyHit = new List<IDamageable>(4);
@@ -150,6 +155,10 @@ namespace DanceWithTheDevil
 
             transform.SetPositionAndRotation(launch.Origin, Quaternion.LookRotation(_direction, Vector3.up));
             UpdateVisual();
+
+            // A pooled projectile keeps its old trail points; without a clear the trail streaks from where it died.
+            if (_trails == null) _trails = GetComponentsInChildren<TrailRenderer>(true);
+            for (int i = 0; i < _trails.Length; i++) _trails[i].Clear();
         }
 
         private void OnDisable()
@@ -389,7 +398,7 @@ namespace DanceWithTheDevil
 
         private void UpdateVisual()
         {
-            if (_visual == null) return;
+            if (_visual == null || !_stretchVisual) return;
             float thickness = Mathf.Max(0.02f, _launch.Radius * 2f * _thicknessScale);
             float length = Mathf.Max(thickness, _launch.Speed * _stretchTime);
             _visual.localRotation = Quaternion.identity;

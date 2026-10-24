@@ -15,6 +15,12 @@ The Dance with the Devil team, Women Game Jam 2026.
 
 ## Art and audio
 
-- All current models are placeholder cube parts built by `Dance/Placeholders/Rebuild All` (no external assets).
+- Defne's model: `Assets/Character/female+soldier+3d+model` (a Tripo AI model with a Mixamo rig), added by the team.
+  Licence/terms: to be confirmed by the team (Tripo export terms).
+- Defne's animations: `Assets/Character/Basic Shooter Pack` (Adobe Mixamo animation pack), added by the team. Mixamo
+  animations are free to use in games under Adobe's terms.
+- Weapons (AK74, RPG7 and its rocket): `Assets/Low Poly Weapons VOL.1`, added by the team. Source and licence: to be
+  confirmed by the team (looks like a free Unity Asset Store pack; the Asset Store EULA allows use in games).
+- Enemies and the arena are still placeholder cube parts built by `Dance/Placeholders/Rebuild All`.
 - All sound effects and the music loop are synthesized by `Dance/Audio/Bake All` (no external assets).
 - The Devil image is a placeholder made of coloured blocks; the team's own drawing replaces it.

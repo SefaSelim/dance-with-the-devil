@@ -1,6 +1,6 @@
 # MAIN GDD — Dance with the Devil (Bir Şey Olmaz)
 
-**Son güncelleme: 2026-10-24 12:45 (UTC+3)**
+**Son güncelleme: 2026-10-24 15:15 (UTC+3)**
 
 > **Bu dosya projenin tek ve yaşayan Game Design Document'ıdır.** Sürüm numarası yoktur (GDD2, GDD3…
 > diye gitmez). Yeni bir mekanik eklendiğinde, var olan bir mekanik değiştiğinde ya da bir tasarım kararı
@@ -56,7 +56,8 @@ Defne her gece her şeye evet diyor: bir iş daha, bir iyilik daha, bir mesaj da
 Şeytan monitörün kenarından eğilir ve Defne'ye değil, **oyuncuya** konuşur. Evetleri oyuncu verir; bedelini Defne öder.
 
 **Defne'nin görünüşü (ilk GDD §13):** büyük köşeli tutamlarla kıvırcık saç, yuvarlak gözlük, düz petrol rengi tulum,
-sade bot, küçük turkuaz detaylar.
+sade bot, küçük turkuaz detaylar. **Oyundaki model (2026-10-24, kullanıcının eklediği):** kıvırcık koyu saçlı, yuvarlak
+gözlüklü, haki/zeytin rengi asker kıyafetli kadın; botlar, kemerde kesecikler. Tulum ve turkuaz detay bu modelde yok.
 
 **Giriş metni (koşu başında, tek satır):** Defne bu gece de her şeye evet dedi. "Bir şey olmaz."
 
@@ -303,7 +304,13 @@ ret ya da sönmeyle biter); ilk kabulden sonra 6 sn "Q basılı + sağ tık: mod
   mermi küçük delik açar.
   Şu an 🟡: ölen hedef kendi parça renkleriyle küplere ayrılıp sıçrar, yere düşer ve küçülerek kaybolur; aynı karede çok
   ölüm olursa sonrakiler daha iri küplerle dağılır. Çevre kırılması ve delikler henüz yok (İsteğe bağlı katman).
-- **Karakterler:** 🟡 parçalı voksel (baş, gövde, kollar, bacaklar); yordamsal animasyon var: yürüme salınımı, eğilme, nişan pozu, geri tepme, vurulunca sarsılma. Defne'nin elinde küplerden bir tüfek var.
+- **Karakterler:** 🟡 Düşmanlar parçalı voksel (baş, gövde, kollar, bacaklar); yordamsal animasyon var: yürüme salınımı, eğilme, nişan pozu, geri tepme, vurulunca sarsılma.
+  **Defne** artık kullanıcının eklediği dokulu 3B model ve hazır animasyonlarla oynar (nişanlı bekleme, yürüme, koşu, geri
+  geri koşma, yana koşma; vurulunca üst gövde sarsılır). Hareket yönü nişana göre okunur: nişan alırken geri geri ya da
+  yana koşar. Elinde gerçek bir AK tüfek var; roket atınca bir an omzuna RPG alır (atılan roket namludan çıkar, tüp boş
+  görünür), sonra RPG sırtına döner. Koyu zeminde okunsun diye modelde sıcak bir kenar ışığı vardır.
+- **Mermiler:** tüfek mermisi pirinç renkli küçük bir mermi ve arkasında kısa sarı-turuncu iz (tracer); roket, RPG'nin kendi
+  savaş başlığı ve arkasında turuncudan griye dönen duman izi.
 - **Şeytan:** ekranın sağ kenarından, monitör çerçevesinin dışından eğilen 2B çizim; ekibin kendi çizimiyle değişecek.
 - **Ses:** 🟡 kısa okunur SFX, karanlık tek müzik döngüsü; Sözleşme 2 bir müzik katmanını susturur. Bütün sesler ve müzik
   koddan üretilir (dış kaynak yok). Müzik Re minör, 90 BPM, 8 ölçülük (~21 sn) kesintisiz döngü; iki katman: taban (drone,
@@ -311,8 +318,12 @@ ret ya da sönmeyle biter); ilk kabulden sonra 6 sn "Q basılı + sağ tık: mod
   kısılır; oyun işaretleri (vuruş, uyarı, kaçınma hazır, kabul/ret) kalır (K-8). Ses tasarımında geçici seçimler: Koşucu
   uyarısı Takipçi uyarısının tiz hâli; fırlatılan modül patlaması roket patlamasının tiz ve kısık hâli; kaçınma sesi oyun
   sesi sayılır.
-- **Yer tutucular 🧪:** son modeller gelene kadar küplerden Defne (16 parça) ve Takipçi (8 parça) kullanılır. Yer tutucu
-  renkler: koyu soğuk zemin ve duvarlar, krem sekme kenarı, erik rengi saç, petrol tulum, turkuaz detay, kırmızı Takipçi.
+- **Yer tutucular 🧪:** düşman modelleri gelene kadar küplerden Takipçi (8 parça), Koşucu ve Nişancı kullanılır; küp Defne
+  yalnızca yeni model kurulmamışsa yedek olarak kalır. Yer tutucu renkler: koyu soğuk zemin ve duvarlar, krem sekme kenarı,
+  kırmızı Takipçi.
+- **Yeni Defne modelinde bedeller (🟡):** Sözleşme 1'de saçla birlikte bütün modelin rengi yarı yarıya çekilir (dokulu modelde
+  saç ayrı parça değil); Sözleşme 6'da tamamen griye döner. Sözleşme 4'te yüzünden sırayla dört küp patlaması çıkar ama
+  yüz dokusu yerinde kalır (yüzden gerçek parça eksilmesi ⬜). Kaçınmadaki iz görüntüleri (afterimage) bu modelde yoktur.
 
 ## 14. Kapsam (jam teslimine kadar) — ⬜
 
@@ -395,3 +406,4 @@ seçenek seçerse değiştirilir:
 - 2026-10-24 05:56 — Burak (Claude Code) — Faz 7: ilk dakika ipuçları eklendi (§12); Sözleşme 1 satırı geçici 3,5 m yarıçapla uyumlu yazıldı (§8); Windows build alındı.
 - 2026-10-24 11:23 — Burak (Claude Code) — Oyun incelemesinden sonra Burak dört öneriyi onayladı: K-14 takip eden kamera, K-15 5:00 sonrası tırmanan dalgalar, K-16 bütün arenayı silen şok dalgası, K-17 3:00 sonrası artan düşman sayısı.
 - 2026-10-24 12:45 — Burak (Claude Code) — İnceleme sonrası düzeltmeler: takip kamerası (K-14), animasyon ve silah, nişan, vuruş efektleri, paketli dalgalar ve tırmanan zorluk (K-15, K-17), şok dalgası (K-16), kart ve HUD açıklığı, Esc menüsü (§4, §5, §6, §8, §9, §10, §11, §13).
+- 2026-10-24 15:15 — SefaSelim (Claude Code) — Defne, kullanıcının eklediği animasyonlu 3B modelle değişti; AK tüfek ve RPG elinde/sırtında; mermiler gerçekçi (pirinç mermi + iz, RPG roketi + duman); yeni modelde bedellerin görünüşü yazıldı (§2, §13).

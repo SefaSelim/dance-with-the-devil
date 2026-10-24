@@ -471,7 +471,9 @@ namespace DanceWithTheDevil.Editor
                 spawnGo.transform.position = spawn;
             }
 
-            var defnePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(DefnePrefabPath);
+            // The imported, animated Defne (Dance/Character/Build Defne) when it is built; else the cube placeholder.
+            var defnePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(CharacterBuilder.DefnePrefabPath);
+            if (defnePrefab == null) defnePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(DefnePrefabPath);
             var player = (GameObject)PrefabUtility.InstantiatePrefab(defnePrefab, scene);
             player.name = "Player";
             player.transform.SetPositionAndRotation(Vector3.zero, Quaternion.Euler(0f, 180f, 0f));
@@ -774,11 +776,29 @@ namespace DanceWithTheDevil.Editor
             var riso = new SerializedObject(rifle);
             SetObject(riso, "_muzzle", null);
             riso.FindProperty("_projectileMaterial").objectReferenceValue = LoadMaterial("vfx_shot_player");
+            SetObject(riso, "_pool", ModelledPool(player, CharacterBuilder.BulletPrefabPath, 32));
             riso.ApplyModifiedPropertiesWithoutUndo();
             var roso = new SerializedObject(rocket);
             SetObject(roso, "_muzzle", null);
             roso.FindProperty("_projectileMaterial").objectReferenceValue = LoadMaterial("vfx_rocket");
+            SetObject(roso, "_pool", ModelledPool(player, CharacterBuilder.RocketPrefabPath, 4));
             roso.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        /// <summary>
+        /// A ProjectilePool on the player using a modelled projectile prefab (brass bullet with tracer, RPG rocket with
+        /// smoke), or null when that prefab is not built yet (the weapon then makes its own runtime-cube pool).
+        /// </summary>
+        private static ProjectilePool ModelledPool(GameObject player, string prefabPath, int prewarm)
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<Projectile>(prefabPath);
+            if (prefab == null) return null;
+            var pool = player.AddComponent<ProjectilePool>();
+            var so = new SerializedObject(pool);
+            so.FindProperty("_prefab").objectReferenceValue = prefab;
+            so.FindProperty("_prewarm").intValue = prewarm;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            return pool;
         }
 
         private static PixelCameraRig BuildCameraRig(Transform target)

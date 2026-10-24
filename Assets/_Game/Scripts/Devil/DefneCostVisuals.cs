@@ -9,11 +9,15 @@ namespace DanceWithTheDevil
     /// always-yes ending. Colours are set through a MaterialPropertyBlock (_BaseColor), so shared materials are not
     /// touched. Runs on unscaled time so it also animates while time is frozen.
     /// Put it on the player root; the model is the child named "Model" unless assigned.
+    /// Imported skinned model (humanoid Defne): colour costs drive the material's _Saturation (contract 1 drains part
+    /// of the colour, contract 6 all of it), and the face loss and the crumble burst <see cref="ShatterProxy"/> boxes
+    /// parented to the bones, since a skinned mesh has no separate parts.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class DefneCostVisuals : MonoBehaviour
     {
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+        private static readonly int SaturationId = Shader.PropertyToID("_Saturation");
         private const string DefaultModelName = "Model";
 
         [Tooltip("Root of Defne's cube parts. Empty = the child named 'Model'.")]
@@ -34,6 +38,13 @@ namespace DanceWithTheDevil
         [SerializeField] private bool _burstFaceParts = true;
         [Tooltip("Cube speed multiplier of a face part's burst.")]
         [SerializeField, Min(0f)] private float _faceBurstForce = 0.5f;
+        [Tooltip("Skinned model: colour left after contract 1 (1 = full colour, 0 = grey).")]
+        [SerializeField, Range(0f, 1f)] private float _drainedSaturation = 0.45f;
+
+        private Renderer[] _saturationRenderers = System.Array.Empty<Renderer>();
+        private ShatterProxy[] _proxies = System.Array.Empty<ShatterProxy>();
+        private float _saturation = 1f;
+        private float _saturationTarget = 1f;
 
         private MeshRenderer[] _renderers = System.Array.Empty<MeshRenderer>();
         private Color[] _baseColors;
@@ -64,6 +75,7 @@ namespace DanceWithTheDevil
         {
             for (int i = 0; i < _renderers.Length; i++)
                 if (_isHair[i]) _greyTarget[i] = 1f;
+            _saturationTarget = Mathf.Min(_saturationTarget, _drainedSaturation);
             _fading = true;
         }
 
@@ -79,6 +91,7 @@ namespace DanceWithTheDevil
         public void TurnAllGrey()
         {
             for (int i = 0; i < _greyTarget.Length; i++) _greyTarget[i] = 1f;
+            _saturationTarget = 0f;
             _fading = true;
         }
 
@@ -90,6 +103,26 @@ namespace DanceWithTheDevil
         {
             if (IsCrumbled || _model == null) return;
             IsCrumbled = true;
+
+            if (_proxies.Length > 0)
+            {
+                int shown = 0;
+                for (int i = 0; i < _proxies.Length; i++)
+                    if (_proxies[i] != null && _proxies[i].gameObject.activeInHierarchy) shown++;
+                var proxyParts = new Transform[shown];
+                var proxyColors = new Color[shown];
+                for (int i = 0, j = 0; i < _proxies.Length; i++)
+                {
+                    if (_proxies[i] == null || !_proxies[i].gameObject.activeInHierarchy) continue;
+                    proxyParts[j] = _proxies[i].transform;
+                    proxyColors[j] = ProxyColor(_proxies[i]);
+                    j++;
+                }
+                if (PixelImpactFeedback.Instance != null)
+                    PixelImpactFeedback.Instance.Shatter(proxyParts, proxyColors, point, Vector3.up, _crumbleForce);
+                _model.gameObject.SetActive(false);
+                return;
+            }
 
             int visible = 0;
             for (int i = 0; i < _renderers.Length; i++)
@@ -129,10 +162,30 @@ namespace DanceWithTheDevil
             if (_model.GetComponentsInChildren<MeshRenderer>(true).Length != _renderers.Length) Cache();
         }
 
+        private Color ProxyColor(ShatterProxy proxy)
+        {
+            Color c = proxy.Color;
+            float lum = (0.299f * c.r + 0.587f * c.g + 0.114f * c.b) * _greyBrightness;
+            return Color.Lerp(new Color(lum, lum, lum, c.a), c, _saturation);
+        }
+
         private void TickGrey(float dt)
         {
             float step = _greyFadeDuration > 0f ? dt / _greyFadeDuration : 1f;
             bool any = false;
+            if (!Mathf.Approximately(_saturation, _saturationTarget))
+            {
+                _saturation = Mathf.MoveTowards(_saturation, _saturationTarget, step);
+                for (int i = 0; i < _saturationRenderers.Length; i++)
+                {
+                    Renderer r = _saturationRenderers[i];
+                    if (r == null) continue;
+                    r.GetPropertyBlock(_block);
+                    _block.SetFloat(SaturationId, _saturation);
+                    r.SetPropertyBlock(_block);
+                }
+                any = true;
+            }
             for (int i = 0; i < _renderers.Length; i++)
             {
                 if (Mathf.Approximately(_grey[i], _greyTarget[i])) continue;
@@ -165,7 +218,8 @@ namespace DanceWithTheDevil
         {
             if (PixelImpactFeedback.Instance == null || !part.gameObject.activeInHierarchy) return;
             Color color = Color.gray;
-            for (int i = 0; i < _renderers.Length; i++)
+            if (part.TryGetComponent(out ShatterProxy proxy)) color = ProxyColor(proxy);
+            else for (int i = 0; i < _renderers.Length; i++)
             {
                 if (_renderers[i] == null || _renderers[i].transform != part) continue;
                 color = CurrentColor(i);
@@ -199,6 +253,26 @@ namespace DanceWithTheDevil
             {
                 _baseColors[i] = PixelImpactFeedback.PartColor(_renderers[i]);
                 _isHair[i] = !string.IsNullOrEmpty(_hairPrefix) && _renderers[i].name.StartsWith(_hairPrefix);
+            }
+
+            _proxies = _model.GetComponentsInChildren<ShatterProxy>(true);
+            Renderer[] all = _model.GetComponentsInChildren<Renderer>(true);
+            int saturated = 0;
+            for (int i = 0; i < all.Length; i++)
+                if (all[i].sharedMaterial != null && all[i].sharedMaterial.HasProperty(SaturationId)) saturated++;
+            _saturationRenderers = new Renderer[saturated];
+            for (int i = 0, j = 0; i < all.Length; i++)
+                if (all[i].sharedMaterial != null && all[i].sharedMaterial.HasProperty(SaturationId)) _saturationRenderers[j++] = all[i];
+
+            if (_proxies.Length > 0)
+            {
+                // Skinned model: the face proxies go with contract 4, in their hierarchy order.
+                int faces = 0;
+                for (int i = 0; i < _proxies.Length; i++) if (_proxies[i].IsFace) faces++;
+                _faceTransforms = new Transform[faces];
+                for (int i = 0, j = 0; i < _proxies.Length; i++)
+                    if (_proxies[i].IsFace) _faceTransforms[j++] = _proxies[i].transform;
+                return;
             }
 
             _faceTransforms = new Transform[_faceParts != null ? _faceParts.Length : 0];

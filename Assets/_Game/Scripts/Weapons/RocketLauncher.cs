@@ -97,6 +97,9 @@ namespace DanceWithTheDevil
             {
                 if (_animator != null)
                 {
+                    // An imported humanoid holds a real launcher; cube characters fire from their rifle tip.
+                    Transform launcherMuzzle = _animator.LauncherMuzzle;
+                    if (launcherMuzzle != null) return launcherMuzzle;
                     Transform gunMuzzle = _animator.Muzzle;
                     if (gunMuzzle != null) return gunMuzzle;
                 }
@@ -201,6 +204,7 @@ namespace DanceWithTheDevil
         public bool TryFireAt(Vector3 aimPoint, Vector3 fallbackDirection)
         {
             if (!isActiveAndEnabled || IsBlocked || _charges <= 0) return false;
+            if (_animator != null) _animator.ShowLauncher(); // launcher into the hands before its muzzle is read
             Vector3 body = _owner != null ? _owner.transform.position : transform.position;
             WeaponAim.ResolveShot(body, MuzzlePosition, aimPoint, fallbackDirection, _minConvergeDistance,
                 _maxConvergeAngle, out Vector3 origin, out Vector3 direction);

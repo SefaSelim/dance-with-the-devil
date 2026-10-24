@@ -18,6 +18,12 @@ namespace DanceWithTheDevil
     /// layers its knock on top, it rotates only the pivots it created (the Chaser tell still rotates the arm cubes
     /// inside them), and it builds in Start, after every Awake has cached its parts. Runs on scaled time, so hitstop
     /// and pauses freeze the pose.
+    /// Humanoid mode: when the Model carries an <see cref="Animator"/> with a humanoid avatar (Defne's imported model),
+    /// no pivots or cube gun are built. The Animator plays the clips (locomotion blend tree on MoveX/MoveZ, a "Hit"
+    /// trigger) and this component feeds it the measured velocity in the body's frame, keeps the spring lean, pushes
+    /// the held weapon back on <see cref="Kick"/>, and swaps the rifle in the hand for the rocket launcher for a moment
+    /// after a launch (<see cref="ShowLauncher"/>). The weapons are children of a transform named "WeaponSocket"
+    /// under the right hand: "Rifle" and "Launcher" (each with a "Muzzle" child), plus an optional "LauncherBack".
     /// </summary>
     [DefaultExecutionOrder(800)] // LateUpdate before ModelPunch (900) and the camera (1000)
     [DisallowMultipleComponent]
@@ -97,6 +103,39 @@ namespace DanceWithTheDevil
         [Tooltip("Body tilt of a flinch, degrees.")]
         [SerializeField, Range(0f, 45f)] private float _flinchDegrees = 14f;
 
+        [Header("Humanoid model (imported, animated)")]
+        [Tooltip("Run speed in m/s that maps to a full locomotion clip (MoveX/MoveZ = ±1).")]
+        [SerializeField, Min(0.1f)] private float _animRunSpeed = 6f;
+        [Tooltip("Damping time of the locomotion parameters, seconds.")]
+        [SerializeField, Min(0f)] private float _animDamping = 0.08f;
+        [Tooltip("Held weapon pulled back along its barrel at Kick(1), metres.")]
+        [SerializeField, Min(0f)] private float _weaponKickDistance = 0.08f;
+        [Tooltip("Held weapon muzzle-up at Kick(1), degrees.")]
+        [SerializeField, Range(0f, 45f)] private float _weaponKickDegrees = 10f;
+        [Tooltip("Seconds the rocket launcher stays in the hands after a launch.")]
+        [SerializeField, Min(0f)] private float _launcherShowTime = 0.55f;
+        [Tooltip("Grip below the right hand bone (into the palm), metres.")]
+        [SerializeField, Min(0f)] private float _gripDrop = 0.03f;
+
+        private static readonly int MoveXId = Animator.StringToHash("MoveX");
+        private static readonly int MoveZId = Animator.StringToHash("MoveZ");
+        private static readonly int SpeedId = Animator.StringToHash("Speed");
+        private static readonly int HitId = Animator.StringToHash("Hit");
+
+        private Animator _body;
+        private bool _humanoid;
+        private Transform _rifle;
+        private Transform _launcher;
+        private Transform _launcherBack;
+        private Transform _launcherMuzzle;
+        private Transform _launcherWarhead;
+        private Transform _socket;
+        private bool _socketFitted;
+        private Transform _heldWeapon;
+        private Vector3 _heldBasePosition;
+        private Quaternion _heldBaseRotation = Quaternion.identity;
+        private float _launcherHideTime = float.NegativeInfinity;
+
         private PlayerController _player;
         private SecondOrderDynamics3 _lean;
         private bool _built;
@@ -132,11 +171,45 @@ namespace DanceWithTheDevil
             }
         }
 
-        /// <summary>Root of the animated cube parts.</summary>
+        /// <summary>The rocket launcher's tip in humanoid mode (rockets start here); null otherwise.</summary>
+        public Transform LauncherMuzzle
+        {
+            get
+            {
+                EnsureBuilt();
+                return _launcherMuzzle;
+            }
+        }
+
+        /// <summary>Root of the animated cube parts, or of the imported model in humanoid mode.</summary>
         public Transform Model => _model;
 
         /// <summary>True if this character builds and holds a gun.</summary>
         public bool HasGun => _hasGun;
+
+        /// <summary>True when the model is an imported humanoid driven by an Animator.</summary>
+        public bool IsHumanoid
+        {
+            get
+            {
+                EnsureBuilt();
+                return _humanoid;
+            }
+        }
+
+        /// <summary>
+        /// Humanoid mode: puts the rocket launcher in the hands (rifle hidden, back copy hidden) for a moment, so the
+        /// launch reads. Call before reading <see cref="LauncherMuzzle"/>. No effect on cube characters.
+        /// </summary>
+        public void ShowLauncher()
+        {
+            EnsureBuilt();
+            if (!_humanoid || _launcher == null) return;
+            _launcherHideTime = Time.time + _launcherShowTime;
+            SetHeld(_launcher);
+            // The fired rocket leaves the tube: the held launcher shows empty until it goes back.
+            if (_launcherWarhead != null) _launcherWarhead.gameObject.SetActive(false);
+        }
 
         private float Omega => 2f * Mathf.PI * _leanFrequency;
         private float CurrentKick => _kickStrength * _kickTime * _kickTime;
@@ -178,6 +251,25 @@ namespace DanceWithTheDevil
             if (_lean != null) _lean.AddVelocity(new Vector3(-strength * _kickBodyDegrees * Omega * ImpulseToPeak, 0f, 0f));
         }
 
+        private void SetHeld(Transform weapon)
+        {
+            if (_heldWeapon == weapon) return;
+            if (_heldWeapon != null)
+            {
+                _heldWeapon.localPosition = _heldBasePosition;
+                _heldWeapon.localRotation = _heldBaseRotation;
+            }
+            if (_rifle != null) _rifle.gameObject.SetActive(weapon == _rifle);
+            if (_launcher != null) _launcher.gameObject.SetActive(weapon == _launcher);
+            if (_launcherBack != null) _launcherBack.gameObject.SetActive(weapon != _launcher);
+            _heldWeapon = weapon;
+            if (weapon != null)
+            {
+                _heldBasePosition = weapon.localPosition;
+                _heldBaseRotation = weapon.localRotation;
+            }
+        }
+
         /// <summary>
         /// Hit reaction: the top of the body is pushed away from <paramref name="fromDirection"/>, the world direction
         /// the hit came from (toward the attacker, i.e. -DamageInfo.Direction), then springs back. Zero = rock straight
@@ -191,6 +283,7 @@ namespace DanceWithTheDevil
             push = push.sqrMagnitude > 1e-6f ? push.normalized : Vector3.back;
             // Pitch +x tilts the top toward local +z; roll -z tilts it toward local +x.
             _lean.AddVelocity(new Vector3(push.z, -push.x, 0f) * (_flinchDegrees * Omega * ImpulseToPeak));
+            if (_humanoid && _body != null && _body.isActiveAndEnabled) _body.SetTrigger(HitId);
         }
 
         private void LateUpdate()
@@ -199,6 +292,11 @@ namespace DanceWithTheDevil
             if (_model == null) return;
             float dt = Time.deltaTime;
             if (dt <= 0f) return; // hitstop or pause: hold the pose
+            if (_humanoid)
+            {
+                UpdateHumanoid(dt);
+                return;
+            }
 
             // Measured flat velocity, smoothed; a teleport (spawn) counts as standing still.
             Vector3 position = transform.position;
@@ -259,6 +357,105 @@ namespace DanceWithTheDevil
             _model.localPosition = _modelBasePosition + new Vector3(0f, bob, 0f);
         }
 
+        /// <summary>
+        /// Humanoid mode per frame: locomotion parameters in the body's frame (the root faces the aim, so walking
+        /// backwards while shooting plays the backward clip), the spring lean on the model, weapon recoil and the
+        /// launcher-back-to-rifle swap.
+        /// </summary>
+        private void UpdateHumanoid(float dt)
+        {
+            if (!_socketFitted) FitWeaponSocket();
+
+            Vector3 position = transform.position;
+            Vector3 delta = position - _lastPosition;
+            _lastPosition = position;
+            delta.y = 0f;
+            Vector3 raw = delta.sqrMagnitude > TeleportDistance * TeleportDistance ? Vector3.zero : delta / dt;
+            _velocity = Vector3.Lerp(_velocity, raw, 1f - Mathf.Exp(-_velocitySharpness * dt));
+
+            Vector3 local = transform.InverseTransformDirection(_velocity);
+            local.y = 0f;
+            if (_body != null && _body.isActiveAndEnabled && _body.runtimeAnimatorController != null)
+            {
+                Vector3 move = local / _animRunSpeed;
+                if (move.sqrMagnitude > 1f) move.Normalize();
+                _body.SetFloat(MoveXId, move.x, _animDamping, dt);
+                _body.SetFloat(MoveZId, move.z, _animDamping, dt);
+                _body.SetFloat(SpeedId, move.magnitude, _animDamping, dt);
+            }
+
+            float maxLean = _leanDegrees * MaxLeanFactor;
+            if (_player != null && _player.IsDodging) maxLean *= DodgeLeanBoost;
+            float leanPerSpeed = _leanDegrees / _fullLeanSpeed;
+            float leanForward = Mathf.Clamp(local.z * leanPerSpeed, -maxLean, maxLean);
+            float leanRight = Mathf.Clamp(local.x * leanPerSpeed, -maxLean, maxLean);
+            Vector3 lean = _lean.Update(dt, new Vector3(leanForward, -leanRight, 0f));
+            _model.localRotation = _modelBaseRotation * Quaternion.Euler(lean.x, 0f, lean.y);
+            _model.localPosition = _modelBasePosition;
+
+            if (_launcher != null && _heldWeapon == _launcher && Time.time >= _launcherHideTime)
+            {
+                SetHeld(_rifle);
+                if (_launcherWarhead != null) _launcherWarhead.gameObject.SetActive(true); // reloaded off-screen
+            }
+
+            if (_heldWeapon != null)
+            {
+                float kick = CurrentKick;
+                // The weapon roots are built with +Z along the barrel: back along -Z, muzzle up around -X.
+                _heldWeapon.localPosition = _heldBasePosition + _heldBaseRotation * Vector3.back * (kick * _weaponKickDistance);
+                _heldWeapon.localRotation = _heldBaseRotation * Quaternion.Euler(-kick * _weaponKickDegrees, 0f, 0f);
+            }
+            _kickTime = Mathf.MoveTowards(_kickTime, 0f, dt / _kickRecoverTime);
+        }
+
+        /// <summary>
+        /// Once, on the first animated frame (the aiming idle): turns the weapon socket so the barrel runs from the
+        /// right (grip) hand toward the left (support) hand, grip in the right palm. It stays fixed to the right hand
+        /// afterwards, so every clip carries the rifle along.
+        /// </summary>
+        private void FitWeaponSocket()
+        {
+            _socketFitted = true;
+            if (_socket == null || _body == null) return;
+            Transform right = _body.GetBoneTransform(HumanBodyBones.RightHand);
+            Transform left = _body.GetBoneTransform(HumanBodyBones.LeftHand);
+            if (right == null || left == null) return;
+            Vector3 barrel = left.position - right.position;
+            if (barrel.sqrMagnitude < 1e-4f) return;
+            _socket.SetPositionAndRotation(right.position + Vector3.down * _gripDrop,
+                Quaternion.LookRotation(barrel.normalized, Vector3.up));
+        }
+
+        /// <summary>Humanoid mode setup: finds the weapons under "WeaponSocket" and holds the rifle.</summary>
+        private void BuildHumanoid()
+        {
+            _humanoid = true;
+            Transform socket = FindDeep(_model, "WeaponSocket");
+            _socket = socket;
+            _rifle = FindDeep(socket, "Rifle");
+            _launcher = FindDeep(socket, "Launcher");
+            _launcherBack = FindDeep(_model, "LauncherBack");
+            _muzzle = FindDeep(_rifle, "Muzzle");
+            _launcherMuzzle = FindDeep(_launcher, "Muzzle");
+            _launcherWarhead = FindDeep(_launcher, "Rocket");
+            if (_rifle == null) Debug.LogWarning($"{nameof(CharacterAnimator)}: humanoid model has no WeaponSocket/Rifle.", this);
+            SetHeld(_rifle);
+        }
+
+        private static Transform FindDeep(Transform parent, string childName)
+        {
+            if (parent == null) return null;
+            for (int i = 0; i < parent.childCount; i++)
+            {
+                Transform child = parent.GetChild(i);
+                if (child.name == childName) return child;
+                Transform found = FindDeep(child, childName);
+                if (found != null) return found;
+            }
+            return null;
+        }
+
         /// <summary>Creates the pivots and the gun once (Start, or the first Muzzle request after it).</summary>
         private void EnsureBuilt()
         {
@@ -269,6 +466,13 @@ namespace DanceWithTheDevil
 
             _modelBasePosition = _model.localPosition;
             _modelBaseRotation = _model.localRotation;
+
+            _body = _model.GetComponentInChildren<Animator>(true);
+            if (_body != null && _body.avatar != null && _body.avatar.isHuman)
+            {
+                BuildHumanoid();
+                return;
+            }
 
             Transform legL = FindDirectChild(_model, "Leg_L");
             Transform legR = FindDirectChild(_model, "Leg_R");

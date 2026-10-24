@@ -19,6 +19,7 @@ namespace DanceWithTheDevil
     public sealed class HurtFeedback : MonoBehaviour
     {
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+        private static readonly int FlashAmountId = Shader.PropertyToID("_FlashAmount");
 
         /// <summary>
         /// Raised when damage lands on Defne, with a strength 0..1 (bigger hits pulse harder). The UI draws a short
@@ -75,7 +76,9 @@ namespace DanceWithTheDevil
         private CharacterAnimator _animator;
         private MaterialPropertyBlock _block;
         private MaterialPropertyBlock _ghostBlock;
-        private MeshRenderer[] _renderers = Array.Empty<MeshRenderer>();
+        private Renderer[] _renderers = Array.Empty<Renderer>();
+        private bool[] _usesFlashAmount = Array.Empty<bool>();
+        private bool _skinned;
         private Color[] _savedColors = Array.Empty<Color>();
         private Transform[] _sourceParts = Array.Empty<Transform>();
         private Ghost[] _ghosts = Array.Empty<Ghost>();
@@ -107,8 +110,14 @@ namespace DanceWithTheDevil
         private void Initialize()
         {
             Transform model = _player.Model != null ? _player.Model : transform;
-            _renderers = model.GetComponentsInChildren<MeshRenderer>(true);
+            _renderers = ModelRenderers(model, out _skinned);
             _savedColors = new Color[_renderers.Length];
+            _usesFlashAmount = new bool[_renderers.Length];
+            for (int i = 0; i < _renderers.Length; i++)
+            {
+                Material material = _renderers[i].sharedMaterial;
+                _usesFlashAmount[i] = material != null && material.HasProperty(FlashAmountId);
+            }
 
             if (model != transform) // never move the player root itself
             {
@@ -193,11 +202,13 @@ namespace DanceWithTheDevil
                 // Remember each part's colour as it is now (material colour or a contract grey), then go white.
                 for (int i = 0; i < _renderers.Length; i++)
                 {
-                    MeshRenderer r = _renderers[i];
+                    Renderer r = _renderers[i];
                     if (r == null) continue;
                     r.GetPropertyBlock(_block);
                     _savedColors[i] = _block.HasColor(BaseColorId) ? _block.GetColor(BaseColorId) : PixelImpactFeedback.PartColor(r);
                     _block.SetColor(BaseColorId, _flashWhite);
+                    // Textured skinned model: the colour replaces the texture only with _FlashAmount up.
+                    if (_usesFlashAmount[i]) _block.SetFloat(FlashAmountId, 1f);
                     r.SetPropertyBlock(_block);
                 }
             }
@@ -214,7 +225,7 @@ namespace DanceWithTheDevil
         {
             for (int i = 0; i < _renderers.Length; i++)
             {
-                MeshRenderer r = _renderers[i];
+                Renderer r = _renderers[i];
                 if (r == null) continue;
                 r.GetPropertyBlock(_block);
                 if (_block.GetColor(BaseColorId) != expected) continue;
@@ -227,11 +238,12 @@ namespace DanceWithTheDevil
         {
             for (int i = 0; i < _renderers.Length; i++)
             {
-                MeshRenderer r = _renderers[i];
+                Renderer r = _renderers[i];
                 if (r == null) continue;
                 r.GetPropertyBlock(_block);
                 if (_block.GetColor(BaseColorId) != expected) continue;
                 _block.SetColor(BaseColorId, _savedColors[i]);
+                if (_usesFlashAmount[i]) _block.SetFloat(FlashAmountId, 0f);
                 r.SetPropertyBlock(_block);
             }
         }
@@ -308,6 +320,9 @@ namespace DanceWithTheDevil
             PixelImpactFeedback feedback = PixelImpactFeedback.Instance;
             Material material = feedback != null ? feedback.FlashMaterial : null;
             if (material == null || _ghostCount <= 0) return;
+            // An imported skinned body would need BakeMesh per afterimage (a dense mesh: a frame spike on every
+            // dodge), and its held weapons alone would look like floating guns: no afterimages for it.
+            if (_skinned) return;
 
             int count = 0;
             for (int i = 0; i < _renderers.Length; i++)
@@ -350,6 +365,23 @@ namespace DanceWithTheDevil
                 }
                 _ghosts[g] = ghost;
             }
+        }
+
+        /// <summary>The model's mesh and skinned-mesh renderers (not trails or particles); reports a skinned body.</summary>
+        private static Renderer[] ModelRenderers(Transform model, out bool skinned)
+        {
+            Renderer[] all = model.GetComponentsInChildren<Renderer>(true);
+            int count = 0;
+            skinned = false;
+            for (int i = 0; i < all.Length; i++)
+            {
+                if (all[i] is SkinnedMeshRenderer) skinned = true;
+                if (all[i] is MeshRenderer || all[i] is SkinnedMeshRenderer) count++;
+            }
+            var result = new Renderer[count];
+            for (int i = 0, j = 0; i < all.Length; i++)
+                if (all[i] is MeshRenderer || all[i] is SkinnedMeshRenderer) result[j++] = all[i];
+            return result;
         }
 
         // ------------------------------------------------------------------ per frame
