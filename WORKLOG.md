@@ -117,3 +117,14 @@ Every change to this project goes here — from people and from AI tools. Git sh
 - Why: Phase 6 of the plan.
 - Status: committed locally, not pushed (Phase 6: synthesized SFX, two-stem music and audio hooks)
 - Notes / risks: compiled clean, bake took 13.5 s, PlayMode 18/18 passed; in play mode both music stems play and the rifle triggers its sound. Nobody has listened to it yet: the team needs a listening pass (levels, fatigue of rifle_shot, music loop seam).
+
+### 2026-10-24 — Burak (Claude Code) — branch claude/project-thread-yuc0gi
+- Changed: Phase 7 (polish, QA, Windows build).
+  - ui-programmer agent: new `Scripts/UI/TutorialHints.cs` (first-minute hints, canvas sort 15); `GameTexts.cs` (4 hint strings); `GameHud.cs` (offer banner hidden while the Devil screen is up, HUD hidden behind the ending screen, new `_devil`/`_ending` fields). Me: `GameHud.cs` HP numbers moved inside the bar (they overlapped the timer).
+  - qa-tester agent: new `Docs/QA_SMOKE_CHECKLIST.md` (Turkish manual smoke test for the team, 8 sections).
+  - `PlaceholderBuilder.cs`: wires TutorialHints and GameHud `_devil`. `Arena.unity` rebuilt: UI + TutorialHints (player health, DevilDirector), UI › GameHud › _devil.
+  - `MAIN_GDD.md` §12 hints, §8 contract 1 row matches the provisional 3.5 m radius.
+  - Windows build: `Builds/Windows/DanceWithTheDevil.exe` (StandaloneWindows64, Mono, Arena only; 0 errors, 510 warnings, 576 s, 79 MB on disk; `Builds/` is git-ignored). Ran it windowed 1280×720 for 25 s: started, no errors in the player log (only "post-processing shader stripped" warnings; post-processing is off in this game).
+- Why: Phase 7 of the plan.
+- Status: committed locally, not pushed (Phase 7: tutorial hints, HUD fixes, QA checklist, Windows build)
+- Notes / risks: tests still green (EditMode 5/5, PlayMode 18/18 before this phase's UI-only changes). Not done: a frame-time measurement inside the build (Editor showed ~113 fps with 3000 cubes), the human playtest and listening pass in the checklist, balancing the death schedule, the 1 px outline and toon shader, .vox importer, imp and brute. Assets/Scenes/aaaa.unity (Burak's) is still untracked and untouched.

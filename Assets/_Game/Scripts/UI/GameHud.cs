@@ -8,7 +8,8 @@ namespace DanceWithTheDevil
     /// In-run HUD (MAIN_GDD §12). Top: HP bar whose width scales with max HP (contract 2 "can çubuğu kısalır") with
     /// numbers, remaining run time (5:00 countdown from WaveDirector.Elapsed), score. Top-left: Defne's small framed
     /// portrait (hidden by contract 3). Bottom: three fixed module slots, rocket charges, dodge charges and the
-    /// reject-ready pip. While a whisper offer exists: its whisper line plus one-line advantage and cost.
+    /// reject-ready pip. While a whisper offer exists (and the Devil is not up): its whisper line plus one-line
+    /// advantage and cost. The whole HUD hides while the ending screen is visible.
     /// Display only; texts are rewritten only when their value changes (no per-frame allocations).
     /// Missing references are resolved from the player's GameObject; anything still missing is just not shown.
     /// </summary>
@@ -28,6 +29,10 @@ namespace DanceWithTheDevil
         [SerializeField] private PlayerModules _modules;
         [SerializeField] private WaveDirector _waves;
         [SerializeField] private ScoreKeeper _score;
+        [Tooltip("The offer banner hides while its State is not Playing. Empty = searched in parents; null = no check.")]
+        [SerializeField] private DevilDirector _devil;
+        [Tooltip("The whole HUD hides while it is visible. Empty = taken from this GameObject.")]
+        [SerializeField] private EndingScreen _ending;
 
         [Header("Look")]
         [Tooltip("Portrait art. Empty = placeholder face built from blocks.")]
@@ -65,6 +70,7 @@ namespace DanceWithTheDevil
         private int _shownHp = -1;
         private int _shownMaxHp = -1;
         private float _rejectReadyTime;
+        private bool _offerOpen;
         private bool _subscribed;
         private Action<ModuleType> _onOfferAppeared;
         private Action<ModuleType> _onOfferClosed;
@@ -114,6 +120,8 @@ namespace DanceWithTheDevil
 
         private void ResolveReferences()
         {
+            if (_devil == null) _devil = GetComponentInParent<DevilDirector>();
+            if (_ending == null) _ending = GetComponent<EndingScreen>();
             if (_playerHealth == null) return;
             GameObject p = _playerHealth.gameObject;
             if (_controller == null) _controller = p.GetComponent<PlayerController>();
@@ -147,18 +155,37 @@ namespace DanceWithTheDevil
             _offerWhisper.text = "<b>" + GameTexts.ModuleName(type) + "</b>  <i>" + GameTexts.ModuleWhisper(type) + "</i>";
             _offerPlus.text = "+ " + GameTexts.ModuleAdvantage(type);
             _offerMinus.text = "− " + GameTexts.ModuleCost(type);
-            _offer.SetActive(true);
+            _offerOpen = true;
+            UpdateVisibility();
         }
 
-        private void OnOfferClosed(ModuleType type) => _offer.SetActive(false);
+        private void OnOfferClosed(ModuleType type)
+        {
+            _offerOpen = false;
+            UpdateVisibility();
+        }
 
         private void Update()
         {
+            UpdateVisibility();
             UpdateHealth();
             UpdateTime();
             UpdateScore();
             UpdateSlots();
             UpdatePips();
+        }
+
+        /// <summary>
+        /// The whole HUD hides behind the ending screen (its small score sat on the module slots); the offer banner
+        /// hides while the Devil is up so it never shows behind his line.
+        /// </summary>
+        private void UpdateVisibility()
+        {
+            bool hudVisible = _ending == null || !_ending.IsVisible;
+            if (_root.gameObject.activeSelf != hudVisible) _root.gameObject.SetActive(hudVisible);
+            bool playing = _devil == null || _devil.State == DevilState.Playing;
+            bool offerVisible = _offerOpen && playing;
+            if (_offer.activeSelf != offerVisible) _offer.SetActive(offerVisible);
         }
 
         private void UpdateHealth()
@@ -273,8 +300,9 @@ namespace DanceWithTheDevil
             _hpBack = hpBack.rectTransform;
             _hpFill = UiKit.Box(_hpBack, "Fill", UiKit.HealthRed, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f),
                 new Vector2(2f, 0f), new Vector2(200f, 10f)).rectTransform;
-            _hpText = UiKit.Label(_hpBack, "Numbers", font, 11, Color.white, TextAnchor.MiddleLeft,
-                new Vector2(1f, 0.5f), new Vector2(0f, 0.5f), new Vector2(6f, 0f), new Vector2(70f, 14f), FontStyle.Bold);
+            // Numbers sit inside the bar's right end so they never reach the centred timer.
+            _hpText = UiKit.Label(_hpBack, "Numbers", font, 11, Color.white, TextAnchor.MiddleRight,
+                new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-4f, 0f), new Vector2(70f, 14f), FontStyle.Bold);
             UiKit.AddShadow(_hpText);
 
             // Time (top centre) and score (top right).

@@ -1,6 +1,6 @@
 # MAIN GDD — Dance with the Devil (Bir Şey Olmaz)
 
-**Son güncelleme: 2026-10-24 05:40 (UTC+3)**
+**Son güncelleme: 2026-10-24 05:56 (UTC+3)**
 
 > **Bu dosya projenin tek ve yaşayan Game Design Document'ıdır.** Sürüm numarası yoktur (GDD2, GDD3…
 > diye gitmez). Yeni bir mekanik eklendiğinde, var olan bir mekanik değiştiğinde ya da bir tasarım kararı
@@ -171,7 +171,7 @@ Kartta bedelin hem şiirsel adı hem tam mekanik etkisi yazar (K-3). HAYIR her z
 
 | # | Vaat (yükseltme) | Bedel: görünür | Bedel: mekanik | Şeytan'ın teklifi |
 |---|---|---|---|---|
-| 1 | Roket hasarı/yarıçapı ×2 (40 → 80, 2,5 → 5 m*, ❓ A-9), atış hızı +%40 (dolum 6,0 → 4,3 sn) | **Rengin:** dünya %30 solar, saçındaki renk çekilir | Yok | Sana iki kat roket, daha hızlı ateş. Ondan? Biraz renk. Fark etmez bile. |
+| 1 | Roket hasarı/yarıçapı ×2 (40 → 80; yarıçap ×2 ise 2,5 → 5 m, alan ×2 ise 2,5 → 3,5 m; şu an geçici olarak 3,5 m 🧪, ❓ A-9), atış hızı +%40 (dolum 6,0 → 4,3 sn) | **Rengin:** dünya %30 solar, saçındaki renk çekilir | Yok | Sana iki kat roket, daha hızlı ateş. Ondan? Biraz renk. Fark etmez bile. |
 | 2 | Pala dalgası açılır; kaçınma şarjı 1 → 2 | **Sesin:** Defne'nin sesleri ve bir müzik katmanı susar; oyun işaretleri (hasar, kaçınma hazır, kabul) kalır (K-8); can çubuğu kısalır | Azami can 100 → 80 | Sana pala dalgası, bir kaçış hakkı daha. Ondan sesini alıyorum. Zaten susuyordu. |
 | 3 | Tüfek mermileri delip geçer (2 ek düşman*, kalkanı delmez*) | **Arkadaşların:** HUD'daki küçük fotoğraf kaybolur | Düşmanlar %15 hızlı | Mermilerin delip geçsin. Ondan arkadaşlarını alıyorum. Onlara zaten vakti yoktu. |
 | 4 | Tüm hasar +%10 (❓ A-10) | **Yüzün:** modelden vokseller kalıcı olarak düşer (isabet alanı küçülmez, K-13) | Azami can 80 → 60 | Yüzde on hasar. Ondan yüzünü alıyorum. Aynaya bakmıyordu nasılsa. |
@@ -268,7 +268,13 @@ Kendin kaldın."
 
 **Skor (ilk GDD §10):** düşman +100, isabetli modül fırlatma +25, hızlı temizleme bonusu, hasardan kaçınma (❓ A-16).
 
-## 12. Arayüz ve öğretim — 🟡 (HUD, modül yuvaları, teklif satırı ve giriş metni var; ilk dakika ipuçları yok)
+## 12. Arayüz ve öğretim — 🟡 (HUD, modül yuvaları, teklif satırı, giriş metni ve ilk dakika ipuçları var; elle test bekliyor)
+
+**İlk dakika ipuçları (uygulanan):** ekranın altında aynı anda tek satır. Başta "WASD: yürü · Fare: nişan · Sol tık: ateş"
+(oyuncu hem yürüyüp hem ateş edince söner); ilk teklif gelince "Temasta kal: kabul · Sağ tık: reddet" (teklif kabul,
+ret ya da sönmeyle biter); ilk kabulden sonra 6 sn "Q basılı + sağ tık: modülü sök ve fırlat"; 20 sn roket kullanılmazsa
+5 sn "E: roket · F: pala · Space: kaçın". Öncelik: teklif > sökme > yürü/ateş > roket. İpuçları oyunu durdurmaz;
+Şeytan ekranı ve sonlarda gizlenir.
 
 İlk GDD §11 korunur: üstte can, süre ve skor; altta üç sabit modül yuvası ile ret/kaçınma hazır göstergeleri; teklif
 üzerinde tek satır avantaj, tek satır bedel. Ek olarak HUD'da Defne'nin küçük fotoğrafı (Sözleşme 3 bedeli) ve roket
@@ -367,3 +373,4 @@ seçenek seçerse değiştirilir:
 - 2026-10-24 04:58 — Burak (Claude Code) — Faz 4 (Minimum): Takipçi, Koşucu, Nişancı, dalga yöneticisi ve doğuş güvenliği eklendi; imp/iri yerine konan dağılım ve ilk bot ölçümü yazıldı (§6, §10).
 - 2026-10-24 05:23 — Burak (Claude Code) — Faz 5: Şeytan'ın ölüm sözleşmeleri, görünür bedeller, üç son, defter, HUD ve fısıltı modülleri oynanır hâle geldi (§3, §7, §8, §11, §12 🟡); açık sorularda geçici seçimler 🧪 listelendi (§15).
 - 2026-10-24 05:40 — Burak (Claude Code) — Faz 6: koddan üretilen sesler ve iki katmanlı müzik eklendi; Sözleşme 2 ses bedeli çalışıyor (§13).
+- 2026-10-24 05:56 — Burak (Claude Code) — Faz 7: ilk dakika ipuçları eklendi (§12); Sözleşme 1 satırı geçici 3,5 m yarıçapla uyumlu yazıldı (§8); Windows build alındı.

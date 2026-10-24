@@ -53,6 +53,12 @@ namespace DanceWithTheDevil
         public const string HudDodge = "Kaçınma [Space]";
         public const string HudReject = "Ret [Sağ tık]";
 
+        // §12 first-minute hints (first GDD §11 "İlk dakika önerisi"), one at a time.
+        public const string HintMoveFire = "WASD: yürü · Fare: nişan · Sol tık: ateş";
+        public const string HintOffer = "Temasta kal: kabul · Sağ tık: reddet";
+        public const string HintEject = "Q basılı + sağ tık: modülü sök ve fırlat";
+        public const string HintRocket = "E: roket · F: pala · Space: kaçın";
+
         // §7 whisper modules: name, advantage, cost, whisper line.
         public static string ModuleName(ModuleType type) => type switch
         {

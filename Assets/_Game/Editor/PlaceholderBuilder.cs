@@ -547,6 +547,16 @@ namespace DanceWithTheDevil.Editor
             dso.FindProperty("_hud").objectReferenceValue = hud;
             dso.ApplyModifiedPropertiesWithoutUndo();
 
+            // Phase 7: first-minute hints, and the HUD hides its offer banner behind the Devil screen.
+            hso.Update();
+            hso.FindProperty("_devil").objectReferenceValue = devil;
+            hso.ApplyModifiedPropertiesWithoutUndo();
+            var hints = ui.AddComponent<TutorialHints>();
+            var tso = new SerializedObject(hints);
+            tso.FindProperty("_playerHealth").objectReferenceValue = health;
+            tso.FindProperty("_devil").objectReferenceValue = devil;
+            tso.ApplyModifiedPropertiesWithoutUndo();
+
             // Phase 6: synthesized SFX and the two-stem music loop (run Dance/Audio/Bake All first).
             var bank = AssetDatabase.LoadAssetAtPath<SoundBank>("Assets/_Game/Audio/SoundBank.asset");
             if (bank == null) Debug.LogWarning("PlaceholderBuilder: SoundBank.asset missing; run Dance/Audio/Bake All.");
