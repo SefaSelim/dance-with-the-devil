@@ -1,0 +1,340 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6a4b512f53fc4a644992c7649f2dc558, type: 3}
+  m_Name: SoundBank
+  m_EditorClassIdentifier: Game.Runtime::DanceWithTheDevil.SoundBank
+  _events:
+  - _name: rifle_shot
+    _clips:
+    - {fileID: 8300000, guid: fa3cf38efd94c6341bb9f73bd92301d7, type: 3}
+    _volumeDb: -14
+    _maxVoices: 3
+    _minGap: 0.05
+    _pitchJitter: 0.05
+    _volumeJitterDb: 1.5
+    _bus: 0
+    _unscaled: 0
+    _pan: 0
+  - _name: rocket_launch
+    _clips:
+    - {fileID: 8300000, guid: 31711df5197a65d4eac83ec8312c7a0c, type: 3}
+    _volumeDb: -9
+    _maxVoices: 2
+    _minGap: 0.08
+    _pitchJitter: 0.04
+    _volumeJitterDb: 0
+    _bus: 0
+    _unscaled: 0
+    _pan: 0
+  - _name: explosion
+    _clips:
+    - {fileID: 8300000, guid: c3744639411a4d24d8d810b8ba329134, type: 3}
+    _volumeDb: -4
+    _maxVoices: 3
+    _minGap: 0.04
+    _pitchJitter: 0.06
+    _volumeJitterDb: 0
+    _bus: 0
+    _unscaled: 0
+    _pan: 0
+  - _name: machete_swing
+    _clips:
+    - {fileID: 8300000, guid: a30b409b3e4d21c4581b898ab5dfd282, type: 3}
+    _volumeDb: -12
+    _maxVoices: 1
+    _minGap: 0
+    _pitchJitter: 0.06
+    _volumeJitterDb: 0
+    _bus: 0
+    _unscaled: 0
+    _pan: 0
+  - _name: machete_hit
+    _clips:
+    - {fileID: 8300000, guid: 070a59726c454784aac5302a9603ad25, type: 3}
+    _volumeDb: -8
+    _maxVoices: 2
+    _minGap: 0
+    _pitchJitter: 0.05
+    _volumeJitterDb: 0
+    _bus: 0
+    _unscaled: 0
+    _pan: 0
+  - _name: bullet_hit_enemy
+    _clips:
+    - {fileID: 8300000, guid: 9a241f0ed187ba645b0f519b21ee8100, type: 3}
+    _volumeDb: -16
+    _maxVoices: 3
+    _minGap: 0.03
+    _pitchJitter: 0.08
+    _volumeJitterDb: 0
+    _bus: 0
+    _unscaled: 0
+    _pan: 1
+  - _name: bullet_hit_wall
+    _clips:
+    - {fileID: 8300000, guid: 85cb950f3ebdb75409084b81f846ae1b, type: 3}
+    _volumeDb: -20
+    _maxVoices: 2
+    _minGap: 0.04
+    _pitchJitter: 0.08
+    _volumeJitterDb: 0
+    _bus: 0
+    _unscaled: 0
+    _pan: 1
+  - _name: echo_bounce
+    _clips:
+    - {fileID: 8300000, guid: d463947408ceffe4a92e3f7cfd827c60, type: 3}
+    _volumeDb: -12
+    _maxVoices: 2
+    _minGap: 0.06
+    _pitchJitter: 0.03
+    _volumeJitterDb: 0
+    _bus: 0
+    _unscaled: 0
+    _pan: 0
+  - _name: enemy_shot
+    _clips:
+    - {fileID: 8300000, guid: f6cb19f90c7fc884e8bcc3783e5b75ab, type: 3}
+    _volumeDb: -13
+    _maxVoices: 3
+    _minGap: 0.06
+    _pitchJitter: 0.05
+    _volumeJitterDb: 0
+    _bus: 0
+    _unscaled: 0
+    _pan: 1
+  - _name: enemy_tell_chaser
+    _clips:
+    - {fileID: 8300000, guid: 473d20f7bf649a84d9cebf5693a6bc2c, type: 3}
+    _volumeDb: -14
+    _maxVoices: 2
+    _minGap: 0.12
+    _pitchJitter: 0.03
+    _volumeJitterDb: 0
+    _bus: 0
+    _unscaled: 0
+    _pan: 1
+  - _name: enemy_tell_shooter
+    _clips:
+    - {fileID: 8300000, guid: 101ced1cd66934744a6ee89107ab5e57, type: 3}
+    _volumeDb: -12
+    _maxVoices: 2
+    _minGap: 0.15
+    _pitchJitter: 0
+    _volumeJitterDb: 0
+    _bus: 0
+    _unscaled: 0
+    _pan: 1
+  - _name: spawn_warning
+    _clips:
+    - {fileID: 8300000, guid: f25fbc84a61e82741b630fdedeebb5b3, type: 3}
+    _volumeDb: -15
+    _maxVoices: 2
+    _minGap: 0.25
+    _pitchJitter: 0
+    _volumeJitterDb: 0
+    _bus: 0
+    _unscaled: 0
+    _pan: 1
+  - _name: enemy_die
+    _clips:
+    - {fileID: 8300000, guid: 2fb5f6b93bb16ae41acde6a6e8ade457, type: 3}
+    _volumeDb: -10
+    _maxVoices: 4
+    _minGap: 0.035
+    _pitchJitter: 0.08
+    _volumeJitterDb: 0
+    _bus: 0
+    _unscaled: 0
+    _pan: 1
+  - _name: player_hurt
+    _clips:
+    - {fileID: 8300000, guid: 5a533eff8f025834e975a222d5509f46, type: 3}
+    _volumeDb: -7
+    _maxVoices: 1
+    _minGap: 0.6
+    _pitchJitter: 0.03
+    _volumeJitterDb: 0
+    _bus: 0
+    _unscaled: 0
+    _pan: 0
+  - _name: player_dodge
+    _clips:
+    - {fileID: 8300000, guid: a6ef5d350dad70a488eacf9f7b2b2e4f, type: 3}
+    _volumeDb: -13
+    _maxVoices: 1
+    _minGap: 0
+    _pitchJitter: 0.04
+    _volumeJitterDb: 0
+    _bus: 0
+    _unscaled: 0
+    _pan: 0
+  - _name: dodge_ready
+    _clips:
+    - {fileID: 8300000, guid: 0d429c24b5312cc46b14c54140ff3945, type: 3}
+    _volumeDb: -18
+    _maxVoices: 1
+    _minGap: 0
+    _pitchJitter: 0
+    _volumeJitterDb: 0
+    _bus: 0
+    _unscaled: 0
+    _pan: 0
+  - _name: defne_voice_hurt
+    _clips:
+    - {fileID: 8300000, guid: 03a064d0ead904545a526671d9f442a8, type: 3}
+    - {fileID: 8300000, guid: ab087ec1ca17c57479a2ebb25a920323, type: 3}
+    - {fileID: 8300000, guid: 5478a141772c627419bc37ab9c4027e5, type: 3}
+    _volumeDb: -10
+    _maxVoices: 1
+    _minGap: 0.6
+    _pitchJitter: 0.04
+    _volumeJitterDb: 0
+    _bus: 1
+    _unscaled: 0
+    _pan: 0
+  - _name: module_offer_appear
+    _clips:
+    - {fileID: 8300000, guid: e9a02a9c3ccee5245b6f78616894ffa3, type: 3}
+    _volumeDb: -16
+    _maxVoices: 1
+    _minGap: 0
+    _pitchJitter: 0
+    _volumeJitterDb: 0
+    _bus: 2
+    _unscaled: 0
+    _pan: 0
+  - _name: module_accept
+    _clips:
+    - {fileID: 8300000, guid: d0703880faef25f479f7e590f4529138, type: 3}
+    _volumeDb: -10
+    _maxVoices: 1
+    _minGap: 0
+    _pitchJitter: 0
+    _volumeJitterDb: 0
+    _bus: 2
+    _unscaled: 0
+    _pan: 0
+  - _name: module_reject_throw
+    _clips:
+    - {fileID: 8300000, guid: 7bdfc7bb3490c894bac18c8e9c4ea806, type: 3}
+    _volumeDb: -10
+    _maxVoices: 1
+    _minGap: 0.65
+    _pitchJitter: 0
+    _volumeJitterDb: 0
+    _bus: 2
+    _unscaled: 0
+    _pan: 0
+  - _name: module_eject
+    _clips:
+    - {fileID: 8300000, guid: 69663e2c1c9d84d42929107a95e068b0, type: 3}
+    _volumeDb: -10
+    _maxVoices: 1
+    _minGap: 0.65
+    _pitchJitter: 0
+    _volumeJitterDb: 0
+    _bus: 2
+    _unscaled: 0
+    _pan: 0
+  - _name: devil_appear
+    _clips:
+    - {fileID: 8300000, guid: 6a703ce4c991c4a4d803ab7af106bd3f, type: 3}
+    _volumeDb: -8
+    _maxVoices: 1
+    _minGap: 0
+    _pitchJitter: 0
+    _volumeJitterDb: 0
+    _bus: 2
+    _unscaled: 1
+    _pan: 0
+  - _name: contract_yes
+    _clips:
+    - {fileID: 8300000, guid: c9e575ac4650ccd4d9350c512cfb3b01, type: 3}
+    _volumeDb: -9
+    _maxVoices: 1
+    _minGap: 0
+    _pitchJitter: 0
+    _volumeJitterDb: 0
+    _bus: 2
+    _unscaled: 1
+    _pan: 0
+  - _name: contract_no
+    _clips:
+    - {fileID: 8300000, guid: 4b097f83859d56f4dae28d844b27f9a3, type: 3}
+    _volumeDb: -11
+    _maxVoices: 1
+    _minGap: 0
+    _pitchJitter: 0
+    _volumeJitterDb: 0
+    _bus: 2
+    _unscaled: 1
+    _pan: 0
+  - _name: revive_shockwave
+    _clips:
+    - {fileID: 8300000, guid: 38ffe2f799995374dbf81d7f744fbcbf, type: 3}
+    _volumeDb: -5
+    _maxVoices: 1
+    _minGap: 0
+    _pitchJitter: 0
+    _volumeJitterDb: 0
+    _bus: 0
+    _unscaled: 0
+    _pan: 0
+  - _name: ending_sting_no_first
+    _clips:
+    - {fileID: 8300000, guid: 2f94a392da52bd14c9c5148881c74647, type: 3}
+    _volumeDb: -8
+    _maxVoices: 1
+    _minGap: 0
+    _pitchJitter: 0
+    _volumeJitterDb: 0
+    _bus: 2
+    _unscaled: 1
+    _pan: 0
+  - _name: ending_sting_no_late
+    _clips:
+    - {fileID: 8300000, guid: 0a689a80c9e95a7489fc52c96de2cf7e, type: 3}
+    _volumeDb: -8
+    _maxVoices: 1
+    _minGap: 0
+    _pitchJitter: 0
+    _volumeJitterDb: 0
+    _bus: 2
+    _unscaled: 1
+    _pan: 0
+  - _name: ending_sting_all_yes
+    _clips:
+    - {fileID: 8300000, guid: 3804da2234fb15c42b3e7946813850da, type: 3}
+    _volumeDb: -8
+    _maxVoices: 1
+    _minGap: 0
+    _pitchJitter: 0
+    _volumeJitterDb: 0
+    _bus: 2
+    _unscaled: 1
+    _pan: 0
+  - _name: ui_click
+    _clips:
+    - {fileID: 8300000, guid: a5d7ac5a24d447d4e97150e8764eef50, type: 3}
+    _volumeDb: -16
+    _maxVoices: 2
+    _minGap: 0.04
+    _pitchJitter: 0.02
+    _volumeJitterDb: 0
+    _bus: 2
+    _unscaled: 1
+    _pan: 0
+  _musicBase: {fileID: 8300000, guid: 1e24d824c86c8d44fa102d51e7df418e, type: 3}
+  _musicMelody: {fileID: 8300000, guid: fe077e704a02e7f43b9b204852e13fd9, type: 3}
+  _musicBaseDb: -14
+  _musicMelodyDb: -17
