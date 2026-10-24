@@ -28,3 +28,16 @@ Every change to this project goes here — from people and from AI tools. Git sh
 - Why: the whole team uses the same AI agents, skills and project rules during the jam.
 - Status: committed (Add Unity project at repo root and shared Claude Code toolkit)
 - Notes / risks: the Unity project (Unity 6000.6.0f1, URP) moved from the `Dance with the Devil/` subfolder to the repo root, so the root is the project folder: re-add it in Unity Hub from the new path. The subfolder's own git repo (Unity Hub's "Initial check-in", remote `Dance-with-the-Devil-2026-10-23_22-13-27`) was dropped; this repo (`SefaSelim/dance-with-the-devil`) is the only one.
+
+### 2026-10-24 — Burak (Claude Code) — branch claude/project-thread-yuc0gi
+- Changed: Phase 0 of the implementation plan (setup and design).
+  - `Packages/manifest.json`: added `com.coplaydev.unity-mcp` (MCP for Unity, git URL; installed by Burak in the Editor before this task), `com.unity.burst` 2.0.0, `com.unity.collections` 6.6.0, `com.unity.mathematics` 1.4.0 (were transitive, now explicit), `com.sandrofigo.voxreader` 5.0.6, and the OpenUPM scoped registry (scope `com.sandrofigo.voxreader`). `Packages/packages-lock.json` updated by Unity.
+  - New folders `Assets/_Game/{Scripts/{Core,Player,Weapons,Enemies,Voxel,Devil,UI,Feel},Art/{Vox,Materials,Shaders},Audio,Prefabs,Scenes,Data,Editor,Tests/EditMode}`.
+  - New assembly definitions: `Assets/_Game/Scripts/Game.Runtime.asmdef` (Burst, Collections, Mathematics, Input System, URP; unsafe allowed), `Assets/_Game/Editor/Game.Editor.asmdef` (Editor only, + VoxReader), `Assets/_Game/Tests/EditMode/Game.Tests.asmdef` (EditMode tests) with `PackageSmokeTests.cs`.
+  - `project.yaml`: `engine` (Unity 6000.6.0f1, C#, URP, PhysX), `specialists` and `naming` blocks (setup-engine). `Docs/engine-reference/unity/VERSION.md`: pinned version fields.
+  - `MAIN_GDD.md`: merged design written (vision and pillars, story, loop and death schedule, controls, weapons, five enemies, modules, six Devil contracts, arena, wave budget, endings and ledger, UI, look, scope) with 19 open questions (❓).
+  - `ProjectSettings/PackageManagerSettings.asset` › m_ScopedRegistries ([] → package.openupm.com, scope com.sandrofigo.voxreader), written by Unity from the manifest.
+  - `.vsconfig` (added by Unity/Visual Studio) committed as is.
+- Why: Phase 0 of `IMPLEMENTATION_PLAN.md`; placeholder models for all art until final assets.
+- Status: committed (Phase 0: packages, _Game folders and asmdefs, merged GDD)
+- Notes / risks: no scene or prefab changes; the only ProjectSettings change is the scoped registry above. Unity MCP (CoplayDev) works over HTTP. Package resolution is clean (only "VoxReader installed without a signature" info). An MCP EditMode test run got stuck because the Editor was unfocused with an unsaved untitled scene open, which also held back the recompile; the VoxReader and Game.Tests compile still has to be confirmed in the Editor. No `.mcp.json` added: the MCP server is configured on Burak's machine.

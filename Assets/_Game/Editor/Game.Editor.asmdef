@@ -1,0 +1,22 @@
+{
+    "name": "Game.Editor",
+    "rootNamespace": "DanceWithTheDevil.Editor",
+    "references": [
+        "Game.Runtime",
+        "Unity.Burst",
+        "Unity.Collections",
+        "Unity.Mathematics",
+        "com.sandrofigo.voxreader"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
