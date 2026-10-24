@@ -77,9 +77,19 @@ namespace DanceWithTheDevil.Editor
                 bank = ScriptableObject.CreateInstance<SoundBank>();
                 AssetDatabase.CreateAsset(bank, BankPath);
             }
-            bank.Set(BuildEvents(), Load(basePath), Load(melodyPath), -14f, -17f);
+            // Keep the team's chosen external rifle clip when regenerating the placeholder sounds.
+            var events = new List<SoundEvent>(BuildEvents());
+            foreach (SoundEvent existing in bank.Events)
+            {
+                if (existing.Name != "rifle_shot" || existing.Clips.Length == 0 || existing.Clips[0] == null) continue;
+                if (AssetDatabase.GetAssetPath(existing.Clips[0]) == SfxFolder + "/rifle_shot.wav") continue;
+                int index = events.FindIndex(e => e.Name == "rifle_shot");
+                events[index] = existing;
+            }
+            bank.Set(events.ToArray(), Load(basePath), Load(melodyPath), -14f, -17f);
             EditorUtility.SetDirty(bank);
             AssetDatabase.SaveAssets();
+            if (Directory.Exists("Assets/_Game/Audio/Recorded")) RecordedAudioInstaller.Apply();
             Debug.Log($"AudioBaker: {sounds.Count} SFX + 2 music stems baked, bank at {BankPath}.");
         }
 

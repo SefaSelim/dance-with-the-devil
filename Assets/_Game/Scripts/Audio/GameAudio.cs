@@ -31,7 +31,7 @@ namespace DanceWithTheDevil
             RifleShot, RocketLaunch, Explosion, MacheteSwing, MacheteHit, BulletHitEnemy, BulletHitWall, EchoBounce,
             EnemyShot, ChaserTell, ShooterTell, SpawnWarning, EnemyDie, PlayerHurt, PlayerDodge, DodgeReady,
             DefneVoiceHurt, OfferAppear, ModuleAccept, ModuleReject, ModuleEject, DevilAppear, ContractYes, ContractNo,
-            ReviveShockwave, EndingNoFirst, EndingNoLate, EndingAllYes, UiClick, Count,
+            ReviveShockwave, EndingNoFirst, EndingNoLate, EndingAllYes, UiClick, SkeletonHit, MummyHit, SkeletonDie, MummyDie, SkeletonTell, MummyTell, SkeletonMove, MummyMove, Count,
         }
 
         private static readonly string[] CueNames =
@@ -41,6 +41,7 @@ namespace DanceWithTheDevil
             "enemy_die", "player_hurt", "player_dodge", "dodge_ready", "defne_voice_hurt", "module_offer_appear",
             "module_accept", "module_reject_throw", "module_eject", "devil_appear", "contract_yes", "contract_no",
             "revive_shockwave", "ending_sting_no_first", "ending_sting_no_late", "ending_sting_all_yes", "ui_click",
+            "skeleton_hit", "mummy_hit", "skeleton_die", "mummy_die", "skeleton_tell", "mummy_tell", "skeleton_move", "mummy_move",
         };
 
         private const float TripleShotPitch = 0.94f;
@@ -99,6 +100,8 @@ namespace DanceWithTheDevil
         private readonly List<AudioSource> _voiceBusSources = new List<AudioSource>(4);
         private readonly List<AudioSource> _ownedSources = new List<AudioSource>(80);
         private readonly Dictionary<Enemy, int> _tellHandles = new Dictionary<Enemy, int>(32);
+        private struct MovementSound { public Vector3 Position; public float Distance; public float Next; }
+        private readonly Dictionary<Enemy, MovementSound> _movement = new Dictionary<Enemy, MovementSound>(32);
         private Slot[] _slots = new Slot[0];
         private AudioSource _musicBase;
         private AudioSource _musicMelody;
@@ -209,7 +212,31 @@ namespace DanceWithTheDevil
             _musicMelody.PlayScheduled(start);
         }
 
-        private void Update() => ApplyBuses(false);
+        private void Update()
+        {
+            ApplyBuses(false);
+            if (_waves == null || Time.timeScale <= 0f || _waves.Paused) return;
+            var enemies = _waves.ActiveEnemies;
+            for (int i = 0; i < enemies.Count; i++)
+            {
+                Enemy enemy = enemies[i];
+                if (enemy == null || !enemy.IsAlive || !enemy.isActiveAndEnabled) continue;
+                Vector3 position = enemy.transform.position;
+                if (!_movement.TryGetValue(enemy, out MovementSound state))
+                    state = new MovementSound { Position = position, Next = Time.time + 0.25f };
+                float distance = Vector3.Distance(position, state.Position);
+                state.Position = position;
+                if (enemy.IsKnockedBack || distance > 2f) state.Distance = 0f;
+                else state.Distance += distance;
+                if (state.Distance >= 1.5f && Time.time >= state.Next)
+                {
+                    PlayCueAt(IsMummy(enemy) ? Cue.MummyMove : Cue.SkeletonMove, position);
+                    state.Distance = 0f;
+                    state.Next = Time.time + 0.8f;
+                }
+                _movement[enemy] = state;
+            }
+        }
 
         private void ApplyBuses(bool force)
         {
@@ -346,6 +373,7 @@ namespace DanceWithTheDevil
                 }
 
                 ImpactBus.OnImpact += OnImpact;
+                Enemy.DamageTaken += OnEnemyDamaged;
                 Rifle.Fired += OnRifleFired;
                 RocketLauncher.Launched += OnRocketLaunched;
                 RocketLauncher.Exploded += OnRocketExploded;
@@ -375,6 +403,7 @@ namespace DanceWithTheDevil
                 {
                     _waves.SpawnWarningStarted += OnSpawnWarning;
                     _waves.EnemyKilled += OnEnemyKilled;
+                    _waves.EnemySpawned += OnEnemySpawned;
                 }
                 if (_devil != null)
                 {
@@ -386,6 +415,8 @@ namespace DanceWithTheDevil
             }
 
             ImpactBus.OnImpact -= OnImpact;
+            Enemy.DamageTaken -= OnEnemyDamaged;
+            _movement.Clear();
             Rifle.Fired -= OnRifleFired;
             RocketLauncher.Launched -= OnRocketLaunched;
             RocketLauncher.Exploded -= OnRocketExploded;
@@ -415,6 +446,7 @@ namespace DanceWithTheDevil
             {
                 _waves.SpawnWarningStarted -= OnSpawnWarning;
                 _waves.EnemyKilled -= OnEnemyKilled;
+                _waves.EnemySpawned -= OnEnemySpawned;
             }
             if (_devil != null)
             {
@@ -434,7 +466,8 @@ namespace DanceWithTheDevil
                 case ImpactKind.Bullet:
                     bool body = e.hitTransform != null && e.hitTransform.GetComponentInParent<Health>() != null;
                     if (!body) PlayCueAt(Cue.BulletHitWall, e.position);
-                    else if (e.instigatorIsLocalPlayer) PlayCueAt(Cue.BulletHitEnemy, e.position);
+                    else if (e.instigatorIsLocalPlayer && e.hitTransform.GetComponentInParent<Enemy>() == null)
+                        PlayCueAt(Cue.BulletHitEnemy, e.position);
                     break; // enemy bullet on the player: player_hurt comes from Health.Damaged
             }
         }
@@ -447,7 +480,7 @@ namespace DanceWithTheDevil
                 _rifleStep = (_rifleStep + 1) % _riflePitchSteps.Length;
                 step = Mathf.Max(0.5f, _riflePitchSteps[_rifleStep]);
             }
-            PlayCue(Cue.RifleShot, (tripleShot ? TripleShotPitch : 1f) * step);
+            PlayCue(Cue.RifleShot, 0.95f * (tripleShot ? TripleShotPitch : 1f) * step);
         }
         private void OnRocketLaunched(RocketLauncher launcher) => PlayCue(Cue.RocketLaunch);
         private void OnRocketExploded(Vector3 point) => PlayCueAt(Cue.Explosion, point);
@@ -467,7 +500,25 @@ namespace DanceWithTheDevil
 
         private void OnEnemyKilled(Enemy enemy)
         {
-            if (enemy != null) PlayCueAt(Cue.EnemyDie, enemy.transform.position);
+            if (enemy == null) return;
+            OnTellCancelled(enemy);
+            _tellHandles.Remove(enemy);
+            _movement.Remove(enemy);
+            PlayCueAt(IsMummy(enemy) ? Cue.MummyDie : Cue.SkeletonDie, enemy.transform.position);
+        }
+
+        // Approved art mapping: Chaser/Runner = skeleton; Shooter = mummy.
+        private static bool IsMummy(Enemy enemy) => enemy.Type == EnemyType.Shooter;
+
+        private void OnEnemySpawned(Enemy enemy)
+        {
+            _movement[enemy] = new MovementSound { Position = enemy.transform.position, Next = Time.time + 0.25f };
+        }
+
+        private void OnEnemyDamaged(Enemy enemy, float remaining)
+        {
+            if (enemy != null && remaining > 0f)
+                PlayCueAt(IsMummy(enemy) ? Cue.MummyHit : Cue.SkeletonHit, enemy.transform.position);
         }
 
         private void OnPlayerDamaged(DamageInfo info, float remaining)
@@ -479,13 +530,13 @@ namespace DanceWithTheDevil
         private void OnChaserTell(Enemy enemy, bool runner)
         {
             if (enemy == null) return;
-            _tellHandles[enemy] = PlayCueAt(Cue.ChaserTell, enemy.transform.position, runner ? RunnerTellPitch : 1f);
+            _tellHandles[enemy] = PlayCueAt(IsMummy(enemy) ? Cue.MummyTell : Cue.SkeletonTell, enemy.transform.position, runner ? RunnerTellPitch : 1f);
         }
 
         private void OnShooterTell(Enemy enemy)
         {
             if (enemy == null) return;
-            _tellHandles[enemy] = PlayCueAt(Cue.ShooterTell, enemy.transform.position);
+            _tellHandles[enemy] = PlayCueAt(IsMummy(enemy) ? Cue.MummyTell : Cue.SkeletonTell, enemy.transform.position);
         }
 
         private void OnTellCancelled(Enemy enemy)
