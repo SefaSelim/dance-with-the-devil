@@ -8,8 +8,9 @@ namespace DanceWithTheDevil.Editor
     /// Image steps for the Devil art (menu Dance/UI/Build Devil Art):
     /// <list type="bullet">
     /// <item><see cref="BuildDevilArt"/>: the hand-drawn Devil (<see cref="SourcePath"/>, black background) to
-    /// <see cref="OutputPath"/> with the black keyed out: alpha from the brightest channel with a soft ramp, the dark
-    /// line art inside the figure kept opaque (morphological closing of the figure mask), a 1-2 px soft edge. Imported
+    /// <see cref="OutputPath"/> with the black background keyed out: the background is what a flood fill from the top
+    /// and left edges (and the empty left part of the bottom edge) reaches through dark pixels, so the black inside
+    /// the figure (line art, gaps between armour plates, shadows under the arms) stays opaque; a 1-2 px soft edge. Imported
     /// as a full-rect Sprite and set on the UI theme (UiTheme.DevilSprite), which DevilScreen uses when its own sprite
     /// field is empty, so no scene edit is needed and Arena rebuilds keep it.</item>
     /// <item><see cref="BuildMenuBackdrop"/>: the menu's Doré engraving with feathered edges (no visible rectangle),
@@ -49,8 +50,9 @@ namespace DanceWithTheDevil.Editor
         private const float KeyLow = 0.035f;
         private const float KeyHigh = 0.13f;
         private const float MaskThreshold = 0.09f;
-        // Gaps in the figure narrower than about 2 × this (px) are filled: black outlines and hatching stay opaque.
-        private const int CloseRadius = 8;
+        // Devil flood fill: the bottom edge seeds the background only left of this fraction of the width (the cape
+        // and legs reach the bottom further right).
+        private const float DevilBottomSeedMaxX = 0.34f;
         private const int EdgeGrow = 2;
         private const int EdgeBlur = 2;
 
@@ -77,11 +79,15 @@ namespace DanceWithTheDevil.Editor
                 lum[i] = l;
                 mask[i] = l > MaskThreshold ? (byte)1 : (byte)0;
             }
-            // Closing (dilate then erode) fills the line art; a small grow keeps the outer outline.
-            mask = Morph(mask, w, h, CloseRadius, true);
-            mask = Morph(mask, w, h, CloseRadius, false);
-            mask = Morph(mask, w, h, EdgeGrow, true);
-            float[] soft = BoxBlur(mask, w, h, EdgeBlur);
+            // Background = the black reached by a flood fill from the top and left edges and the empty left part of
+            // the bottom edge (the figure is cut off at the right and bottom). Dark gaps enclosed by the figure
+            // (between armour plates, under the arms, between the legs) are not reached and stay opaque black.
+            byte[] closed = Morph(Morph(mask, w, h, HoleCloseRadius, true), w, h, HoleCloseRadius, false);
+            byte[] background = FloodFromEdges(closed, w, h, false, Mathf.RoundToInt(DevilBottomSeedMaxX * w));
+            var solid = new byte[n];
+            for (int i = 0; i < n; i++) solid[i] = background[i] == 0 ? (byte)1 : (byte)0;
+            solid = Morph(solid, w, h, EdgeGrow - 1, true);
+            float[] soft = BoxBlur(solid, w, h, EdgeBlur);
 
             for (int i = 0; i < n; i++)
             {
@@ -138,7 +144,7 @@ namespace DanceWithTheDevil.Editor
                 mask[i] = l > MaskThreshold ? (byte)1 : (byte)0;
             }
             byte[] closed = Morph(Morph(mask, w, h, HoleCloseRadius, true), w, h, HoleCloseRadius, false);
-            byte[] background = FloodFromEdges(closed, w, h);
+            byte[] background = FloodFromEdges(closed, w, h, true, 0);
             var solid = new byte[n];
             for (int i = 0; i < n; i++) solid[i] = background[i] == 0 ? (byte)1 : (byte)0;
             solid = Morph(solid, w, h, 1, true);
@@ -189,19 +195,21 @@ namespace DanceWithTheDevil.Editor
         }
 
         /// <summary>
-        /// Background = pixels with mask 0 connected (4-neighbour) to the top, left or right edge. The bottom edge is
-        /// not a seed: the figures are cut off there. Returns 1 for background.
+        /// Background = pixels with mask 0 connected (4-neighbour) to the top or left edge, the right edge when
+        /// <paramref name="seedRight"/>, and the bottom edge left of <paramref name="bottomSeedMaxX"/> (px); figures
+        /// cut off at an edge do not seed there. Returns 1 for background.
         /// </summary>
-        private static byte[] FloodFromEdges(byte[] mask, int w, int h)
+        private static byte[] FloodFromEdges(byte[] mask, int w, int h, bool seedRight, int bottomSeedMaxX)
         {
             var bg = new byte[mask.Length];
             var stack = new int[mask.Length];
             int top = 0;
             for (int x = 0; x < w; x++) Seed(mask, bg, stack, ref top, (h - 1) * w + x); // top row (rows bottom-up)
+            for (int x = 0; x < Mathf.Min(bottomSeedMaxX, w); x++) Seed(mask, bg, stack, ref top, x);
             for (int y = 0; y < h; y++)
             {
                 Seed(mask, bg, stack, ref top, y * w);
-                Seed(mask, bg, stack, ref top, y * w + w - 1);
+                if (seedRight) Seed(mask, bg, stack, ref top, y * w + w - 1);
             }
             while (top > 0)
             {

@@ -4,8 +4,9 @@ namespace DanceWithTheDevil
 {
     /// <summary>
     /// When the <see cref="Health"/> dies, bursts the model into coloured cubes (GDD §13: everything that gets hit
-    /// scatters into its pixels), with a short white pop at the body's centre and the kill feel (capped shake, zoom
-    /// kick, small screen shockwave: <see cref="PixelImpactFeedback.KillFeel"/>). Hiding the model is left to the owner
+    /// scatters into its pixels) with the kill feel (capped shake, zoom kick, small screen shockwave:
+    /// <see cref="PixelImpactFeedback.KillFeel"/>). No white pop at the body's centre: it was a solid cube that read as
+    /// the enemy turning into a box for a frame before bursting. Hiding the model is left to the owner
     /// (enemy, training dummy).
     /// <list type="bullet">
     /// <item>Skinned model (Synty enemies): its <see cref="ShatterProxy"/> boxes on the bones burst into ~300 tiny
@@ -123,7 +124,6 @@ namespace DanceWithTheDevil
             }
 
             Vector3 body = visible > 0 ? center / visible : transform.position + Vector3.up;
-            if (visible > 0) feedback.KillFlash(body);
             // Rocket kills come in groups and the blast already warps the screen: a lighter kill feel each.
             feedback.KillFeel(body, blast ? 0.6f : 1f);
         }

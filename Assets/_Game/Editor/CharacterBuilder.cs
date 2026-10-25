@@ -401,6 +401,10 @@ namespace DanceWithTheDevil.Editor
             controller.AddParameter("MoveZ", AnimatorControllerParameterType.Float);
             controller.AddParameter("Speed", AnimatorControllerParameterType.Float);
             controller.AddParameter("Hit", AnimatorControllerParameterType.Trigger);
+            controller.AddParameter(new AnimatorControllerParameter
+            {
+                name = "LocoSpeed", type = AnimatorControllerParameterType.Float, defaultFloat = 1f,
+            });
 
             // Base layer: one 2D blend tree on the velocity in the body's frame (the body faces the aim).
             AnimatorStateMachine root = controller.layers[0].stateMachine;
@@ -408,17 +412,20 @@ namespace DanceWithTheDevil.Editor
             tree.blendType = BlendTreeType.FreeformDirectional2D;
             tree.blendParameter = "MoveX";
             tree.blendParameterY = "MoveZ";
-            AddMotion(tree, "rifle aiming idle", 0f, 0f);
-            AddMotion(tree, "walking", 0f, 0.45f);
-            AddMotion(tree, "rifle run", 0f, 1f);
-            AddMotion(tree, "walking backwards", 0f, -0.45f);
-            AddMotion(tree, "run backwards", 0f, -1f);
-            // Measured root travel (Log Clip Root Motion): "strafe (2)" runs left, "strafe" runs right,
-            // "strafe left"/"strafe right" are the slower walking strafes.
-            AddMotion(tree, "strafe left", -0.45f, 0f);
-            AddMotion(tree, "strafe (2)", -1f, 0f);
-            AddMotion(tree, "strafe right", 0.45f, 0f);
-            AddMotion(tree, "strafe", 1f, 0f);
+            // Idle plus the four run directions only. The walking ring (walk, walk back, walking strafes) was dropped:
+            // its cycles (0.7-1.4 s, different foot phases) blended against the runs (0.5-0.7 s) crossed and
+            // twisted her legs in every in-between and diagonal direction. Each run clip gets a time scale that
+            // brings its ground speed to LocomotionClipSpeed, so all directions step alike; CharacterAnimator then
+            // speeds the whole state up through "LocoSpeed" to match the real ground speed (no foot skating).
+            AddMotion(tree, "rifle aiming idle", 0f, 0f, false);
+            AddMotion(tree, "rifle run", 0f, 1f, true);
+            AddMotion(tree, "run backwards", 0f, -1f, true);
+            // Measured root travel (Log Clip Root Motion): "strafe (2)" runs left, "strafe" runs right.
+            AddMotion(tree, "strafe (2)", -1f, 0f, true);
+            AddMotion(tree, "strafe", 1f, 0f, true);
+            locomotion.speedParameter = "LocoSpeed";
+            locomotion.speedParameterActive = true;
+            locomotion.iKOnFeet = true; // keeps the feet on the clips' footprints after retargeting
             root.defaultState = locomotion;
 
             // Hit layer (upper body only): plays the hit reaction over the legs' locomotion on the "Hit" trigger.
@@ -460,10 +467,28 @@ namespace DanceWithTheDevil.Editor
             return controller;
         }
 
-        private static void AddMotion(BlendTree tree, string clipName, float x, float z)
+        /// <summary>
+        /// Ground speed (m/s at human scale 1) every run clip is time-scaled to; CharacterAnimator's Clip Run Speed
+        /// must match it.
+        /// </summary>
+        public const float LocomotionClipSpeed = 2.8f;
+
+        private static void AddMotion(BlendTree tree, string clipName, float x, float z, bool matchSpeed)
         {
             AnimationClip clip = LoadClip(clipName);
-            if (clip != null) tree.AddChild(clip, new Vector2(x, z));
+            if (clip == null) return;
+            tree.AddChild(clip, new Vector2(x, z));
+            if (!matchSpeed) return;
+            Vector3 average = clip.averageSpeed;
+            float groundSpeed = new Vector2(average.x, average.z).magnitude;
+            if (groundSpeed < 0.5f)
+            {
+                Debug.LogWarning($"CharacterBuilder: {clipName} travels only {groundSpeed:F2} m/s; time scale left at 1.");
+                return;
+            }
+            ChildMotion[] children = tree.children; // a copy of structs: edit and assign back
+            children[children.Length - 1].timeScale = LocomotionClipSpeed / groundSpeed;
+            tree.children = children;
         }
 
         private static AvatarMask BuildUpperBodyMask()

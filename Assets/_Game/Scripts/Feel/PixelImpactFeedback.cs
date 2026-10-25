@@ -467,6 +467,8 @@ namespace DanceWithTheDevil
 
         // ---------------------------------------------------------------- pixel bursts
 
+        private const float DeathPrescatter = 0.06f; // seconds of flight a death pixel may already have on frame 0
+
         /// <summary>
         /// Death pixels for a skinned enemy: about <see cref="_deathPixels"/> tiny cubes (1–2.5 texels) spread through
         /// the first <paramref name="count"/> proxy boxes by volume, in each box's baked palette, thrown away from
@@ -511,8 +513,11 @@ namespace DanceWithTheDevil
                     Vector3 away = pos - point;
                     away.y = Mathf.Abs(away.y) + 0.25f;
                     Vector3 dir = (away.normalized + push * 1.1f + Random.insideUnitSphere * 0.45f).normalized;
-                    emit.position = pos;
-                    emit.velocity = dir * (Random.Range(_deathPixelSpeed.x, _deathPixelSpeed.y) * force);
+                    Vector3 velocity = dir * (Random.Range(_deathPixelSpeed.x, _deathPixelSpeed.y) * force);
+                    // Start each pixel a random few frames along its path: on the first frame the burst is already
+                    // loose, never a solid box in the shape of the proxy.
+                    emit.position = pos + velocity * Random.Range(0.015f, DeathPrescatter);
+                    emit.velocity = velocity;
                     emit.startSize = Random.Range(_pixelSize.x, _pixelSize.y) * sizeScale;
                     emit.startLifetime = Random.Range(_deathPixelLifetime.x, _deathPixelLifetime.y);
                     emit.startColor = Shade(proxy.PickColor(Random.value));

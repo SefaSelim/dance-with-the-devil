@@ -107,8 +107,17 @@ namespace DanceWithTheDevil
         [Header("Humanoid model (imported, animated)")]
         [Tooltip("Run speed in m/s that maps to a full locomotion clip (MoveX/MoveZ = ±1).")]
         [SerializeField, Min(0.1f)] private float _animRunSpeed = 6f;
-        [Tooltip("Damping time of the locomotion parameters, seconds.")]
-        [SerializeField, Min(0f)] private float _animDamping = 0.08f;
+        [Tooltip("Damping time of the locomotion parameters, seconds (longer = softer turns between the clips).")]
+        [SerializeField, Min(0f)] private float _locomotionDamping = 0.15f;
+        [Tooltip("Ground speed (m/s at human scale 1) the controller's run clips are normalised to by their per-clip " +
+                 "time scale (CharacterBuilder.LocomotionClipSpeed). Used with a \"LocoSpeed\" parameter only.")]
+        [SerializeField, Min(0.1f)] private float _clipRunSpeed = 2.8f;
+        [Tooltip("Highest locomotion playback speed-up so the feet keep up with the ground (needs a \"LocoSpeed\" parameter).")]
+        [SerializeField, Min(1f)] private float _maxPlaybackScale = 1.8f;
+        [Tooltip("Humanoid lean toward the movement at the full-lean speed, degrees (critically damped, no overshoot).")]
+        [SerializeField, Range(0f, 30f)] private float _humanoidLeanDegrees = 4f;
+        [Tooltip("Humanoid movement-lean spring frequency (Hz). Kicks and flinches keep the Lean spring above.")]
+        [SerializeField, Min(0.1f)] private float _humanoidLeanFrequency = 2.5f;
         [Tooltip("Held weapon pulled back along its barrel at Kick(1), metres.")]
         [SerializeField, Min(0f)] private float _weaponKickDistance = 0.08f;
         [Tooltip("Held weapon muzzle-up at Kick(1), degrees.")]
@@ -120,9 +129,12 @@ namespace DanceWithTheDevil
         private static readonly int MoveZId = Animator.StringToHash("MoveZ");
         private static readonly int SpeedId = Animator.StringToHash("Speed");
         private static readonly int HitId = Animator.StringToHash("Hit");
+        private static readonly int LocoSpeedId = Animator.StringToHash("LocoSpeed");
 
         private Animator _body;
         private bool _humanoid;
+        private bool _hasLocoSpeed;
+        private SecondOrderDynamics3 _moveLean;
         private Transform _rifle;
         private Transform _launcher;
         private Transform _launcherBack;
@@ -216,11 +228,14 @@ namespace DanceWithTheDevil
             if (_model == null) _model = FindDirectChild(transform, ModelName);
             if (_isPlayer) _player = GetComponent<PlayerController>();
             _lean = new SecondOrderDynamics3(_leanFrequency, _leanDamping, 0f, Vector3.zero);
+            // Critically damped (z = 1): the body settles into the lean without swinging past it.
+            _moveLean = new SecondOrderDynamics3(_humanoidLeanFrequency, 1f, 0f, Vector3.zero);
         }
 
         private void OnValidate()
         {
             if (_lean != null) _lean.SetParameters(_leanFrequency, _leanDamping, 0f);
+            if (_moveLean != null) _moveLean.SetParameters(_humanoidLeanFrequency, 1f, 0f);
         }
 
         private void OnEnable()
@@ -231,6 +246,7 @@ namespace DanceWithTheDevil
             _swingAmount = 0f;
             _kickTime = 0f;
             if (_lean != null) _lean.Reset(Vector3.zero);
+            if (_moveLean != null) _moveLean.Reset(Vector3.zero);
         }
 
         private void Start() => EnsureBuilt();
@@ -375,17 +391,29 @@ namespace DanceWithTheDevil
             {
                 Vector3 move = local / _animRunSpeed;
                 if (move.sqrMagnitude > 1f) move.Normalize();
-                _body.SetFloat(MoveXId, move.x, _animDamping, dt);
-                _body.SetFloat(MoveZId, move.z, _animDamping, dt);
-                _body.SetFloat(SpeedId, move.magnitude, _animDamping, dt);
+                float amount = move.magnitude;
+                _body.SetFloat(MoveXId, move.x, _locomotionDamping, dt);
+                _body.SetFloat(MoveZId, move.z, _locomotionDamping, dt);
+                _body.SetFloat(SpeedId, amount, _locomotionDamping, dt);
+                if (_hasLocoSpeed)
+                {
+                    // The run clips are time-scaled to one ground speed; speed them up so the feet match the
+                    // real one (no skating), easing in with the run weight so the idle never plays fast.
+                    float clipSpeed = _clipRunSpeed * Mathf.Max(0.1f, _body.humanScale);
+                    float fullScale = Mathf.Clamp(_animRunSpeed / clipSpeed, 1f, _maxPlaybackScale);
+                    _body.SetFloat(LocoSpeedId, Mathf.Lerp(1f, fullScale, amount), _locomotionDamping, dt);
+                }
             }
 
-            float maxLean = _leanDegrees * MaxLeanFactor;
+            // Movement lean on its own critically damped spring (smaller, no overshoot on direction changes);
+            // the underdamped Lean spring now only carries the kick and flinch impulses back to zero.
+            float maxLean = _humanoidLeanDegrees * MaxLeanFactor;
             if (_player != null && _player.IsDodging) maxLean *= DodgeLeanBoost;
-            float leanPerSpeed = _leanDegrees / _fullLeanSpeed;
+            float leanPerSpeed = _humanoidLeanDegrees / _fullLeanSpeed;
             float leanForward = Mathf.Clamp(local.z * leanPerSpeed, -maxLean, maxLean);
             float leanRight = Mathf.Clamp(local.x * leanPerSpeed, -maxLean, maxLean);
-            Vector3 lean = _lean.Update(dt, new Vector3(leanForward, -leanRight, 0f));
+            Vector3 lean = _moveLean.Update(dt, new Vector3(leanForward, -leanRight, 0f))
+                           + _lean.Update(dt, Vector3.zero);
             _model.localRotation = _modelBaseRotation * Quaternion.Euler(lean.x, 0f, lean.y);
             _model.localPosition = _modelBasePosition;
 
@@ -409,6 +437,11 @@ namespace DanceWithTheDevil
         private void BuildHumanoid()
         {
             _humanoid = true;
+            _hasLocoSpeed = false; // only Defne.controller has it; the enemy controllers keep their fixed speed
+            if (_body.runtimeAnimatorController != null)
+                foreach (AnimatorControllerParameter parameter in _body.parameters)
+                    if (parameter.nameHash == LocoSpeedId && parameter.type == AnimatorControllerParameterType.Float)
+                        _hasLocoSpeed = true;
             Transform socket = FindDeep(_model, "WeaponSocket");
             _rifle = FindDeep(socket, "Rifle");
             _launcher = FindDeep(socket, "Launcher");
