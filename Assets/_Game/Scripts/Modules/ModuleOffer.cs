@@ -131,6 +131,15 @@ namespace DanceWithTheDevil
             Transform dot = ModuleVisuals.CreatePart("Dot", PrimitiveType.Cube, crit, Vector3.zero, Vector3.one * 0.1f, m);
             dot.localRotation = Quaternion.Euler(0f, 0f, 45f);
 
+            // Delici: a long spike skewering two thin plates, with a pointed tip (a bullet through two enemies).
+            Transform pierce = NewShape(ModuleType.Pierce);
+            m = Mat(ModuleType.Pierce);
+            ModuleVisuals.CreatePart("Shaft", PrimitiveType.Cube, pierce, Vector3.zero, new Vector3(0.66f, 0.07f, 0.07f), m);
+            Transform spikeTip = ModuleVisuals.CreatePart("Tip", PrimitiveType.Cube, pierce, new Vector3(0.36f, 0f, 0f), Vector3.one * 0.12f, m);
+            spikeTip.localRotation = Quaternion.Euler(0f, 0f, 45f);
+            ModuleVisuals.CreatePart("Plate_A", PrimitiveType.Cube, pierce, new Vector3(-0.12f, 0f, 0f), new Vector3(0.05f, 0.34f, 0.3f), m);
+            ModuleVisuals.CreatePart("Plate_B", PrimitiveType.Cube, pierce, new Vector3(0.12f, 0f, 0f), new Vector3(0.05f, 0.34f, 0.3f), m);
+
             Material ringBase = materials != null && materials.Length > ModuleCatalog.Count ? materials[ModuleCatalog.Count] : null;
             _ringBase = ModuleVisuals.CreatePart("RingBase", PrimitiveType.Cylinder, transform, new Vector3(0f, 0.02f, 0f),
                 new Vector3(_ringDiameter, 0.01f, _ringDiameter), ringBase);

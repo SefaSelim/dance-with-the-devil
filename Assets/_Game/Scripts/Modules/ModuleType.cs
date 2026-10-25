@@ -15,13 +15,18 @@ namespace DanceWithTheDevil
         /// cost: Defne walks ×0.85 (6 → 5.1 m/s) while the fire button is held.
         /// </summary>
         CritChance,
+        /// <summary>
+        /// Delici (user decision 2026-10-25): rifle bullets pass through 2 more enemies (adds to Contract 3's +2, max 4);
+        /// cost: each enemy passed through cuts that bullet's damage by 30 % (×0.7 per pierce).
+        /// </summary>
+        Pierce,
     }
 
     /// <summary>Fixed per-type data shared by gameplay and UI (MAIN_GDD §7 / first GDD §7 colours).</summary>
     public static class ModuleCatalog
     {
         /// <summary>Number of module types (and fixed slots).</summary>
-        public const int Count = 5;
+        public const int Count = 6;
 
         /// <summary>Triple Shot turquoise #3FE0D0.</summary>
         public static readonly Color TripleShotColor = new Color(0x3F / 255f, 0xE0 / 255f, 0xD0 / 255f, 1f);
@@ -33,6 +38,11 @@ namespace DanceWithTheDevil
         public static readonly Color HasteColor = new Color(0xB8 / 255f, 0xFF / 255f, 0x3F / 255f, 1f);
         /// <summary>Keskin Göz cold steel white #D6EEFF (placeholder; paler and bluer than Triple Shot's turquoise).</summary>
         public static readonly Color CritChanceColor = new Color(0xD6 / 255f, 0xEE / 255f, 0xFF / 255f, 1f);
+        /// <summary>
+        /// Delici copper #E0703A (placeholder; a bone white would blur into Keskin Göz's pale steel and the cream
+        /// "TAKILI" marker, so it sits between Density amber and the Devil's red, clearly orange).
+        /// </summary>
+        public static readonly Color PierceColor = new Color(0xE0 / 255f, 0x70 / 255f, 0x3A / 255f, 1f);
 
         public static Color ColorOf(ModuleType type)
         {
@@ -42,6 +52,7 @@ namespace DanceWithTheDevil
                 case ModuleType.Echo: return EchoColor;
                 case ModuleType.Haste: return HasteColor;
                 case ModuleType.CritChance: return CritChanceColor;
+                case ModuleType.Pierce: return PierceColor;
                 default: return DensityColor;
             }
         }

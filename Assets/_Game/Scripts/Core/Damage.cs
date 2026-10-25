@@ -44,14 +44,17 @@ namespace DanceWithTheDevil
 
     /// <summary>
     /// Critical hits (user decision 2026-10-25, production/design/crit-difficulty.md): every player weapon rolls per
-    /// target hit with its own <c>CritChance</c> (base 5 %, + Keskin Göz module on the rifle, + contract 3 on all);
+    /// target hit with its own <c>CritChance</c> (base 12 %, user decision 2026-10-25 raised from 5 %; + Keskin Göz module on the rifle, + contract 3 on all);
     /// a crit multiplies that hit's damage (×2). One shared random stream; tests call <see cref="Seed"/> for a
     /// repeatable sequence.
     /// </summary>
     public static class CritRoll
     {
-        /// <summary>Default base crit chance of every weapon (5 %). The weapons serialize their own copy.</summary>
-        public const float DefaultChance = 0.05f;
+        /// <summary>
+        /// Default base crit chance of every weapon (12 %, user decision 2026-10-25; was 5 %). The weapons serialize
+        /// their own copy in <c>_baseCritChanceV2</c> (renamed so scenes saved with the old 5 % pick up the new default).
+        /// </summary>
+        public const float DefaultChance = 0.12f;
         /// <summary>Default damage multiplier of a crit (×2). The weapons serialize their own copy.</summary>
         public const float DefaultMultiplier = 2f;
 

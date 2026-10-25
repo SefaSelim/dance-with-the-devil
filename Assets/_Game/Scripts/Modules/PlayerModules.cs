@@ -8,8 +8,9 @@ namespace DanceWithTheDevil
     /// 0.45 s intentional contact accept), capacity (one per type), right-click reject (60° cone, 3 m), Q selection
     /// ring with fixed slots (one per <see cref="ModuleType"/>), Q + right-click eject, the shared 0.65 s cooldown,
     /// and applying/removing every module effect on the Rifle and PlayerController in one place
-    /// (<see cref="ApplyEffects"/>). Hız (production/design/combo-haste.md §3) and Keskin Göz
-    /// (production/design/crit-difficulty.md §3) are rifle only (K-7); Keskin Göz's cost slows Defne's walk while the
+    /// (<see cref="ApplyEffects"/>). Hız (production/design/combo-haste.md §3), Keskin Göz
+    /// (production/design/crit-difficulty.md §3) and Delici (user decision 2026-10-25: +2 pierce, −30 % damage per
+    /// enemy passed) are rifle only (K-7); Keskin Göz's cost slows Defne's walk while the
     /// fire button is held (<see cref="UpdateFiringSlow"/>). No offer while every slot is full (A-20).
     /// Offers are placed by <see cref="ModuleSpawner"/> through <see cref="PresentOffer"/>. Scaled time throughout.
     /// World-side feedback: every reject pulse flashes its cone on the floor (cream on a whiff, the module's colour
@@ -80,8 +81,12 @@ namespace DanceWithTheDevil
         [SerializeField, Range(0f, 1f)] private float _keskinGozCritBonus = 0.2f;
         [Tooltip("Keskin Göz cost: walk speed multiplier while the fire button is held (design: 0.85, 6 → 5.1 m/s). Dodge unaffected.")]
         [SerializeField, Range(0.05f, 1f)] private float _keskinGozFiringSpeedMultiplier = 0.85f;
+        [Tooltip("Delici: extra enemies each rifle bullet passes through, added to the contract's (design: 2).")]
+        [SerializeField, Min(0)] private int _pierceExtra = 2;
+        [Tooltip("Delici cost: fraction of damage a bullet loses per enemy it passes through (design: 0.3 → ×0.7 each).")]
+        [SerializeField, Range(0f, 1f)] private float _pierceDamageFalloff = 0.3f;
 
-        /// <summary>Left, up, right, down, up-right around the player (index = ModuleType).</summary>
+        /// <summary>Left, up, right, down, up-right, up-left around the player (index = ModuleType).</summary>
         private static readonly Vector3[] DefaultSlotOffsets =
         {
             new Vector3(-1.2f, 1.2f, 0f),
@@ -89,6 +94,7 @@ namespace DanceWithTheDevil
             new Vector3(1.2f, 1.2f, 0f),
             new Vector3(0f, 1.2f, -1.2f),
             new Vector3(1.1f, 1.2f, 1.1f),
+            new Vector3(-1.1f, 1.2f, 1.1f),
         };
 
         private PlayerController _player;
@@ -416,6 +422,7 @@ namespace DanceWithTheDevil
             bool density = _equipped[(int)ModuleType.Density];
             bool haste = _equipped[(int)ModuleType.Haste];
             bool keskinGoz = _equipped[(int)ModuleType.CritChance];
+            bool pierce = _equipped[(int)ModuleType.Pierce];
 
             if (_rifle != null)
             {
@@ -427,6 +434,8 @@ namespace DanceWithTheDevil
                 _rifle.ModuleFireRateMultiplier = haste ? _hasteFireRateMultiplier : 1f;
                 _rifle.ModuleSpreadDegrees = haste ? _hasteSpreadDegrees : 0f;
                 _rifle.ModuleCritChance = keskinGoz ? _keskinGozCritBonus : 0f;
+                _rifle.ModulePierceCount = pierce ? _pierceExtra : 0;
+                _rifle.PierceDamageFalloff = pierce ? _pierceDamageFalloff : 0f;
             }
             if (_player != null)
             {

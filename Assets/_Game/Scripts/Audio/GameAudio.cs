@@ -31,7 +31,7 @@ namespace DanceWithTheDevil
             RifleShot, RocketLaunch, Explosion, MacheteSwing, MacheteHit, BulletHitEnemy, BulletHitWall, EchoBounce,
             EnemyShot, ChaserTell, ShooterTell, SpawnWarning, EnemyDie, PlayerHurt, PlayerDodge, DodgeReady,
             DefneVoiceHurt, OfferAppear, ModuleAccept, ModuleReject, ModuleEject, DevilAppear, ContractYes, ContractNo,
-            ReviveShockwave, EndingNoFirst, EndingNoLate, EndingAllYes, UiClick, SkeletonHit, MummyHit, SkeletonDie, MummyDie, SkeletonTell, MummyTell, SkeletonMove, MummyMove, Count,
+            ReviveShockwave, EndingNoFirst, EndingNoLate, EndingAllYes, UiClick, SkeletonHit, MummyHit, SkeletonDie, MummyDie, SkeletonTell, MummyTell, SkeletonMove, MummyMove, CritHit, Count,
         }
 
         private static readonly string[] CueNames =
@@ -42,6 +42,7 @@ namespace DanceWithTheDevil
             "module_accept", "module_reject_throw", "module_eject", "devil_appear", "contract_yes", "contract_no",
             "revive_shockwave", "ending_sting_no_first", "ending_sting_no_late", "ending_sting_all_yes", "ui_click",
             "skeleton_hit", "mummy_hit", "skeleton_die", "mummy_die", "skeleton_tell", "mummy_tell", "skeleton_move", "mummy_move",
+            "crit_hit",
         };
 
         private const float TripleShotPitch = 0.94f;
@@ -77,6 +78,10 @@ namespace DanceWithTheDevil
         [SerializeField, Range(-24f, 6f)] private float _explosionTrimDb = -3f;
         [Tooltip("Rifle shots cycle through these pitch factors on top of the bank's jitter (stand-in round-robin).")]
         [SerializeField] private float[] _riflePitchSteps = { 1f, 0.955f, 1.04f, 0.975f, 1.02f };
+        [Tooltip("crit_hit (bank -3 dB, built by Dance/Audio/Build Crit Sound): Defne's crits, well above the rifle.")]
+        [SerializeField, Range(-24f, 6f)] private float _critTrimDb = 0f;
+        [Tooltip("Fewest unscaled seconds between two crit sounds (a pierce or machete sweep crits several at once).")]
+        [SerializeField, Min(0f)] private float _critMinGap = 0.05f;
 
         private sealed class Voice
         {
@@ -115,6 +120,7 @@ namespace DanceWithTheDevil
         private DevilState _lastDevilState = DevilState.Playing;
         private float _musicTrim = 1f;
         private int _rifleStep;
+        private float _lastCrit = float.NegativeInfinity;
 
         /// <summary>0..1 melody stem fade (0 after contract 2 has faded it out).</summary>
         public float MelodyFade => _melodyFade;
@@ -174,6 +180,7 @@ namespace DanceWithTheDevil
                 _cueIds[c] = _ids.TryGetValue(CueNames[c], out int id) ? id : -1;
             Trim(Cue.RifleShot, _rifleTrimDb);
             Trim(Cue.Explosion, _explosionTrimDb);
+            Trim(Cue.CritHit, _critTrimDb);
             _musicTrim = SoundBank.DbToLinear(_musicTrimDb);
 
             if (bank != null && bank.MusicBase != null && bank.MusicMelody != null) StartMusic(bank);
@@ -457,6 +464,13 @@ namespace DanceWithTheDevil
 
         private void OnImpact(ImpactEvent e)
         {
+            // Defne's crits (bullet, machete target, rocket blast that critted): a bright metallic ting + low thump on
+            // top of the normal hit sound, the same frame as the hit. Unscaled gap so a machete hitstop cannot bunch them.
+            if (e.isCrit && e.instigatorIsLocalPlayer && e.kind != ImpactKind.MuzzleFire
+                && Time.unscaledTime - _lastCrit >= _critMinGap
+                && PlayCueAt(Cue.CritHit, e.position, Random.Range(0.97f, 1.04f)) != 0)
+                _lastCrit = Time.unscaledTime;
+
             switch (e.kind)
             {
                 case ImpactKind.MuzzleFire:

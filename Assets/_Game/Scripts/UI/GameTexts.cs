@@ -28,7 +28,7 @@ namespace DanceWithTheDevil
         public const string No = "HAYIR";
         // EVET needs a deliberate hold (never E, which is the rocket); HAYIR is H or a click.
         public const string YesKeys = "[Enter] basılı tut";
-        public const string NoKeys = "[H]";
+        public const string NoKeys = "[H] basılı tut";
         // The stakes, stated plainly under each choice.
         public const string YesStakes = "dirilirsin · bedeli kalıcı";
         public const string NoStakes = "oyun biter";
@@ -120,6 +120,7 @@ namespace DanceWithTheDevil
             ModuleType.Echo => "Yankı",
             ModuleType.Haste => "Hız",
             ModuleType.CritChance => "Keskin Göz",
+            ModuleType.Pierce => "Delici",
             _ => "Yoğunluk",
         };
 
@@ -129,6 +130,7 @@ namespace DanceWithTheDevil
             ModuleType.Echo => "Mermiler duvardan bir kez seker",
             ModuleType.Haste => "Tüfek atış hızı ×1,4 (6 → 8,4 atış/sn)",
             ModuleType.CritChance => "Tüfekte +%20 kritik şansı",
+            ModuleType.Pierce => "Mermi 2 düşmanı daha deler (tüfek)",
             _ => "Mermi hasarı ×1,6",
         };
 
@@ -138,6 +140,7 @@ namespace DanceWithTheDevil
             ModuleType.Echo => "Seken mermi sana da çarpar (yarım hasar), 2. duvarda söner",
             ModuleType.Haste => "Mermiler nişandan rastgele ±6° sapar",
             ModuleType.CritChance => "Ateş ederken yavaşlarsın (yürüme 6 → 5,1 m/sn)",
+            ModuleType.Pierce => "Her delişte mermi %30 zayıflar",
             _ => "Gövden ×1,5 büyür, daha kolay vurulursun",
         };
 
@@ -147,6 +150,7 @@ namespace DanceWithTheDevil
             ModuleType.Echo => "Duvardan seker. Arada bir sana döner. Bir şey olmaz.",
             ModuleType.Haste => "Daha hızlı sık. Nereye mi gider? Aşağı yukarı oraya.",
             ModuleType.CritChance => "Gözünü kıs, tam ortadan vur. Biraz ağır yürürsün, bir şey olmaz.",
+            ModuleType.Pierce => "Bir mermi, üç düşman. Sondaki biraz gıdıklanır, o kadar.",
             _ => "Daha sert vur. Biraz irileşirsin, kimse fark etmez.",
         };
     }

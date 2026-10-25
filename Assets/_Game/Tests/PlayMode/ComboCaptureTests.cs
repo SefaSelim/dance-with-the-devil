@@ -54,8 +54,12 @@ namespace DanceWithTheDevil.Tests
             var screen = Object.FindAnyObjectByType<DevilScreen>();
             var field = typeof(DevilScreen).GetField("AdvancePressed",
                 System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-            (field?.GetValue(screen) as System.Action)?.Invoke();
-            yield return Wait(2.5f);
+            // First press finishes the typing, the second moves on to the card.
+            for (int press = 0; press < 3 && !(field?.GetValue(screen) is null) ; press++)
+            {
+                (field?.GetValue(screen) as System.Action)?.Invoke();
+                yield return Wait(1.2f);
+            }
             yield return Capture(folder, "05_devil_card");
         }
 

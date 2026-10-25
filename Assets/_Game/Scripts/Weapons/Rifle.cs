@@ -8,7 +8,9 @@ namespace DanceWithTheDevil
     /// Contracts (GDD §8) use <see cref="DamageMultiplier"/> and <see cref="PierceCount"/>. Whisper modules (GDD §7,
     /// decision K-7: only the rifle) are switched by <see cref="PlayerModules"/> through <see cref="TripleShot"/>,
     /// <see cref="RecoilSpeed"/>, <see cref="EchoEnabled"/>, <see cref="ModuleDamageMultiplier"/>,
-    /// <see cref="ModuleFireRateMultiplier"/> and <see cref="ModuleSpreadDegrees"/> (Hız); the two damage multipliers
+    /// <see cref="ModuleFireRateMultiplier"/>, <see cref="ModuleSpreadDegrees"/> (Hız), <see cref="ModuleCritChance"/>
+    /// (Keskin Göz) and <see cref="ModulePierceCount"/> / <see cref="PierceDamageFalloff"/> (Delici: contract and
+    /// module pierce add up, <see cref="TotalPierceCount"/>); the two damage multipliers
     /// stack by product (GDD §8 Birikme kuralları), and so do the two fire-rate multipliers (contract
     /// <see cref="AttackSpeedMultiplier"/> × module; production/design/combo-haste.md §3).
     /// Aiming (GDD §4): <see cref="TryFireAt"/> fires from the muzzle toward the aim point, so shots converge on the
@@ -71,8 +73,8 @@ namespace DanceWithTheDevil
         [SerializeField, Range(0f, 1f)] private float _echoRangeAfterBounce = 0.5f;
 
         [Header("Critical hits (crit-difficulty design)")]
-        [Tooltip("Base crit chance per bullet, rolled at fire time, 0..1 (design: 0.05).")]
-        [SerializeField, Range(0f, 1f)] private float _baseCritChance = CritRoll.DefaultChance;
+        [Tooltip("Base crit chance per bullet, rolled at fire time, 0..1 (design: 0.12; field renamed from _baseCritChance so old scene values are dropped).")]
+        [SerializeField, Range(0f, 1f)] private float _baseCritChanceV2 = CritRoll.DefaultChance;
         [Tooltip("Damage multiplier of a crit (design: 2).")]
         [SerializeField, Min(1f)] private float _critMultiplier = CritRoll.DefaultMultiplier;
 
@@ -92,6 +94,8 @@ namespace DanceWithTheDevil
         private float _moduleSpreadDegrees;
         private float _moduleCritChance;
         private float _contractCritChance;
+        private int _modulePierceCount;
+        private float _pierceDamageFalloff;
         private bool _tripleShot;
         private float _tripleSpreadDegrees = 12f;
         private float _recoilSpeed;
@@ -136,11 +140,11 @@ namespace DanceWithTheDevil
             set => _moduleSpreadDegrees = Mathf.Clamp(value, 0f, 45f);
         }
 
-        /// <summary>Base crit chance (serialized 0.05). Settable for tests. Clamped 0..1.</summary>
+        /// <summary>Base crit chance (serialized 0.12). Settable for tests. Clamped 0..1.</summary>
         public float BaseCritChance
         {
-            get => _baseCritChance;
-            set => _baseCritChance = Mathf.Clamp01(value);
+            get => _baseCritChanceV2;
+            set => _baseCritChanceV2 = Mathf.Clamp01(value);
         }
 
         /// <summary>Crit chance added by contracts (Contract 3: +0.15). Additive. Set by <see cref="DealEffects"/>.</summary>
@@ -161,13 +165,34 @@ namespace DanceWithTheDevil
         }
 
         /// <summary>Crit chance per bullet (rolled at fire time): base + module + contract, clamped 0..1.</summary>
-        public float CritChance => CritRoll.Combine(_baseCritChance, _moduleCritChance, _contractCritChance);
+        public float CritChance => CritRoll.Combine(_baseCritChanceV2, _moduleCritChance, _contractCritChance);
 
-        /// <summary>Extra enemies a bullet passes through (contracts). Min 0.</summary>
+        /// <summary>Extra enemies a bullet passes through (serialized base + contracts; Contract 3: +2). Min 0.</summary>
         public int PierceCount
         {
             get => _pierceCount;
             set => _pierceCount = Mathf.Max(0, value);
+        }
+
+        /// <summary>Extra pierce from the module system (Delici +2). Min 0. Set only by <see cref="PlayerModules"/>.</summary>
+        public int ModulePierceCount
+        {
+            get => _modulePierceCount;
+            set => _modulePierceCount = Mathf.Max(0, value);
+        }
+
+        /// <summary>Pierce of every bullet launched now: contract + module, added (Contract 3 + Delici = 4).</summary>
+        public int TotalPierceCount => _pierceCount + _modulePierceCount;
+
+        /// <summary>
+        /// Delici cost: each enemy a bullet passes through cuts its damage for the next one by this fraction (0.3 →
+        /// ×0.7 per pierce, multiplied: 10, 7, 4.9, ...). Applies to every pierce of the bullet while set. 0 = none.
+        /// Set only by <see cref="PlayerModules"/>.
+        /// </summary>
+        public float PierceDamageFalloff
+        {
+            get => _pierceDamageFalloff;
+            set => _pierceDamageFalloff = Mathf.Clamp01(value);
         }
 
         /// <summary>Triple Shot: each shot is a centre bullet plus two at ±<see cref="TripleSpreadDegrees"/>, each full damage.</summary>
@@ -330,7 +355,8 @@ namespace DanceWithTheDevil
                 SourceIsLocalPlayer = isPlayer,
                 Damage = Damage,
                 Kind = DamageKind.Bullet,
-                PierceCount = _pierceCount,
+                PierceCount = TotalPierceCount,
+                PierceDamageFalloff = _pierceDamageFalloff,
                 HitIntensity = _hitIntensity,
                 WallHitIntensity = _wallHitIntensity,
                 Bounces = echo ? _echoBounces : 0,

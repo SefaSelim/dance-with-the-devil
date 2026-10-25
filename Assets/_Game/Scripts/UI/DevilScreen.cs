@@ -15,15 +15,18 @@ namespace DanceWithTheDevil
     /// plain line of stakes under each choice (EVET: you come back, the cost stays; HAYIR: the run ends).
     /// Display only: it raises <see cref="YesPressed"/>, <see cref="NoPressed"/>, <see cref="AdvancePressed"/> and
     /// <see cref="DevilDirector"/> decides.
-    /// Deliberate inputs only (combat keys never choose or skip): EVET = hold Enter / pad South, or hold the mouse
-    /// on EVET, for <see cref="_yesHoldSeconds"/> (a bar fills); HAYIR = H / pad East / a click on HAYIR; lines =
-    /// Enter / pad South / a click on the bubble (the first press finishes the typing). Presses that started before a
-    /// prompt's input lock are ignored, and the choices fade in during the card lock. Unscaled time.
+    /// Deliberate inputs only (combat keys never choose or skip): both choices must be HELD for
+    /// <see cref="_yesHoldSeconds"/>: EVET = Enter / pad South / the mouse on EVET; HAYIR = H / pad East / the mouse
+    /// on HAYIR. A light fill sweeps over the whole button left to right while held and drains back on release
+    /// (gold on EVET, pale on HAYIR). Lines = Enter / pad South / a click on the bubble (the first press finishes the
+    /// typing). Presses that started before a prompt's input lock are ignored, and the choices fade in during the card
+    /// lock. Unscaled time.
+    /// Layout: the card sits on the right side, bottom; the Devil stands at the right edge drawn OVER the card's right
+    /// part, so the card's text and buttons keep to a left column (<see cref="CardColumnWidth"/>) that wraps before
+    /// him. Bottom row of the card: small HAYIR on the left, big EVET on the right (static), a stakes line under each.
     /// Art: the serialized sprite, else the theme's hand-drawn Devil (UiTheme.DevilSprite, Dance/UI/Build Devil Art),
-    /// else blocks. The drawn Devil is sized to the image aspect and fills the right side; EVET (with its stakes line)
-    /// rides on his reaching fingertip (<see cref="_handPoint"/> in the art), following his lean-in and idle sway every
-    /// frame; the idle sway calms while the pointer is on EVET. Motion (DOTween, unscaled): lean-in, card and EVET
-    /// pop-in, bubble pop. ReduceMotion skips them.
+    /// else blocks. The drawn Devil is sized to the image aspect and fills the right side. Motion (DOTween, unscaled):
+    /// lean-in, idle sway, card and EVET pop-in, bubble pop. ReduceMotion skips them.
     /// No monitor frame is drawn (open design question).
     /// TODO(Burak): should right click (the in-combat "no") also mean HAYIR on the card (K-2)? Not decided.
     /// TODO(Burak): monitor frame around the game image for the Devil to lean over (GDD §3, §13)? Not decided.
@@ -47,7 +50,7 @@ namespace DanceWithTheDevil
         [SerializeField, Min(0f)] private float _lineInputLock = 0.5f;
         [Tooltip("Card: presses are ignored for this long after the card appears; the choices fade in meanwhile.")]
         [SerializeField, Min(0f)] private float _cardInputLock = 0.9f;
-        [Tooltip("EVET: how long Enter / pad South / the mouse on EVET must be held.")]
+        [Tooltip("EVET and HAYIR: how long the key / pad button / the mouse on the button must be held.")]
         [SerializeField, Min(0.05f)] private float _yesHoldSeconds = 0.6f;
 
         [Header("Devil animation")]
@@ -61,36 +64,47 @@ namespace DanceWithTheDevil
         [SerializeField, Range(0f, 6f)] private float _bobUnits = 2f;
 
         [Header("Drawn Devil")]
-        [Tooltip("His reaching fingertip in the art, 0..1 from the bottom-left of the image (EVET sits there).")]
-        [SerializeField] private Vector2 _handPoint = new Vector2(0.51f, 0.41f);
         [Tooltip("Height of the drawn Devil, canvas units (the game image is 360 high; a little is cut at the bottom).")]
         [SerializeField, Min(50f)] private float _artHeight = 400f;
         [Tooltip("Lean-in angle for the drawn Devil (the block Devil uses Lean Angle), degrees.")]
         [SerializeField, Range(0f, 10f)] private float _artLeanAngle = 3f;
 
-        // Block Devil (no art): size, rest position (partly past the right edge), hand point (claws, left side).
+        // Block Devil (no art): size, rest position (partly past the right edge).
         private static readonly Vector2 BlockDevilSize = new Vector2(210f, 330f);
         private static readonly Vector2 BlockDevilIn = new Vector2(50f, -20f);
-        private static readonly Vector2 BlockHandPoint = new Vector2(0.02f, 0.47f);
         // Drawn Devil: his right edge a little past the frame, feet below it.
         private const float ArtRightOverhang = 20f;
         private const float ArtBottom = -30f;
-        // EVET rests on the fingertip: bottom-centre of the button at the tip, 2 units up.
-        private static readonly Vector2 YesOnHandOffset = new Vector2(0f, 2f);
-        private static readonly Vector2 YesSize = new Vector2(140f, 36f);
+        // Card: bottom-right of the 640×360 frame (x 116..616, y 6..206). The drawn Devil's figure starts near x 463,
+        // so the text and buttons keep to a left column ending near x 454 (CardPad + CardColumnWidth inside the plate).
+        private static readonly Vector2 CardSize = new Vector2(500f, 200f);
+        private static readonly Vector2 CardCentre = new Vector2(-24f - 250f, 6f + 100f); // from the bottom-right corner
+        private const float CardPad = 8f;
+        private const float CardColumnWidth = 330f;
+        private const float CardLineGap = 3f;
+        // Bottom row: HAYIR small on the left, EVET big on the right of the column; stakes lines under them.
+        private static readonly Vector2 YesSize = new Vector2(140f, 34f);
+        private static readonly Vector2 NoSize = new Vector2(100f, 28f);
+        private const float ButtonRowY = 17f;
+        private const float StakesY = 4f;
         private static readonly Color YesColor = new Color(0.95f, 0.22f, 0.15f, 1f);
         private static readonly Color YesHover = new Color(1f, 0.42f, 0.3f, 1f);
-        // HAYIR is a text button: dim label, brighter on hover.
+        // HAYIR is a text button: dim label, brighter on hover / hold.
         private static readonly Color NoColor = UiKit.Light;
         private static readonly Color NoHover = Color.white;
+        // Hold fills over the whole button (semi-transparent, so the label still reads through).
+        private static readonly Color YesFillColor = new Color(1f, 0.84f, 0.32f, 0.5f);
+        private static readonly Color NoFillColor = new Color(0.9f, 0.9f, 0.93f, 0.4f);
+        private const float HoldDrainRate = 4f;
+        private static Sprite _fillSprite;
         private const string TransparentOpen = "<color=#00000000>";
         private const string TransparentClose = "</color>";
 
         private RectTransform _root;
         private Image _dim;
         private RectTransform _devil;
-        private RectTransform _handAnchor;
-        private RectTransform _yesAnchor;
+        private RectTransform _yesRect;
+        private float _yesScale = 1f;
         private RectTransform _cardRect;
         private RectTransform _speechRect;
         private Vector2 _devilIn, _devilOut;
@@ -113,8 +127,7 @@ namespace DanceWithTheDevil
         private Image[] _yesPlates;
         private TMP_Text _noLabel;
         private UiHoldButton _yesButton, _noButton;
-        private RectTransform _yesFill;
-        private float _yesFillWidth;
+        private Image _yesFill, _noFill;
 
         private enum Mode { Hidden, Entering, Line, Card }
         private Mode _mode = Mode.Hidden;
@@ -122,9 +135,9 @@ namespace DanceWithTheDevil
         private float _promptShownAt;
         private float _clock;
         private float _idleWeight;
-        private float _yesProgress;
-        private bool _keyHoldArmed;
-        private int _bubblePressSeen, _noPressSeen;
+        private float _yesProgress, _noProgress;
+        private bool _keyHoldArmed, _noKeyHoldArmed;
+        private int _bubblePressSeen;
 
         // Typewriter (prefix strings are built once per line, never per frame).
         private string _line = "";
@@ -150,6 +163,8 @@ namespace DanceWithTheDevil
         public bool IsTyping => _typing;
         /// <summary>0..1 progress of the EVET hold.</summary>
         public float YesHoldProgress => _yesProgress;
+        /// <summary>0..1 progress of the HAYIR hold.</summary>
+        public float NoHoldProgress => _noProgress;
 
         private void Awake()
         {
@@ -227,13 +242,14 @@ namespace DanceWithTheDevil
             _costTitle.text = GameTexts.CardTake + " " + deal.CostName;
             _takeText.text = GameTexts.CardCostVisible + " " + deal.CostVisibleText + "\n"
                 + GameTexts.CardCostMechanical + " " + deal.CostMechanicalText;
+            StackCardText();
             _choices.SetActive(offersChoice);
             bool wasShown = _card.activeSelf;
             _card.SetActive(true);
             if (!wasShown)
             {
                 UiKit.PopIn(_cardRect, 0f, 0.82f, 0.28f);
-                if (offersChoice) UiKit.PopIn(_yesAnchor, 0.25f, 0.6f, 0.3f);
+                if (offersChoice) UiKit.PopIn(_yesRect, 0.25f, 0.6f, 0.3f, _yesScale);
             }
             _cardHasChoice = offersChoice;
             _mode = Mode.Card;
@@ -257,11 +273,12 @@ namespace DanceWithTheDevil
         {
             _promptShownAt = Time.unscaledTime;
             _yesProgress = 0f;
+            _noProgress = 0f;
             _keyHoldArmed = false;
-            ApplyYesProgress();
+            _noKeyHoldArmed = false;
+            ApplyHoldProgress();
             // Presses already counted belong to the previous prompt.
             _bubblePressSeen = _bubbleButton.PressCount;
-            _noPressSeen = _noButton.PressCount;
         }
 
         private void Update()
@@ -271,12 +288,7 @@ namespace DanceWithTheDevil
             _clock += dt;
 
             if (_mode != Mode.Entering)
-            {
-                // The sway calms while the pointer is on EVET, so it does not slide out from under the cursor.
-                bool onYes = _yesButton != null && _choices.activeInHierarchy && (_yesButton.IsHovered || _yesButton.IsHeld);
-                float target = UiKit.ReduceMotion ? 0f : onYes ? 0.2f : 1f;
-                _idleWeight = Mathf.MoveTowards(_idleWeight, target, dt * 2f);
-            }
+                _idleWeight = Mathf.MoveTowards(_idleWeight, UiKit.ReduceMotion ? 0f : 1f, dt * 2f);
             ApplyPose();
             TickTyping(dt);
             AnimateFace(dt);
@@ -328,40 +340,54 @@ namespace DanceWithTheDevil
             // The bubble click only finishes the typing here; it never chooses.
             if (ConsumeClick(_bubbleButton, ref _bubblePressSeen, 0f) && _typing) FinishTyping();
 
-            // HAYIR: H / pad East / a click on HAYIR.
-            Keyboard k = Keyboard.current;
-            Gamepad g = Gamepad.current;
-            bool noClick = ConsumeClick(_noButton, ref _noPressSeen, _cardInputLock);
-            bool noKey = unlocked && ((k != null && k.hKey.wasPressedThisFrame) || (g != null && g.buttonEast.wasPressedThisFrame));
-            if (noClick || noKey)
-            {
-                UiKit.NotifyClick();
-                RaiseNo();
-                return;
-            }
-
-            // EVET: a fresh press after the lock, then held.
+            // EVET: Enter / pad South, a fresh press after the lock, then held; or the mouse held on EVET.
             if (unlocked && UiKit.ConfirmPressed()) _keyHoldArmed = true;
             if (!UiKit.ConfirmHeld()) _keyHoldArmed = false;
-            bool mouseHold = _yesButton.IsHeld && _yesButton.PressedAt >= _promptShownAt + _cardInputLock;
-            bool holding = unlocked && (_keyHoldArmed || mouseHold);
-            _yesProgress = holding
-                ? _yesProgress + dt / _yesHoldSeconds
-                : Mathf.Max(0f, _yesProgress - dt * 4f);
-            ApplyYesProgress();
+            bool yesMouse = _yesButton.IsHeld && _yesButton.PressedAt >= _promptShownAt + _cardInputLock;
+            bool holdingYes = unlocked && (_keyHoldArmed || yesMouse);
 
-            Color yesTint = _yesButton.IsHovered || holding ? YesHover : YesColor;
+            // HAYIR: H / pad East, a fresh press after the lock, then held; or the mouse held on HAYIR.
+            Keyboard k = Keyboard.current;
+            Gamepad g = Gamepad.current;
+            if (unlocked && ((k != null && k.hKey.wasPressedThisFrame) || (g != null && g.buttonEast.wasPressedThisFrame)))
+                _noKeyHoldArmed = true;
+            if (!((k != null && k.hKey.isPressed) || (g != null && g.buttonEast.isPressed))) _noKeyHoldArmed = false;
+            bool noMouse = _noButton.IsHeld && _noButton.PressedAt >= _promptShownAt + _cardInputLock;
+            bool holdingNo = unlocked && (_noKeyHoldArmed || noMouse);
+
+            _yesProgress = StepHold(_yesProgress, holdingYes, dt);
+            _noProgress = StepHold(_noProgress, holdingNo, dt);
+            ApplyHoldProgress();
+
+            Color yesTint = _yesButton.IsHovered || holdingYes ? YesHover : YesColor;
             for (int i = 0; i < _yesPlates.Length; i++) SetColor(_yesPlates[i], yesTint);
-            if (_noLabel != null) SetColor(_noLabel, _noButton.IsHovered ? NoHover : NoColor);
+            if (_noLabel != null) SetColor(_noLabel, _noButton.IsHovered || holdingNo ? NoHover : NoColor);
 
             if (_yesProgress >= 1f)
             {
-                _yesProgress = 0f;
-                _keyHoldArmed = false;
-                ApplyYesProgress();
+                ClearHolds();
                 UiKit.NotifyClick();
                 RaiseYes();
             }
+            else if (_noProgress >= 1f)
+            {
+                ClearHolds();
+                UiKit.NotifyClick();
+                RaiseNo();
+            }
+        }
+
+        private float StepHold(float progress, bool holding, float dt) => holding
+            ? progress + dt / _yesHoldSeconds
+            : Mathf.Max(0f, progress - dt * HoldDrainRate);
+
+        private void ClearHolds()
+        {
+            _yesProgress = 0f;
+            _noProgress = 0f;
+            _keyHoldArmed = false;
+            _noKeyHoldArmed = false;
+            ApplyHoldProgress();
         }
 
         private void RaiseYes()
@@ -376,10 +402,48 @@ namespace DanceWithTheDevil
             NoPressed?.Invoke();
         }
 
-        private void ApplyYesProgress()
+        private void ApplyHoldProgress()
         {
-            float w = Mathf.Round(Mathf.Clamp01(_yesProgress) * _yesFillWidth);
-            if (!Mathf.Approximately(_yesFill.sizeDelta.x, w)) _yesFill.sizeDelta = new Vector2(w, _yesFill.sizeDelta.y);
+            SetFill(_yesFill, _yesProgress);
+            SetFill(_noFill, _noProgress);
+        }
+
+        private static void SetFill(Image fill, float progress)
+        {
+            if (fill == null) return;
+            float amount = Mathf.Clamp01(progress);
+            if (!Mathf.Approximately(fill.fillAmount, amount)) fill.fillAmount = amount;
+            bool show = amount > 0f;
+            if (fill.enabled != show) fill.enabled = show;
+        }
+
+        /// <summary>
+        /// A light overlay over the whole button that fills left to right with the hold (Image.Type.Filled needs a
+        /// sprite: a shared one over the built-in white texture). Sits under the label when the label is a direct
+        /// child, else on top (semi-transparent, so the label still reads).
+        /// </summary>
+        private static Image AddHoldFill(RectTransform button, Color color, TMP_Text label)
+        {
+            if (_fillSprite == null)
+            {
+                Texture2D white = Texture2D.whiteTexture;
+                _fillSprite = Sprite.Create(white, new Rect(0f, 0f, white.width, white.height), new Vector2(0.5f, 0.5f));
+                _fillSprite.name = "HoldFillSprite";
+            }
+            RectTransform rect = UiKit.Stretch(button, "HoldFill");
+            rect.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+            Image fill = rect.gameObject.AddComponent<Image>();
+            fill.sprite = _fillSprite;
+            fill.color = color;
+            fill.raycastTarget = false;
+            fill.type = Image.Type.Filled;
+            fill.fillMethod = Image.FillMethod.Horizontal;
+            fill.fillOrigin = (int)Image.OriginHorizontal.Left;
+            fill.fillAmount = 0f;
+            fill.enabled = false;
+            if (label != null && label.transform.parent == button) rect.SetSiblingIndex(label.transform.GetSiblingIndex());
+            else rect.SetAsLastSibling();
+            return fill;
         }
 
         private static void SetColor(Graphic graphic, Color color)
@@ -451,7 +515,7 @@ namespace DanceWithTheDevil
 
         /// <summary>
         /// Lean-in (<see cref="_enter"/>, tweened 0 to 1) plus the slow idle sway and bob (whole texels, so the blocks
-        /// stay crisp), the dim overlay, and EVET placed on his fingertip.
+        /// stay crisp) and the dim overlay. The card and its buttons never move with him.
         /// </summary>
         private void ApplyPose()
         {
@@ -463,7 +527,6 @@ namespace DanceWithTheDevil
             Color c = _dim.color;
             c.a = _dimAlpha * Mathf.Clamp01(e);
             _dim.color = c;
-            if (_yesAnchor != null && _handAnchor != null) _yesAnchor.position = _handAnchor.position;
         }
 
         /// <summary>Blinks every few seconds; the mouth moves while the line types.</summary>
@@ -516,7 +579,6 @@ namespace DanceWithTheDevil
 
             Sprite sprite = _devilSprite != null ? _devilSprite : UiKit.Theme != null ? UiKit.Theme.DevilSprite : null;
             Vector2 size;
-            Vector2 hand;
             if (sprite != null)
             {
                 Rect r = sprite.rect;
@@ -524,14 +586,12 @@ namespace DanceWithTheDevil
                 size = new Vector2(Mathf.Round(_artHeight * aspect), _artHeight);
                 _devilIn = new Vector2(ArtRightOverhang, ArtBottom);
                 _lean = _artLeanAngle;
-                hand = _handPoint;
             }
             else
             {
                 size = BlockDevilSize;
                 _devilIn = BlockDevilIn;
                 _lean = _leanAngle;
-                hand = BlockHandPoint;
             }
             _devilOut = _devilIn + new Vector2(size.x * 0.75f + 40f, 0f);
 
@@ -547,11 +607,11 @@ namespace DanceWithTheDevil
             {
                 BuildPlaceholderDevil(_devil);
             }
-            // The fingertip: an empty point in the art's rect, so it follows the lean and sway.
-            _handAnchor = UiKit.Rect(_devil, "Fingertip", hand, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
-
             BuildSpeechBubble(font);
             BuildCard(font);
+            // Draw order: card, then the Devil over its right part, then the speech bubble on top.
+            _devil.SetAsLastSibling();
+            _speechRect.SetAsLastSibling();
             _root.gameObject.SetActive(false);
         }
 
@@ -585,62 +645,84 @@ namespace DanceWithTheDevil
             _continueText.text = GameTexts.LineContinue;
         }
 
+        /// <summary>
+        /// Stacks the card's three text blocks by their real wrapped height, so a long promise that wraps to three lines
+        /// pushes the cost lines down instead of being drawn under them (seen in the 2026-10-25 captures).
+        /// </summary>
+        private void StackCardText()
+        {
+            float y = -6f;
+            y = PlaceBlock(_giveText, y);
+            y = PlaceBlock(_costTitle, y);
+            PlaceBlock(_takeText, y);
+        }
+
+        private static float PlaceBlock(Text text, float top)
+        {
+            RectTransform rect = text.rectTransform;
+            float height = Mathf.Ceil(text.preferredHeight);
+            rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, top);
+            rect.sizeDelta = new Vector2(rect.sizeDelta.x, height);
+            return top - height - CardLineGap;
+        }
+
         private void BuildCard(Font font)
         {
             Vector2 mid = new Vector2(0.5f, 0.5f);
-            Vector2 top = new Vector2(0.5f, 1f);
+            Vector2 tl = new Vector2(0f, 1f);
+            Vector2 bl = Vector2.zero;
+            Vector2 br = new Vector2(1f, 0f);
             Vector2 bottom = new Vector2(0.5f, 0f);
 
-            // Left of the Devil so his reaching hand (and EVET on it) stays clear of the text.
-            Image card = UiKit.Framed(_root, "Card", UiKit.DevilRed, UiKit.Panel, mid, mid, new Vector2(-100f, -54f),
-                new Vector2(384f, 200f));
+            // Right side, bottom; the Devil is drawn over its right part (Build), so everything inside keeps to the
+            // left column [CardPad, CardPad + CardColumnWidth] of the plate and wraps before him.
+            Image card = UiKit.Framed(_root, "Card", UiKit.DevilRed, UiKit.Panel, br, mid, CardCentre, CardSize);
             _card = card.transform.parent.gameObject;
             _cardRect = (RectTransform)card.transform.parent;
             Transform c = card.transform;
 
-            _giveText = UiKit.Label(c, "Give", font, 12, Color.white, TextAnchor.UpperLeft, top, top,
-                new Vector2(0f, -6f), new Vector2(360f, 32f));
-            _costTitle = UiKit.Label(c, "CostName", font, 16, UiKit.CostRed, TextAnchor.UpperLeft, top, top,
-                new Vector2(0f, -40f), new Vector2(360f, 20f), FontStyle.Bold);
+            _giveText = UiKit.Label(c, "Give", font, 12, Color.white, TextAnchor.UpperLeft, tl, tl,
+                new Vector2(CardPad, -6f), new Vector2(CardColumnWidth, 32f));
+            _costTitle = UiKit.Label(c, "CostName", font, 16, UiKit.CostRed, TextAnchor.UpperLeft, tl, tl,
+                new Vector2(CardPad, -40f), new Vector2(CardColumnWidth, 20f), FontStyle.Bold);
             UiKit.AddShadow(_costTitle);
-            _takeText = UiKit.Label(c, "Take", font, 12, UiKit.Cream, TextAnchor.UpperLeft, top, top,
-                new Vector2(0f, -62f), new Vector2(360f, 48f));
+            _takeText = UiKit.Label(c, "Take", font, 12, UiKit.Cream, TextAnchor.UpperLeft, tl, tl,
+                new Vector2(CardPad, -62f), new Vector2(CardColumnWidth, 54f));
 
             RectTransform choices = UiKit.Stretch(c, "Choices");
             _choices = choices.gameObject;
             _choicesGroup = _choices.AddComponent<CanvasGroup>();
 
-            // EVET: big and bright (K-2), hold to sign; a gold bar fills along its bottom. It rides on the Devil's
-            // fingertip: an anchor in the card's choices (so it fades and hides with them) placed on the hand every
-            // frame (ApplyPose); the stakes line sits just above the button.
-            _yesAnchor = UiKit.Rect(choices, "YesOnHand", mid, mid, Vector2.zero, Vector2.zero);
-            RectTransform yes = (RectTransform)UiKit.PrefabHoldButton(_yesAnchor, UiKit.ButtonPrefab,
-                GameTexts.Yes + "\n<size=55%><color=#EDE0BD>" + GameTexts.YesKeys + "</color></size>", mid, bottom,
-                YesOnHandOffset, YesSize, out TMP_Text yesLabel, 16f, "Yes").transform;
+            // Bottom row. EVET (right of the column): big and bright (K-2), static, held to sign; a gold fill sweeps
+            // over the whole button while held.
+            float columnRight = CardPad + CardColumnWidth;
+            RectTransform yes = (RectTransform)UiKit.PrefabHoldButton(choices, UiKit.ButtonPrefab,
+                GameTexts.Yes + "\n<size=55%><color=#EDE0BD>" + GameTexts.YesKeys + "</color></size>", bl, br,
+                new Vector2(columnRight, ButtonRowY), YesSize, out TMP_Text yesLabel, 16f, "Yes").transform;
+            _yesRect = yes;
+            _yesScale = yes.localScale.x;
             _yesButton = yes.GetComponent<UiHoldButton>();
             if (yesLabel != null) yesLabel.color = Color.white;
             _yesPlates = UiKit.PlateImages(yes.gameObject);
             for (int i = 0; i < _yesPlates.Length; i++) _yesPlates[i].color = YesColor;
-            // The fill lives under the (scaled) button root: sizes in its local units, outside its layout group.
-            float s = Mathf.Max(0.001f, yes.localScale.x);
-            float inset = 2f / s;
-            _yesFillWidth = yes.sizeDelta.x - inset * 2f;
-            Image yesFill = UiKit.Box(yes, "HoldFill", UiKit.Gold, Vector2.zero, Vector2.zero,
-                new Vector2(inset, inset), new Vector2(0f, 4f / s));
-            yesFill.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
-            _yesFill = yesFill.rectTransform;
-            Text yesStakes = UiKit.Label(_yesAnchor, "YesStakes", font, 10, UiKit.Cream, TextAnchor.MiddleCenter,
-                mid, bottom, YesOnHandOffset + new Vector2(0f, YesSize.y + 2f), new Vector2(220f, 14f));
+            _yesFill = AddHoldFill(yes, YesFillColor, yesLabel);
+            Text yesStakes = UiKit.Label(choices, "YesStakes", font, 10, UiKit.Cream, TextAnchor.MiddleCenter, bl,
+                bottom, new Vector2(columnRight - YesSize.x * 0.5f, StakesY), new Vector2(150f, 12f));
             yesStakes.text = GameTexts.YesStakes;
             UiKit.AddShadow(yesStakes);
 
-            // HAYIR: small and dim, but readable and always selectable (K-2). Synty small text button prefab.
-            _noButton = UiKit.PrefabHoldButton(choices, UiKit.SmallButtonPrefab, GameTexts.No + " " + GameTexts.NoKeys,
-                bottom, bottom, new Vector2(0f, 30f), new Vector2(96f, 20f), out _noLabel, 10f, "No");
+            // HAYIR (left of the column): small and dim, but readable and always selectable (K-2); held like EVET,
+            // with a pale fill. Synty small text button prefab.
+            RectTransform no = (RectTransform)UiKit.PrefabHoldButton(choices, UiKit.SmallButtonPrefab,
+                GameTexts.No + "\n<size=75%>" + GameTexts.NoKeys + "</size>", bl, bl, new Vector2(CardPad, ButtonRowY),
+                NoSize, out _noLabel, 11f, "No").transform;
+            _noButton = no.GetComponent<UiHoldButton>();
             if (_noLabel != null) _noLabel.color = NoColor;
-            Text noStakes = UiKit.Label(choices, "NoStakes", font, 10, UiKit.Light, TextAnchor.MiddleCenter,
-                bottom, bottom, new Vector2(0f, 12f), new Vector2(220f, 14f));
+            _noFill = AddHoldFill(no, NoFillColor, _noLabel);
+            Text noStakes = UiKit.Label(choices, "NoStakes", font, 10, UiKit.Light, TextAnchor.MiddleCenter, bl,
+                bottom, new Vector2(CardPad + NoSize.x * 0.5f, StakesY), new Vector2(NoSize.x, 12f));
             noStakes.text = GameTexts.NoStakes;
+            UiKit.AddShadow(noStakes);
         }
 
         /// <summary>Placeholder Devil from blocks (team drawing replaces it, GDD §13). Keeps eye/mouth refs to animate.</summary>

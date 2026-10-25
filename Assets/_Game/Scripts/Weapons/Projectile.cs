@@ -37,6 +37,11 @@ namespace DanceWithTheDevil
         /// <summary>Extra damageables passed through. 0 = stop on the first damageable.</summary>
         public int PierceCount;
         /// <summary>
+        /// Damage lost per enemy passed through (Delici cost 0.3): the next target takes Damage × (1 − this)^passed.
+        /// 0 = full damage to every pierced target.
+        /// </summary>
+        public float PierceDamageFalloff;
+        /// <summary>
         /// Optional (enemy shots): if set, only damageables under this root are hit; other damageables (enemies) are
         /// flown through. Colliders without a damageable (walls) still stop it. Null = hit any damageable.
         /// </summary>
@@ -122,6 +127,7 @@ namespace DanceWithTheDevil
         private float _travelled;
         private float _rangeLimit;
         private int _pierceLeft;
+        private float _pierceDamageScale = 1f;
         private bool _active;
         private int _bouncesLeft;
         private bool _bounced;
@@ -163,6 +169,7 @@ namespace DanceWithTheDevil
             _travelled = 0f;
             _rangeLimit = launch.MaxRange;
             _pierceLeft = Mathf.Max(0, launch.PierceCount);
+            _pierceDamageScale = 1f;
             _bouncesLeft = Mathf.Max(0, launch.Bounces);
             _bounced = false;
             _ignoreRoot = launch.IgnoreRoot;
@@ -265,7 +272,7 @@ namespace DanceWithTheDevil
                     return SweepResult.Ended;
                 }
 
-                float damage = _launch.Damage;
+                float damage = _launch.Damage * _pierceDamageScale; // Delici: weaker after each enemy passed
                 bool selfHit = false;
                 if (_selfRoot != null && collider.transform.IsChildOf(_selfRoot))
                 {
@@ -295,6 +302,7 @@ namespace DanceWithTheDevil
                     return SweepResult.Ended;
                 }
                 _pierceLeft--;
+                if (_launch.PierceDamageFalloff > 0f) _pierceDamageScale *= 1f - Mathf.Clamp01(_launch.PierceDamageFalloff);
             }
             return SweepResult.Continue;
         }

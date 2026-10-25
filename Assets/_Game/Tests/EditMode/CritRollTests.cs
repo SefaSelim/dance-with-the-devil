@@ -14,8 +14,9 @@ namespace DanceWithTheDevil.Tests
         public void TearDown() => CritRoll.Seed(System.Environment.TickCount);
 
         [TestCase(0.05f, 0.006f)]
-        [TestCase(0.25f, 0.012f)]
-        [TestCase(0.40f, 0.012f)]
+        [TestCase(0.12f, 0.008f)]
+        [TestCase(0.32f, 0.012f)]
+        [TestCase(0.47f, 0.012f)]
         public void Roll_SeededManyTimes_RateWithinTolerance(float chance, float tolerance)
         {
             // Arrange
@@ -71,9 +72,25 @@ namespace DanceWithTheDevil.Tests
         public void Combine_BasePlusBonuses_ClampsToOne()
         {
             // Act / Assert
-            Assert.AreEqual(0.40f, CritRoll.Combine(0.05f, 0.2f, 0.15f), 1e-5f);
+            Assert.AreEqual(0.47f, CritRoll.Combine(CritRoll.DefaultChance, 0.2f, 0.15f), 1e-5f);
             Assert.AreEqual(1f, CritRoll.Combine(0.5f, 0.5f, 0.5f), 1e-5f);
             Assert.AreEqual(0f, CritRoll.Combine(-1f, 0f, 0f), 1e-5f);
+        }
+
+        [Test]
+        public void DefaultChance_IsTwelvePercent_SeededRateMatches()
+        {
+            // Arrange (user decision 2026-10-25: base 5 % -> 12 %)
+            CritRoll.Seed(2026);
+            int crits = 0;
+
+            // Act
+            for (int i = 0; i < Rolls; i++)
+                if (CritRoll.Roll(CritRoll.DefaultChance)) crits++;
+
+            // Assert
+            Assert.AreEqual(0.12f, CritRoll.DefaultChance, 1e-6f);
+            Assert.AreEqual(0.12f, crits / (float)Rolls, 0.008f);
         }
 
         [Test]

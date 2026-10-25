@@ -13,7 +13,7 @@ namespace DanceWithTheDevil
     /// elapsed run time (the run has no end time: D2, K-4); score with the live combo multiplier ("Puan 1200 ×1,5",
     /// shown above ×1,0; the combo itself pops up in the world, see WorldPopups). Top-left: Defne's small block portrait (hair
     /// greys after contract 1, hidden by contract 3) and the "Verdiklerin" strip, one icon per cost taken (the
-    /// newest one pulses). Bottom: one fixed slot per module type (ModuleCatalog.Count, five) (empty = a dim socket with no name until that module has
+    /// newest one pulses). Bottom: one fixed slot per module type (ModuleCatalog.Count; the row narrows from six on) (empty = a dim socket with no name until that module has
     /// been offered once; equipped = the module's own colour; while Q is held the highlighted slot grows, turns gold
     /// and "Sağ tık: sök" shows above it), "Küçük hayırlar: N", rocket / machete / dodge / reject pips (reject reads
     /// PlayerModules' real cooldown). While a whisper offer exists (and the Devil is not up): a small banner in the
@@ -32,11 +32,13 @@ namespace DanceWithTheDevil
         private const int ModuleSlots = ModuleCatalog.Count;
         private const int MaxCostIcons = 6;
         private const int TimeCacheSeconds = 3600;
-        // Five slots at 640×360: centres 0/±68/±136, extents ±167 (±171 highlighted); the rocket/machete/dodge/reject
-        // pips end at −174; "Küçük hayırlar" starts at +175 and ends at +315 inside the 320 half-width.
-        private const float SlotSpacing = 68f;
-        private static readonly Vector2 SlotSize = new Vector2(62f, 20f);
-        private static readonly Vector2 SlotSizeHighlighted = new Vector2(70f, 26f);
+        // The slot row fits ±170 at 640×360 whatever the module count: the pip rows (label + 4 pips) end at −180 and
+        // "Küçük hayırlar" (140 wide) starts right of the last highlighted slot and must end before +320.
+        // Five slots: spacing 68, centres 0/±68/±136, extents ±167 (±171 highlighted), "Küçük hayırlar" +175..+315.
+        // Six slots: spacing 56, centres ±28/±84/±140, extents ±165 (±169 highlighted), "Küçük hayırlar" +173..+313.
+        private const float SlotSpacing = ModuleSlots <= 5 ? 68f : 336f / ModuleSlots;
+        private static readonly Vector2 SlotSize = new Vector2(SlotSpacing - 6f, 20f);
+        private static readonly Vector2 SlotSizeHighlighted = new Vector2(SlotSpacing + 2f, 26f);
         // Offer banner: top-right corner under the score line.
         private static readonly Vector2 OfferSize = new Vector2(232f, 40f);
         private static readonly Vector2 OfferHome = new Vector2(-6f, -27f);

@@ -179,6 +179,24 @@ namespace DanceWithTheDevil
         [Tooltip("Most hit chips emitted in one frame.")]
         [SerializeField, Min(16)] private int _maxChipsPerFrame = 600;
 
+        [Header("Crit burst (Defne's bullet / machete crits; spark cubes inside _maxSparks)")]
+        [Tooltip("Radial white-hot/gold sparks (all directions, a little upward) and a tight streak along the bullet.")]
+        [SerializeField, Min(0)] private int _critRadial = 22;
+        [SerializeField, Min(0)] private int _critStreak = 16;
+        [Tooltip("Crit spark edge range in metres (1.5–3.5 texels).")]
+        [SerializeField] private Vector2 _critSize = new Vector2(0.035f, 0.085f);
+        [SerializeField] private Vector2 _critRadialSpeed = new Vector2(4f, 9f);
+        [SerializeField] private Vector2 _critStreakSpeed = new Vector2(8f, 14f);
+        [SerializeField] private Vector2 _critLifetime = new Vector2(0.18f, 0.42f);
+        [Tooltip("Half-angle of the streak cone around the bullet direction, degrees.")]
+        [SerializeField, Range(2f, 40f)] private float _critStreakCone = 12f;
+        [SerializeField] private Color _critHot = new Color(1f, 1f, 0.92f);
+        [SerializeField] private Color _critGold = new Color(1f, 0.76f, 0.2f);
+        [Tooltip("Two crossed gold-white flash bars at the hit (along the bullet and across it), metres.")]
+        [SerializeField, Min(0f)] private float _critFlashSize = 0.6f;
+        [Tooltip("Most crit sparks emitted in one frame (a machete sweep critting 6 targets degrades, never floods).")]
+        [SerializeField, Min(16)] private int _maxCritSparksPerFrame = 160;
+
         [Header("Blast ring (explosions)")]
         [SerializeField] private RingStyle _blastRing = new RingStyle
         {
@@ -259,6 +277,8 @@ namespace DanceWithTheDevil
         private int _deathPixelsThisFrame;
         private int _chipsThisFrame;
         private int _shatterFrame = -1;
+        private int _critFrame = -1;
+        private int _critSparksThisFrame;
         private int _shatterCubesThisFrame;
         private FlashShape[] _flashes;
         private int _nextFlash;
@@ -349,6 +369,8 @@ namespace DanceWithTheDevil
                 if (!TryChip(e, intensity)) EmitCubes(p, e, intensity, blastScale);
                 if (ringRadius > 0f) SpawnRing(FloorPoint(e.position), ringRadius, _blastRing, 0.35f);
             }
+            if (e.isCrit && e.instigatorIsLocalPlayer && (e.kind == ImpactKind.Bullet || e.kind == ImpactKind.Melee))
+                EmitCritBurst(e);
 
             if (light != null && p.LightIntensity > 0f)
             {
@@ -610,6 +632,57 @@ namespace DanceWithTheDevil
                 emit.rotation3D = new Vector3(Random.Range(0f, 360f), Random.Range(0f, 360f), 0f);
                 _sparks.Emit(emit, 1);
             }
+        }
+
+        /// <summary>
+        /// Crit layer on top of the normal hit (chips + flash stay): two crossed gold-white flash bars, a radial spray of
+        /// white-hot → gold spark cubes and a tight fast streak along the bullet. Spark cubes freeze during hitstop like
+        /// the rest. Capped per frame (<see cref="_maxCritSparksPerFrame"/>) and by the live spark cap.
+        /// </summary>
+        private void EmitCritBurst(in ImpactEvent e)
+        {
+            Vector3 axis = e.direction.sqrMagnitude > 1e-4f ? e.direction.normalized
+                : e.normal.sqrMagnitude > 1e-4f ? -e.normal.normalized : Vector3.forward;
+            Vector3 across = Vector3.Cross(axis, Vector3.up);
+            across = across.sqrMagnitude > 1e-4f ? across.normalized : Vector3.right;
+            Color flash = Color.Lerp(_critHot, _critGold, 0.35f);
+            if (_critFlashSize > 0f)
+            {
+                SpawnFlash(e.position, _critFlashSize, 0.016f, 0.07f, flash, axis, 2.4f);
+                SpawnFlash(e.position, _critFlashSize * 0.8f, 0.016f, 0.05f, _critHot, across, 1.8f);
+            }
+
+            if (_sparks == null) return;
+            if (_critFrame != Time.frameCount)
+            {
+                _critFrame = Time.frameCount;
+                _critSparksThisFrame = 0;
+            }
+            int wanted = _critRadial + _critStreak;
+            int n = Mathf.Min(wanted, Mathf.Min(_maxCritSparksPerFrame - _critSparksThisFrame, _maxSparks - _sparks.particleCount));
+            if (n <= 0) return;
+            int radial = Mathf.RoundToInt(_critRadial * (n / (float)wanted));
+            float spread = Mathf.Tan(_critStreakCone * Mathf.Deg2Rad);
+
+            var emit = new ParticleSystem.EmitParams { applyShapeToPosition = false };
+            for (int i = 0; i < n; i++)
+            {
+                bool streak = i >= radial;
+                Vector3 dir = streak
+                    ? (axis + Random.insideUnitSphere * spread).normalized
+                    : (Random.onUnitSphere + Vector3.up * 0.35f).normalized;
+                emit.position = e.position + dir * 0.04f;
+                emit.velocity = dir * (streak ? Random.Range(_critStreakSpeed.x, _critStreakSpeed.y)
+                    : Random.Range(_critRadialSpeed.x, _critRadialSpeed.y));
+                emit.startSize = streak ? Random.Range(_critSize.x, Mathf.Lerp(_critSize.x, _critSize.y, 0.6f))
+                    : Random.Range(_critSize.x, _critSize.y);
+                emit.startLifetime = Random.Range(_critLifetime.x, _critLifetime.y) * (streak ? 0.75f : 1f);
+                // Most sparks white-hot, a minority deep gold (temperature ramp, no grey: crits stay bright).
+                emit.startColor = Color.Lerp(_critHot, _critGold, Random.value * Random.value * 1.4f);
+                emit.rotation3D = new Vector3(Random.Range(0f, 360f), Random.Range(0f, 360f), 0f);
+                _sparks.Emit(emit, 1);
+            }
+            _critSparksThisFrame += n;
         }
 
         private void EmitCubes(in Profile p, in ImpactEvent e, float intensity, float countScale)

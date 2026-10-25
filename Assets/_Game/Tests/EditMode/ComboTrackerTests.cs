@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace DanceWithTheDevil.Tests
 {
-    /// <summary>Combo rules (production/design/combo-haste.md §2, §4, §8) on the scene-free <see cref="ComboCounter"/>.</summary>
+    /// <summary>Combo rules (production/design/combo-haste.md §2, §4, §8; user decision 2026-10-25: only death resets) on the scene-free <see cref="ComboCounter"/>.</summary>
     public sealed class ComboTrackerTests
     {
         private GameObject _player;
@@ -140,7 +140,29 @@ namespace DanceWithTheDevil.Tests
         }
 
         [Test]
-        public void PlayerHurt_ResetsWithDamageReason()
+        public void PlayerDamaged_Survivable_KeepsComboAndWindow()
+        {
+            // Arrange (user decision 2026-10-25: damage no longer resets the combo)
+            int breaks = 0;
+            _combo.Broken += (r, l) => breaks++;
+            Hits(12);
+            _combo.Tick(1f, enemiesAlive: 2, frozen: false);
+            float timeLeft = _combo.TimeLeft;
+
+            // Act
+            bool broke = _combo.PlayerDamaged(remainingHealth: 40f);
+            _combo.PlayerDamaged(remainingHealth: 1f);
+
+            // Assert
+            Assert.IsFalse(broke);
+            Assert.AreEqual(0, breaks);
+            Assert.AreEqual(12, _combo.Count);
+            Assert.AreEqual(timeLeft, _combo.TimeLeft, 1e-5f, "damage neither refills nor drains the window");
+            Assert.AreEqual(1.2f, _combo.Multiplier, 1e-5f);
+        }
+
+        [Test]
+        public void PlayerDamaged_Lethal_ResetsWithDamageReason()
         {
             // Arrange
             ComboBreak reason = ComboBreak.Timeout;
@@ -149,9 +171,10 @@ namespace DanceWithTheDevil.Tests
             Hits(12);
 
             // Act
-            _combo.PlayerHurt();
+            bool broke = _combo.PlayerDamaged(remainingHealth: 0f);
 
             // Assert
+            Assert.IsTrue(broke);
             Assert.AreEqual(0, _combo.Count);
             Assert.AreEqual(ComboBreak.Damage, reason);
             Assert.AreEqual(12, lost);
@@ -159,17 +182,32 @@ namespace DanceWithTheDevil.Tests
         }
 
         [Test]
-        public void PlayerHurt_AtZero_RaisesNothing()
+        public void PlayerDied_AtZero_RaisesNothing()
         {
             // Arrange
             int breaks = 0;
             _combo.Broken += (r, l) => breaks++;
 
             // Act
-            _combo.PlayerHurt();
+            bool broke = _combo.PlayerDied();
 
             // Assert
+            Assert.IsFalse(broke);
             Assert.AreEqual(0, breaks);
+        }
+
+        [TestCase(10, 25)]
+        [TestCase(11, 28)]
+        [TestCase(15, 38)]
+        [TestCase(20, 50)]
+        [TestCase(30, 75)]
+        public void CritBonus_TwentyFiveTimesMultiplier_RoundedHalfUp(int tenths, int expected)
+        {
+            // Act
+            int bonus = ScoreKeeper.CritBonus(25, tenths);
+
+            // Assert
+            Assert.AreEqual(expected, bonus);
         }
 
         [TestCase(0, 10)]
@@ -228,7 +266,7 @@ namespace DanceWithTheDevil.Tests
             var tiers = new List<int>();
             _combo.TierUp += tiers.Add;
             Hits(10);
-            _combo.PlayerHurt();
+            _combo.PlayerDied();
 
             // Act
             Hits(10);

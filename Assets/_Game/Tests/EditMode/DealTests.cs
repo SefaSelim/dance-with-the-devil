@@ -76,9 +76,9 @@ namespace DanceWithTheDevil.Tests
             DealEffects.Apply(_deals[2], new DealTargets { Rifle = rifle, Machete = machete, Rocket = rocket });
 
             // Assert
-            Assert.AreEqual(0.20f, rifle.CritChance, 1e-5f, "rifle 5 % → 20 %");
-            Assert.AreEqual(0.20f, machete.CritChance, 1e-5f, "machete 5 % → 20 %");
-            Assert.AreEqual(0.20f, rocket.CritChance, 1e-5f, "rocket 5 % → 20 %");
+            Assert.AreEqual(0.27f, rifle.CritChance, 1e-5f, "rifle 12 % → 27 %");
+            Assert.AreEqual(0.27f, machete.CritChance, 1e-5f, "machete 12 % → 27 %");
+            Assert.AreEqual(0.27f, rocket.CritChance, 1e-5f, "rocket 12 % → 27 %");
             Assert.AreEqual(2, rifle.PierceCount, "pierce kept");
             StringAssert.Contains("kritik", _deals[2].LedgerTaken);
             Enemy.SpeedMultiplier = enemySpeed; // contract 3 also speeds enemies up (static)

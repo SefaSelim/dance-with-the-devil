@@ -253,7 +253,7 @@ namespace DanceWithTheDevil.Tests
         }
 
         [UnityTest]
-        public IEnumerator Offer_AllFiveEquipped_NoOfferCanAppear()
+        public IEnumerator Offer_AllSlotsEquipped_NoOfferCanAppear()
         {
             // Arrange
             var origin = new Vector3(0f, 0f, 1600f);
@@ -266,7 +266,7 @@ namespace DanceWithTheDevil.Tests
             bool presented = modules.PresentOffer(ModuleType.Echo, origin + new Vector3(0f, 0f, 5f));
 
             // Assert
-            Assert.AreEqual(5, ModuleCatalog.Count);
+            Assert.AreEqual(6, ModuleCatalog.Count);
             Assert.AreEqual(ModuleCatalog.Count, modules.EquippedCount);
             Assert.IsFalse(canPresent, "every slot is full");
             Assert.IsFalse(presented);
@@ -281,13 +281,14 @@ namespace DanceWithTheDevil.Tests
         [UnityTest]
         public IEnumerator Spawner_EquippedTypes_AreNeverDrawn()
         {
-            // Arrange: four types equipped, only Keskin Göz free.
+            // Arrange: every type but Keskin Göz equipped.
             var origin = new Vector3(0f, 0f, 1700f);
             PlayerModules modules = SpawnPlayer(origin);
             modules.EquipImmediate(ModuleType.TripleShot);
             modules.EquipImmediate(ModuleType.Echo);
             modules.EquipImmediate(ModuleType.Density);
             modules.EquipImmediate(ModuleType.Haste);
+            modules.EquipImmediate(ModuleType.Pierce);
             ModuleSpawner spawner = Spawn("Spawner", origin).AddComponent<ModuleSpawner>();
             spawner.Configure(modules, null, null);
             yield return null;
@@ -299,13 +300,14 @@ namespace DanceWithTheDevil.Tests
                 Assert.AreEqual(ModuleType.CritChance, type, $"draw {i}");
             }
 
-            // All five equipped: nothing to draw.
+            // All six equipped: nothing to draw, and no offer can appear.
             modules.EquipImmediate(ModuleType.CritChance);
             Assert.IsFalse(spawner.DrawTypeForTests(out _));
+            Assert.IsFalse(modules.CanPresentOffer);
         }
 
         [UnityTest]
-        public IEnumerator KeskinGoz_Equipped_RifleCrit25Percent_EjectRestores()
+        public IEnumerator KeskinGoz_Equipped_RifleCrit32Percent_EjectRestores()
         {
             // Arrange
             var origin = new Vector3(0f, 0f, 1800f);
@@ -322,11 +324,11 @@ namespace DanceWithTheDevil.Tests
             Assert.IsTrue(modules.TryEject(ModuleType.CritChance));
 
             // Assert
-            Assert.AreEqual(0.25f, equipped, 1e-5f, "5 % + 20 %");
+            Assert.AreEqual(0.32f, equipped, 1e-5f, "12 % + 20 %");
             Assert.AreEqual(baseDamage, rifle.Damage, 1e-5f, "no damage cost");
             Assert.IsFalse(slowWithoutFire, "the walk is slowed only while fire is held");
             Assert.AreEqual(baseSpeed, modules.Player.MoveSpeedMultiplier, 1e-5f);
-            Assert.AreEqual(0.05f, rifle.CritChance, 1e-5f, "back to base");
+            Assert.AreEqual(0.12f, rifle.CritChance, 1e-5f, "back to base");
         }
     }
 }

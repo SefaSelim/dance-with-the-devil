@@ -9,14 +9,18 @@ namespace DanceWithTheDevil
     {
         /// <summary>No counted hit or kill for the whole window while enemies were alive.</summary>
         Timeout,
-        /// <summary>Defne lost health.</summary>
+        /// <summary>
+        /// Defne died (user decision 2026-10-25: taking damage no longer breaks the combo, only her death does; the
+        /// name is kept so the HUD's "KIRILDI" branch needs no change).
+        /// </summary>
         Damage,
     }
 
     /// <summary>
     /// Combo rules without Unity scene dependencies (testable in EditMode). Design: production/design/combo-haste.md §2.
     /// +1 per damaging hit per enemy, +1 more per kill; window 3.0 s after the last count; the window does not run while
-    /// no enemy is alive or while frozen (Devil screen, pause, hitstop); Defne losing health resets to 0.
+    /// no enemy is alive or while frozen (Devil screen, pause, hitstop). Defne taking damage does NOT reset it any more
+    /// (user decision 2026-10-25); only her death does (the combo cannot survive the Devil screen).
     /// Multiplier = min(3.0, 1.0 + 0.1 × floor(count / 5)), kept in tenths so 100 × multiplier is an exact integer.
     /// Tiers: 1 at 10 (×1.2), 2 at 25 (×1.5), 3 at 50 (×2.0), 4 at 100 (×3.0).
     /// </summary>
@@ -111,10 +115,23 @@ namespace DanceWithTheDevil
             if (TimeLeft <= 0f) Break(ComboBreak.Timeout);
         }
 
-        /// <summary>Defne lost health: the combo ends (nothing happens at 0).</summary>
-        public void PlayerHurt()
+        /// <summary>
+        /// Defne took damage and has <paramref name="remainingHealth"/> left. Survivable damage changes nothing (user
+        /// decision 2026-10-25); at 0 (death) the combo ends with <see cref="ComboBreak.Damage"/> (nothing happens at 0
+        /// combo). Returns true if it broke.
+        /// </summary>
+        public bool PlayerDamaged(float remainingHealth)
         {
-            if (Count > 0) Break(ComboBreak.Damage);
+            if (remainingHealth > 0f) return false;
+            return PlayerDied();
+        }
+
+        /// <summary>Defne died: the combo ends (nothing happens at 0). Returns true if it broke.</summary>
+        public bool PlayerDied()
+        {
+            if (Count <= 0) return false;
+            Break(ComboBreak.Damage);
+            return true;
         }
 
         /// <summary>Back to 0 without events (new run).</summary>
@@ -149,9 +166,10 @@ namespace DanceWithTheDevil
 
     /// <summary>
     /// Scene side of the combo: hooks every spawned enemy's Health (hits and kills, before
-    /// <see cref="WaveDirector.EnemyKilled"/> fires) and Defne's Health (reset), and drains the window in LateUpdate on
+    /// <see cref="WaveDirector.EnemyKilled"/> fires) and Defne's Health (reset on her death only), and drains the window in LateUpdate on
     /// scaled time, frozen while the Devil screen, pause or a global hitstop is up. <see cref="ScoreKeeper"/> asks
     /// <see cref="ConsumeKillMultiplierTenths"/> for each kill: Defne's kills pay the current multiplier, shockwave kills ×1.
+    /// <see cref="CritHit"/> reports each of Defne's crit hits on an enemy (after it counted) for the crit score bonus.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class ComboTracker : MonoBehaviour
@@ -160,7 +178,7 @@ namespace DanceWithTheDevil
         [SerializeField] private WaveDirector _waves;
         [Tooltip("Devil flow: the window is frozen while its State is not Playing. Empty = no check.")]
         [SerializeField] private DevilDirector _devil;
-        [Tooltip("Defne's Health: losing health resets the combo. Empty = taken from the wave director's player.")]
+        [Tooltip("Defne's Health: her death resets the combo (damage alone does not). Empty = taken from the wave director's player.")]
         [SerializeField] private Health _playerHealth;
         [Tooltip("Seconds after the last counted hit or kill (design: 3.0).")]
         [SerializeField, Min(0.1f)] private float _window = ComboCounter.DefaultWindow;
@@ -185,6 +203,12 @@ namespace DanceWithTheDevil
         public event Action<int> Changed { add => _counter.Changed += value; remove => _counter.Changed -= value; }
         public event Action<int> TierUp { add => _counter.TierUp += value; remove => _counter.TierUp -= value; }
         public event Action<ComboBreak, int> Broken { add => _counter.Broken += value; remove => _counter.Broken -= value; }
+
+        /// <summary>
+        /// One of Defne's crit hits damaged an enemy (DamageInfo.IsCrit, credited like a combo hit). Raised after the
+        /// hit counted, so <see cref="MultiplierTenths"/> already includes it; before the kill of the same hit counts.
+        /// </summary>
+        public event Action<Enemy, DamageInfo> CritHit;
 
         private void Awake()
         {
@@ -273,13 +297,15 @@ namespace DanceWithTheDevil
         // hit and the kill are counted before the score is paid (design: the kill that crosses a tier pays the new tier).
         private void OnEnemyDamaged(Enemy enemy, DamageInfo info, float remaining)
         {
-            _counter.RegisterHit(info);
+            bool counted = _counter.RegisterHit(info);
+            if (counted && info.IsCrit) CritHit?.Invoke(enemy, info);
             if (remaining > 0f) return;
             if (_counter.RegisterKill(info)) _creditedKills.Add(enemy);
             Unhook(enemy);
         }
 
-        private void OnPlayerDamaged(DamageInfo info, float remaining) => _counter.PlayerHurt();
+        // User decision 2026-10-25: damage alone keeps the combo; the hit that kills Defne ends it.
+        private void OnPlayerDamaged(DamageInfo info, float remaining) => _counter.PlayerDamaged(remaining);
 
         private void LateUpdate()
         {

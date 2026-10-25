@@ -420,6 +420,18 @@ MonoBehaviour:
     _bus: 0
     _unscaled: 0
     _pan: 1
+  - _name: crit_hit
+    _clips:
+    - {fileID: 8300000, guid: 7735fe1a6d6046747aec0bcd25c29aa3, type: 3}
+    - {fileID: 8300000, guid: f4f4ad6f10c07324d954f95bb7b5113d, type: 3}
+    _volumeDb: -3
+    _maxVoices: 3
+    _minGap: 0.05
+    _pitchJitter: 0.04
+    _volumeJitterDb: 0.5
+    _bus: 0
+    _unscaled: 0
+    _pan: 1
   _musicBase: {fileID: 8300000, guid: 1e24d824c86c8d44fa102d51e7df418e, type: 3}
   _musicMelody: {fileID: 8300000, guid: fe077e704a02e7f43b9b204852e13fd9, type: 3}
   _musicBaseDb: -14

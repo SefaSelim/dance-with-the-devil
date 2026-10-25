@@ -188,9 +188,9 @@ namespace DanceWithTheDevil.Tests
             float clamped = rifle.CritChance;
 
             // Assert
-            Assert.AreEqual(0.05f, baseChance, 1e-5f);
-            Assert.AreEqual(0.25f, withModule, 1e-5f);
-            Assert.AreEqual(0.40f, withBoth, 1e-5f);
+            Assert.AreEqual(0.12f, baseChance, 1e-5f);
+            Assert.AreEqual(0.32f, withModule, 1e-5f);
+            Assert.AreEqual(0.47f, withBoth, 1e-5f);
             Assert.AreEqual(1f, clamped, 1e-5f);
         }
     }

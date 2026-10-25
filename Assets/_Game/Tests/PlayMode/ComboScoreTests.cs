@@ -10,7 +10,8 @@ namespace DanceWithTheDevil.Tests
 {
     /// <summary>
     /// Combo × score in a code-built arena (same setup as <see cref="EnemyWaveTests"/>): Defne's kills pay
-    /// 100 × multiplier, revive-shockwave kills a flat 100 and leave the combo alone (production/design/combo-haste.md §8).
+    /// 100 × multiplier, revive-shockwave kills a flat 100 and leave the combo alone (production/design/combo-haste.md §8);
+    /// a crit hit adds 25 × multiplier; only Defne's death resets the combo (user decision 2026-10-25).
     /// </summary>
     public sealed class ComboScoreTests
     {
@@ -98,25 +99,33 @@ namespace DanceWithTheDevil.Tests
             for (int i = 0; i < 8; i++) combo.Counter.RegisterHit(fromDefne); // combo 8 (×1.1)
             Enemy first = waves.ActiveEnemies[0];
 
-            // Act 1: Defne's lethal hit → hit 9, kill 10 → ×1.2 before the score is paid.
-            first.Health.TakeDamage(new DamageInfo(1000f, Vector3.zero, Vector3.forward, player, DamageKind.Bullet));
+            // Act 1: Defne's lethal crit hit → hit 9 (×1.1: crit bonus 25 × 1.1 = 27.5 → 28), kill 10 → ×1.2 → 120.
+            first.Health.TakeDamage(new DamageInfo(1000f, Vector3.zero, Vector3.forward, player, DamageKind.Bullet, true));
 
             // Assert 1
             Assert.AreEqual(10, combo.Count);
-            Assert.AreEqual(120, score.Score, "kill crossing the ×1.2 step pays 120");
+            Assert.AreEqual(148, score.Score, "crit bonus 28 at ×1.1, then the kill crossing the ×1.2 step pays 120");
 
             // Act 2: revive shockwave clears the rest.
             waves.KillAll();
 
             // Assert 2
-            Assert.AreEqual(220, score.Score, "shockwave kill pays a flat 100");
+            Assert.AreEqual(248, score.Score, "shockwave kill pays a flat 100");
             Assert.AreEqual(10, combo.Count, "shockwave kills do not count");
 
-            // Act 3: Defne loses health.
-            player.GetComponent<Health>().TakeDamage(new DamageInfo(5f, Vector3.zero, Vector3.forward, null, DamageKind.Contact));
+            // Act 3: Defne loses health but lives (user decision 2026-10-25: the combo survives damage).
+            Health defne = player.GetComponent<Health>();
+            defne.InvulnerabilityAfterHit = 0f;
+            defne.TakeDamage(new DamageInfo(5f, Vector3.zero, Vector3.forward, null, DamageKind.Contact));
 
             // Assert 3
-            Assert.AreEqual(0, combo.Count, "damage resets the combo");
+            Assert.AreEqual(10, combo.Count, "survivable damage keeps the combo");
+
+            // Act 4: Defne dies.
+            defne.TakeDamage(new DamageInfo(1000f, Vector3.zero, Vector3.forward, null, DamageKind.Contact));
+
+            // Assert 4
+            Assert.AreEqual(0, combo.Count, "death resets the combo");
             yield return null;
         }
     }

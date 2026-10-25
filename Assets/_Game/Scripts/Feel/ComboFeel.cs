@@ -18,6 +18,10 @@ namespace DanceWithTheDevil
     /// </list>
     /// Tier-up also bends the screen: a shockwave ring from Defne (<see cref="DisplayGrade.Shockwave(Vector3, float, float, float)"/>,
     /// 0.8 + 0.15 × tier strength, 5 + 1.5 × tier m, 0.5 s) and a zoom kick 0.03 + 0.01 × tier.
+    /// High-combo kills: from tier 3 (x2) every kill Defne earns replays the tier-up layers (shake, zoom kick, shockwave
+    /// from Defne, Volume pulse) at <see cref="_killPulseScale"/> strength, at most one per <see cref="_killPulseInterval"/>
+    /// unscaled seconds (a rocket killing 6 gives one pulse, not a strobe); its shake is capped. Shockwave kills never count
+    /// (the combo does not move on them). No hitstop.
     /// Crits (ImpactEvent.isCrit from the player): a 0.15 s chromatic-aberration punch (own Volume), a small shockwave at
     /// the hit (≤ one per 0.08 s) and a capped shake (+0.12, ceiling 0.5).
     /// Accessibility: shake goes through <see cref="PixelCameraRig.GlobalShakeScale"/>; pulse and glow weights through
@@ -63,6 +67,18 @@ namespace DanceWithTheDevil
         [SerializeField, Range(0f, 0.1f)] private float _tierZoomKick = 0.03f;
         [SerializeField, Range(0f, 0.05f)] private float _tierZoomKickPerTier = 0.01f;
 
+        [Header("High-combo kills (every Defne kill at tier 3+ replays the tier-up, lighter)")]
+        [Tooltip("Kills replay the tier-up feel from this tier (3 = x2.0 at combo 50).")]
+        [SerializeField, Range(1, 4)] private int _killPulseMinTier = 3;
+        [Tooltip("Strength of the replay relative to a real tier-up (shake, zoom kick, warp, pulse weight).")]
+        [SerializeField, Range(0f, 1f)] private float _killPulseScale = 0.75f;
+        [Tooltip("Fewest unscaled seconds between two kill replays.")]
+        [SerializeField, Min(0f)] private float _killPulseInterval = 0.12f;
+        [Tooltip("Kill replays never push trauma above this on their own.")]
+        [SerializeField, Range(0f, 1f)] private float _killPulseTraumaCeiling = 0.65f;
+        [Tooltip("Wave director whose kills are listened to. Empty = found in the scene.")]
+        [SerializeField] private WaveDirector _waves;
+
         [Header("Crit punch")]
         [Tooltip("Chromatic aberration at the crit peak (own Volume, weight-driven).")]
         [SerializeField, Range(0f, 1f)] private float _critChromatic = 0.9f;
@@ -98,6 +114,10 @@ namespace DanceWithTheDevil
         private float _pulseTime = float.PositiveInfinity;
         private float _pulsePeak;
         private float _glowWeight;
+        private WaveDirector _hookedWaves;
+        private int _changedFrame = -1;
+        private bool _killThisFrame;
+        private float _lastKillPulse = float.NegativeInfinity;
 
         private void Awake()
         {
@@ -135,6 +155,12 @@ namespace DanceWithTheDevil
         private void OnEnable()
         {
             ImpactBus.OnImpact += OnImpact;
+            if (_waves == null) _waves = FindAnyObjectByType<WaveDirector>();
+            if (_waves != null)
+            {
+                _hookedWaves = _waves;
+                _hookedWaves.EnemyKilled += OnEnemyKilled;
+            }
             if (_combo == null) return;
             _combo.Changed += OnChanged;
             _combo.TierUp += OnTierUp;
@@ -143,6 +169,9 @@ namespace DanceWithTheDevil
         private void OnDisable()
         {
             ImpactBus.OnImpact -= OnImpact;
+            if (_hookedWaves != null) _hookedWaves.EnemyKilled -= OnEnemyKilled;
+            _hookedWaves = null;
+            _killThisFrame = false;
             if (_critVolume != null) _critVolume.weight = 0f;
             _critTime = float.PositiveInfinity;
             if (_combo != null)
@@ -180,8 +209,19 @@ namespace DanceWithTheDevil
 
         private void OnChanged(int count)
         {
-            if (count > _lastCount) _hitsThisFrame += count - _lastCount;
+            if (count > _lastCount)
+            {
+                _hitsThisFrame += count - _lastCount;
+                _changedFrame = Time.frameCount;
+            }
             _lastCount = count;
+        }
+
+        // The tracker counts the killing hit and the kill (Health.Damaged) before WaveDirector.EnemyKilled fires, so a
+        // kill Defne earned always has a count change this frame; shockwave kills (ignored source) never do.
+        private void OnEnemyKilled(Enemy enemy)
+        {
+            if (_changedFrame == Time.frameCount) _killThisFrame = true;
         }
 
         private void OnTierUp(int tier)
@@ -208,18 +248,16 @@ namespace DanceWithTheDevil
             if (_tierUpThisFrame > 0)
             {
                 int t = _tierUpThisFrame;
-                if (_rig != null)
-                {
-                    _rig.AddTrauma(_tierTrauma + _tierTraumaPerTier * t);
-                    _rig.AddZoomKick(_tierZoomKick + _tierZoomKickPerTier * t);
-                    Vector3 center = _rig.Target != null ? _rig.Target.position + Vector3.up : _rig.Focus;
-                    DisplayGrade.Shockwave(center, _tierWarp + _tierWarpPerTier * t,
-                        _tierWarpRadius + _tierWarpRadiusPerTier * t, 0.5f);
-                }
-                StartPulse(t);
+                PlayTierFeel(t, 1f, false);
+                _lastKillPulse = Time.unscaledTime; // a kill right after the tier-up does not stack on it
                 // Never extend or stack on a weapon hitstop that is already running.
                 if (_tierHitStop > 0f && HitStop.Instance != null && !HitStop.Instance.IsGlobalActive)
                     HitStop.Instance.TriggerGlobal(Mathf.Min(_tierHitStop, 0.05f));
+            }
+            else if (_killThisFrame && tier >= _killPulseMinTier && Time.unscaledTime - _lastKillPulse >= _killPulseInterval)
+            {
+                _lastKillPulse = Time.unscaledTime;
+                PlayTierFeel(tier, _killPulseScale, true);
             }
             else if (_hitsThisFrame > 0 && _rig != null)
             {
@@ -227,6 +265,7 @@ namespace DanceWithTheDevil
             }
             _hitsThisFrame = 0;
             _tierUpThisFrame = 0;
+            _killThisFrame = false;
 
             if (_critThisFrame)
             {
@@ -258,9 +297,7 @@ namespace DanceWithTheDevil
             if (_pulseTime < _pulseAttack + _pulseDecay)
             {
                 _pulseTime += dt;
-                pulse = _pulseTime < _pulseAttack
-                    ? _pulseTime / _pulseAttack
-                    : Sq(1f - Mathf.Clamp01((_pulseTime - _pulseAttack) / _pulseDecay));
+                pulse = PulseEnvelope();
             }
             if (_pulseVolume != null) _pulseVolume.weight = pulse * _pulsePeak * flash;
 
@@ -270,12 +307,40 @@ namespace DanceWithTheDevil
             if (_glowVolume != null) _glowVolume.weight = _glowWeight * flash;
         }
 
-        private void StartPulse(int tier)
+        /// <summary>Tier-up layers at <paramref name="scale"/>: shake (capped for kill replays), zoom kick, warp, pulse.</summary>
+        private void PlayTierFeel(int t, float scale, bool capped)
         {
-            _pulseTime = 0f;
-            _pulsePeak = Pick(_pulseWeightByTier, tier - 1);
+            if (_rig != null)
+            {
+                float trauma = (_tierTrauma + _tierTraumaPerTier * t) * scale;
+                if (capped) _rig.AddTraumaUpTo(trauma, _killPulseTraumaCeiling);
+                else _rig.AddTrauma(trauma);
+                _rig.AddZoomKick((_tierZoomKick + _tierZoomKickPerTier * t) * scale);
+                Vector3 center = _rig.Target != null ? _rig.Target.position + Vector3.up : _rig.Focus;
+                DisplayGrade.Shockwave(center, (_tierWarp + _tierWarpPerTier * t) * scale,
+                    _tierWarpRadius + _tierWarpRadiusPerTier * t, 0.5f);
+            }
+            StartPulse(t, scale);
+        }
+
+        private void StartPulse(int tier, float scale = 1f)
+        {
+            float peak = Pick(_pulseWeightByTier, tier - 1) * scale;
+            float current = PulseEnvelope() * _pulsePeak;
+            if (scale < 1f && current >= peak) return; // a stronger pulse is still up: keep it
+            // Restart the attack from the current level, so back-to-back pulses never dip to 0 for a frame.
+            _pulseTime = peak > 0f ? _pulseAttack * Mathf.Clamp01(current / peak) : 0f;
+            _pulsePeak = peak;
             float distortion = UiKit.ReduceMotion ? 0f : _pulseDistortion * Mathf.Clamp01(PixelCameraRig.GlobalShakeScale);
             if (_distortion != null) _distortion.intensity.Override(distortion);
+        }
+
+        private float PulseEnvelope()
+        {
+            if (_pulseTime >= _pulseAttack + _pulseDecay) return 0f;
+            return _pulseTime < _pulseAttack
+                ? _pulseTime / _pulseAttack
+                : Sq(1f - Mathf.Clamp01((_pulseTime - _pulseAttack) / _pulseDecay));
         }
 
         private static float Pick(float[] values, int index)

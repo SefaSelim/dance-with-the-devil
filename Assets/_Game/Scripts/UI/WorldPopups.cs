@@ -21,6 +21,10 @@ namespace DanceWithTheDevil
     public sealed class WorldPopups : MonoBehaviour
     {
         public const int MaxPopups = 12;
+        // Crits read big (about 1.6× the old 14) and pop harder than combo lines: start small, overshoot, punch.
+        private const int CritFontSize = 22;
+        private const float CritStartScale = 0.35f;
+        private const float CritPunch = 0.4f;
 
         private enum Kind { Combo = 0, Tier = 1, Crit = 2 }
 
@@ -176,7 +180,7 @@ namespace DanceWithTheDevil
                 Vector3 at = info.Point.sqrMagnitude > 0.0001f ? info.Point : enemy.transform.position + Vector3.up;
                 at += Vector3.up * _overHit + Vector3.right * UnityEngine.Random.Range(-0.3f, 0.3f);
                 string text = string.Format(ComboTexts.PopupCritFormat, Mathf.RoundToInt(info.Amount));
-                Spawn(Kind.Crit, text, _critColor, 14, null, at);
+                Spawn(Kind.Crit, text, _critColor, CritFontSize, null, at);
             }
             if (remaining <= 0f) Unhook(enemy);
         }
@@ -252,10 +256,11 @@ namespace DanceWithTheDevil
             Sequence s = DOTween.Sequence();
             if (!UiKit.ReduceMotion)
             {
-                float start = kind == Kind.Tier ? 0.4f : 0.6f;
+                float start = kind == Kind.Tier ? 0.4f : kind == Kind.Crit ? CritStartScale : 0.6f;
+                float punch = kind == Kind.Tier ? 0.3f : kind == Kind.Crit ? CritPunch : 0.15f;
                 p.Rect.localScale = new Vector3(start, start, 1f);
-                s.Insert(0f, p.Rect.DOScale(1f, 0.16f).SetEase(Ease.OutBack));
-                s.Insert(0.16f, p.Rect.DOPunchScale(Vector3.one * (kind == Kind.Tier ? 0.3f : 0.15f), 0.3f, 7, 0.5f));
+                s.Insert(0f, p.Rect.DOScale(1f, 0.16f).SetEase(Ease.OutBack, kind == Kind.Crit ? 2.4f : 1.70158f));
+                s.Insert(0.16f, p.Rect.DOPunchScale(Vector3.one * punch, 0.3f, 7, 0.5f));
                 s.Insert(0f, DOTween.To(p.GetRise, p.SetRise, _riseUnits * (kind == Kind.Tier ? 0.7f : 1f), life)
                     .SetEase(Ease.OutCubic));
             }
@@ -330,6 +335,7 @@ namespace DanceWithTheDevil
                 Text label = UiKit.Label(_frame, "Popup_" + i, font, 14, Color.white, TextAnchor.MiddleCenter,
                     Vector2.zero, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(200f, 48f), FontStyle.Bold);
                 label.horizontalOverflow = HorizontalWrapMode.Overflow;
+                label.verticalOverflow = VerticalWrapMode.Overflow;
                 var outline = label.gameObject.AddComponent<Outline>();
                 outline.effectColor = new Color(0f, 0f, 0f, 0.9f);
                 outline.effectDistance = new Vector2(1f, -1f);
