@@ -101,6 +101,7 @@ MonoBehaviour:
   - hint.move_fire
   - hint.offer
   - hint.rocket
+  - hint.slots_full
   - hud.dodge
   - hud.eject_hint
   - hud.empty_slot
@@ -110,6 +111,7 @@ MonoBehaviour:
   - hud.reject
   - hud.rocket
   - hud.score
+  - hud.slots_full
   - hud.small_nos
   - intro.goal
   - intro.line
@@ -252,6 +254,7 @@ MonoBehaviour:
   - "WASD: y\xFCr\xFC \xB7 Fare: ni\u015Fan al \xB7 Sol t\u0131k: ate\u015F et"
   - "\xDCst\xFCne git, bekle: kabul \xB7 Sa\u011F t\u0131k: hay\u0131r de"
   - "E: roket at \xB7 F: pala savur \xB7 Space: ka\xE7"
+  - "Yuvalar dolu \xB7 Q bas\u0131l\u0131 + Sa\u011F t\u0131k: birini s\xF6k"
   - "Ka\xE7\u0131\u015F [Space]"
   - "Sa\u011F t\u0131k: s\xF6k\xFCp at"
   - "\u2014"
@@ -261,6 +264,7 @@ MonoBehaviour:
   - "Hay\u0131r [Sa\u011F t\u0131k]"
   - 'Roket [E]'
   - Puan {0}
+  - DOLU
   - "K\xFC\xE7\xFCk hay\u0131rlar: {0}"
   - "Dayanabildi\u011Fin kadar dayan. Arkas\u0131 kesilmez."
   - "Defne bu gece de her \u015Feye evet dedi. \"Bir \u015Fey olmaz.\""

@@ -8,7 +8,7 @@ namespace DanceWithTheDevil
     /// approach, lifetime, contact and reject rules are run by <see cref="PlayerModules"/>, which owns the single
     /// reused instance (at most one offer at a time). No colliders: it never blocks bullets or the player.
     /// The UI reads <see cref="Type"/>, <see cref="Position"/>, <see cref="AcceptProgress"/>, <see cref="TimeLeft"/>
-    /// and <see cref="IsEquippedDuplicate"/> ("TAKILI").
+    /// and <see cref="IsEquippedDuplicate"/> ("TAKILI") / <see cref="SlotsFull"/> ("DOLU").
     /// World-side readability (audit F14): the core is drawn 1.8x and pulses, the contact ring has a bright edge in
     /// the module's colour, a duplicate shows a flat cream X across its ring (and a smaller, still core), and the core
     /// blinks in its last 3 seconds before it fades. Visual scale never changes the contact radius.
@@ -64,6 +64,13 @@ namespace DanceWithTheDevil
         public float Lifetime => _lifetime;
         /// <summary>True when the player already has this type: the offer shows "TAKILI" and contact does nothing.</summary>
         public bool IsEquippedDuplicate { get; internal set; }
+        /// <summary>
+        /// True while all <see cref="ModuleCatalog.SlotCount"/> slots are taken: shown like a duplicate (X, still core)
+        /// and contact does nothing until the player ejects a module (K-23).
+        /// </summary>
+        public bool SlotsFull { get; internal set; }
+        /// <summary>The offer cannot be taken now (a duplicate or full slots).</summary>
+        public bool IsBlocked => IsEquippedDuplicate || SlotsFull;
         /// <summary>True until it has come within the stop distance of the player once; then it stays put.</summary>
         public bool IsApproaching { get; internal set; }
 
@@ -86,59 +93,8 @@ namespace DanceWithTheDevil
             _core.SetParent(transform, false);
             _core.localPosition = Vector3.up * CoreHeight;
 
-            // Triple Shot: a core with three prongs.
-            Transform triple = NewShape(ModuleType.TripleShot);
-            Material m = Mat(ModuleType.TripleShot);
-            ModuleVisuals.CreatePart("Body", PrimitiveType.Cube, triple, Vector3.zero, Vector3.one * 0.28f, m);
-            ModuleVisuals.CreatePart("Prong_L", PrimitiveType.Cube, triple, new Vector3(-0.22f, 0.16f, 0f), Vector3.one * 0.13f, m);
-            ModuleVisuals.CreatePart("Prong_C", PrimitiveType.Cube, triple, new Vector3(0f, 0.26f, 0f), Vector3.one * 0.13f, m);
-            ModuleVisuals.CreatePart("Prong_R", PrimitiveType.Cube, triple, new Vector3(0.22f, 0.16f, 0f), Vector3.one * 0.13f, m);
-
-            // Echo: a small core inside a square ring.
-            Transform echo = NewShape(ModuleType.Echo);
-            m = Mat(ModuleType.Echo);
-            ModuleVisuals.CreatePart("Body", PrimitiveType.Cube, echo, Vector3.zero, Vector3.one * 0.2f, m);
-            ModuleVisuals.CreatePart("Ring_N", PrimitiveType.Cube, echo, new Vector3(0f, 0f, 0.3f), new Vector3(0.6f, 0.1f, 0.1f), m);
-            ModuleVisuals.CreatePart("Ring_S", PrimitiveType.Cube, echo, new Vector3(0f, 0f, -0.3f), new Vector3(0.6f, 0.1f, 0.1f), m);
-            ModuleVisuals.CreatePart("Ring_E", PrimitiveType.Cube, echo, new Vector3(0.3f, 0f, 0f), new Vector3(0.1f, 0.1f, 0.6f), m);
-            ModuleVisuals.CreatePart("Ring_W", PrimitiveType.Cube, echo, new Vector3(-0.3f, 0f, 0f), new Vector3(0.1f, 0.1f, 0.6f), m);
-
-            // Density: one big cube.
-            Transform density = NewShape(ModuleType.Density);
-            ModuleVisuals.CreatePart("Body", PrimitiveType.Cube, density, Vector3.zero, Vector3.one * 0.5f, Mat(ModuleType.Density));
-
-            // Haste: a double chevron ">>" (speed), thin bars.
-            Transform haste = NewShape(ModuleType.Haste);
-            m = Mat(ModuleType.Haste);
-            for (int c = 0; c < 2; c++)
-            {
-                float tip = 0.2f - c * 0.24f;
-                Transform upper = ModuleVisuals.CreatePart("Chevron" + c + "_Up", PrimitiveType.Cube, haste,
-                    new Vector3(tip - 0.09f, 0.09f, 0f), new Vector3(0.28f, 0.08f, 0.08f), m);
-                upper.localRotation = Quaternion.Euler(0f, 0f, -45f);
-                Transform lower = ModuleVisuals.CreatePart("Chevron" + c + "_Down", PrimitiveType.Cube, haste,
-                    new Vector3(tip - 0.09f, -0.09f, 0f), new Vector3(0.28f, 0.08f, 0.08f), m);
-                lower.localRotation = Quaternion.Euler(0f, 0f, 45f);
-            }
-
-            // Keskin Göz: an upright crosshair (four thin arms with a gap) around a small diamond (aim).
-            Transform crit = NewShape(ModuleType.CritChance);
-            m = Mat(ModuleType.CritChance);
-            ModuleVisuals.CreatePart("Arm_Up", PrimitiveType.Cube, crit, new Vector3(0f, 0.24f, 0f), new Vector3(0.07f, 0.2f, 0.07f), m);
-            ModuleVisuals.CreatePart("Arm_Down", PrimitiveType.Cube, crit, new Vector3(0f, -0.24f, 0f), new Vector3(0.07f, 0.2f, 0.07f), m);
-            ModuleVisuals.CreatePart("Arm_Left", PrimitiveType.Cube, crit, new Vector3(-0.24f, 0f, 0f), new Vector3(0.2f, 0.07f, 0.07f), m);
-            ModuleVisuals.CreatePart("Arm_Right", PrimitiveType.Cube, crit, new Vector3(0.24f, 0f, 0f), new Vector3(0.2f, 0.07f, 0.07f), m);
-            Transform dot = ModuleVisuals.CreatePart("Dot", PrimitiveType.Cube, crit, Vector3.zero, Vector3.one * 0.1f, m);
-            dot.localRotation = Quaternion.Euler(0f, 0f, 45f);
-
-            // Delici: a long spike skewering two thin plates, with a pointed tip (a bullet through two enemies).
-            Transform pierce = NewShape(ModuleType.Pierce);
-            m = Mat(ModuleType.Pierce);
-            ModuleVisuals.CreatePart("Shaft", PrimitiveType.Cube, pierce, Vector3.zero, new Vector3(0.66f, 0.07f, 0.07f), m);
-            Transform spikeTip = ModuleVisuals.CreatePart("Tip", PrimitiveType.Cube, pierce, new Vector3(0.36f, 0f, 0f), Vector3.one * 0.12f, m);
-            spikeTip.localRotation = Quaternion.Euler(0f, 0f, 45f);
-            ModuleVisuals.CreatePart("Plate_A", PrimitiveType.Cube, pierce, new Vector3(-0.12f, 0f, 0f), new Vector3(0.05f, 0.34f, 0.3f), m);
-            ModuleVisuals.CreatePart("Plate_B", PrimitiveType.Cube, pierce, new Vector3(0.12f, 0f, 0f), new Vector3(0.05f, 0.34f, 0.3f), m);
+            for (int i = 0; i < ModuleCatalog.Count; i++)
+                _shapes[i] = ModuleVisuals.BuildIcon((ModuleType)i, _core, Mat((ModuleType)i));
 
             Material ringBase = materials != null && materials.Length > ModuleCatalog.Count ? materials[ModuleCatalog.Count] : null;
             _ringBase = ModuleVisuals.CreatePart("RingBase", PrimitiveType.Cylinder, transform, new Vector3(0f, 0.02f, 0f),
@@ -194,14 +150,6 @@ namespace DanceWithTheDevil
             if (_markerMaterial != null) Destroy(_markerMaterial);
         }
 
-        private Transform NewShape(ModuleType type)
-        {
-            var shape = new GameObject("Shape_" + type).transform;
-            shape.SetParent(_core, false);
-            _shapes[(int)type] = shape;
-            return shape;
-        }
-
         private Material Mat(ModuleType type) =>
             _materials != null && (int)type < _materials.Length ? _materials[(int)type] : null;
 
@@ -215,6 +163,7 @@ namespace DanceWithTheDevil
             _age = 0f;
             _active = true;
             IsEquippedDuplicate = false;
+            SlotsFull = false;
             IsApproaching = true;
 
             transform.SetPositionAndRotation(floorPosition, Quaternion.identity);
@@ -263,7 +212,7 @@ namespace DanceWithTheDevil
 
         private void UpdateVisual()
         {
-            bool duplicate = IsEquippedDuplicate;
+            bool duplicate = IsBlocked;
             float beat = duplicate ? 0f : Mathf.Sin(_age * PulseFrequency * 2f * Mathf.PI);
             beat *= beat; // 0..1, two soft beats per cycle
             if (_core != null)

@@ -25,8 +25,11 @@ namespace DanceWithTheDevil
     /// <summary>Fixed per-type data shared by gameplay and UI (MAIN_GDD §7 / first GDD §7 colours).</summary>
     public static class ModuleCatalog
     {
-        /// <summary>Number of module types (and fixed slots).</summary>
+        /// <summary>Number of module types.</summary>
         public const int Count = 6;
+
+        /// <summary>Modules the player can have equipped at once (user decision 2026-10-25, K-23).</summary>
+        public const int SlotCount = 3;
 
         /// <summary>Triple Shot turquoise #3FE0D0.</summary>
         public static readonly Color TripleShotColor = new Color(0x3F / 255f, 0xE0 / 255f, 0xD0 / 255f, 1f);
@@ -104,6 +107,74 @@ namespace DanceWithTheDevil
             if (material.HasProperty(BaseColorId)) material.SetColor(BaseColorId, color);
             material.color = color;
             return material;
+        }
+
+        /// <summary>
+        /// The module's icon from primitives, ~0.6 m across at scale 1, built inactive-safe under
+        /// <paramref name="parent"/>: the offer's floating core and the Q selection ring show the same shape.
+        /// </summary>
+        public static Transform BuildIcon(ModuleType type, Transform parent, Material m)
+        {
+            var icon = new GameObject("Shape_" + type).transform;
+            icon.SetParent(parent, false);
+            switch (type)
+            {
+                case ModuleType.TripleShot:
+                    // Three bullets fanned out from one muzzle (the ±12° salvo), tips up.
+                    CreatePart("Muzzle", PrimitiveType.Cube, icon, new Vector3(0f, -0.06f, 0f), new Vector3(0.14f, 0.06f, 0.06f), m);
+                    for (int i = -1; i <= 1; i++)
+                    {
+                        float angle = i * 24f;
+                        Quaternion turn = Quaternion.Euler(0f, 0f, -angle);
+                        Transform bullet = CreatePart("Bullet_" + (i + 1), PrimitiveType.Capsule, icon,
+                            new Vector3(0f, -0.2f, 0f) + turn * new Vector3(0f, 0.3f, 0f), new Vector3(0.09f, 0.11f, 0.09f), m);
+                        bullet.localRotation = turn;
+                    }
+                    break;
+                case ModuleType.Echo:
+                    // A small core inside a square ring.
+                    CreatePart("Body", PrimitiveType.Cube, icon, Vector3.zero, Vector3.one * 0.2f, m);
+                    CreatePart("Ring_N", PrimitiveType.Cube, icon, new Vector3(0f, 0f, 0.3f), new Vector3(0.6f, 0.1f, 0.1f), m);
+                    CreatePart("Ring_S", PrimitiveType.Cube, icon, new Vector3(0f, 0f, -0.3f), new Vector3(0.6f, 0.1f, 0.1f), m);
+                    CreatePart("Ring_E", PrimitiveType.Cube, icon, new Vector3(0.3f, 0f, 0f), new Vector3(0.1f, 0.1f, 0.6f), m);
+                    CreatePart("Ring_W", PrimitiveType.Cube, icon, new Vector3(-0.3f, 0f, 0f), new Vector3(0.1f, 0.1f, 0.6f), m);
+                    break;
+                case ModuleType.Haste:
+                    // A double chevron ">>" (speed), thin bars.
+                    for (int c = 0; c < 2; c++)
+                    {
+                        float tip = 0.2f - c * 0.24f;
+                        Transform upper = CreatePart("Chevron" + c + "_Up", PrimitiveType.Cube, icon,
+                            new Vector3(tip - 0.09f, 0.09f, 0f), new Vector3(0.28f, 0.08f, 0.08f), m);
+                        upper.localRotation = Quaternion.Euler(0f, 0f, -45f);
+                        Transform lower = CreatePart("Chevron" + c + "_Down", PrimitiveType.Cube, icon,
+                            new Vector3(tip - 0.09f, -0.09f, 0f), new Vector3(0.28f, 0.08f, 0.08f), m);
+                        lower.localRotation = Quaternion.Euler(0f, 0f, 45f);
+                    }
+                    break;
+                case ModuleType.CritChance:
+                    // Keskin Göz: an upright crosshair (four thin arms with a gap) around a small diamond (aim).
+                    CreatePart("Arm_Up", PrimitiveType.Cube, icon, new Vector3(0f, 0.24f, 0f), new Vector3(0.07f, 0.2f, 0.07f), m);
+                    CreatePart("Arm_Down", PrimitiveType.Cube, icon, new Vector3(0f, -0.24f, 0f), new Vector3(0.07f, 0.2f, 0.07f), m);
+                    CreatePart("Arm_Left", PrimitiveType.Cube, icon, new Vector3(-0.24f, 0f, 0f), new Vector3(0.2f, 0.07f, 0.07f), m);
+                    CreatePart("Arm_Right", PrimitiveType.Cube, icon, new Vector3(0.24f, 0f, 0f), new Vector3(0.2f, 0.07f, 0.07f), m);
+                    CreatePart("Dot", PrimitiveType.Cube, icon, Vector3.zero, Vector3.one * 0.1f, m)
+                        .localRotation = Quaternion.Euler(0f, 0f, 45f);
+                    break;
+                case ModuleType.Pierce:
+                    // Delici: a long spike skewering two thin plates, with a pointed tip (a bullet through two enemies).
+                    CreatePart("Shaft", PrimitiveType.Cube, icon, Vector3.zero, new Vector3(0.66f, 0.07f, 0.07f), m);
+                    CreatePart("Tip", PrimitiveType.Cube, icon, new Vector3(0.36f, 0f, 0f), Vector3.one * 0.12f, m)
+                        .localRotation = Quaternion.Euler(0f, 0f, 45f);
+                    CreatePart("Plate_A", PrimitiveType.Cube, icon, new Vector3(-0.12f, 0f, 0f), new Vector3(0.05f, 0.34f, 0.3f), m);
+                    CreatePart("Plate_B", PrimitiveType.Cube, icon, new Vector3(0.12f, 0f, 0f), new Vector3(0.05f, 0.34f, 0.3f), m);
+                    break;
+                default:
+                    // Density: one big cube.
+                    CreatePart("Body", PrimitiveType.Cube, icon, Vector3.zero, Vector3.one * 0.5f, m);
+                    break;
+            }
+            return icon;
         }
 
         /// <summary>A primitive with its collider disabled and removed (never blocks bullets or the player).</summary>

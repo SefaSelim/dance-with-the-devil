@@ -436,3 +436,5 @@ MonoBehaviour:
   _musicMelody: {fileID: 8300000, guid: fe077e704a02e7f43b9b204852e13fd9, type: 3}
   _musicBaseDb: -14
   _musicMelodyDb: -17
+  _musicTrack: {fileID: 8300000, guid: 7c7827b3250d7204ea506b50c0b96b66, type: 3}
+  _musicTrackDb: -18

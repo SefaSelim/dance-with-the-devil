@@ -15,7 +15,8 @@ namespace DanceWithTheDevil
     ///     the player has already used both the rocket and the machete; for <see cref="_rocketHintDuration"/> s (or
     ///     until both have been used). The machete (F) has no other teacher, so a rocket fired early no longer
     ///     cancels this hint.
-    /// Priority when several apply: offer > eject > move/fire > rocket; a pre-empted move/fire hint comes back.
+    ///  5. Slots full (K-23): whenever an offer is up while all three module slots are taken (not only once).
+    /// Priority when several apply: slots full > offer > eject > move/fire > rocket; a pre-empted move/fire hint comes back.
     /// Hidden while the Devil screen or an ending is up (DevilDirector.State != Playing). Gameplay timers run on
     /// scaled time, fades on unscaled time (skipped with UiKit.ReduceMotion). No per-frame allocations.
     /// Missing references are resolved from the player's GameObject; anything still missing skips its hint.
@@ -49,7 +50,7 @@ namespace DanceWithTheDevil
         [Tooltip("Rocket hint length.")]
         [SerializeField, Min(0.1f)] private float _rocketHintDuration = 5f;
 
-        private enum Hint { None, MoveFire, Offer, Eject, Rocket }
+        private enum Hint { None, MoveFire, Offer, Eject, Rocket, SlotsFull }
 
         private RectTransform _root;
         private CanvasGroup _group;
@@ -225,6 +226,9 @@ namespace DanceWithTheDevil
 
         private Hint Desired()
         {
+            // Every time, not only in the first minute: the way to take an offer with full slots (K-23).
+            ModuleOffer offer = _modules != null ? _modules.Current : null;
+            if (offer != null && offer.SlotsFull && !offer.IsEquippedDuplicate) return Hint.SlotsFull;
             if (_offerOpen) return Hint.Offer;
             if (_ejectTimeLeft > 0f) return Hint.Eject;
             if (!_basicDone) return Hint.MoveFire;
@@ -257,6 +261,7 @@ namespace DanceWithTheDevil
             Hint.MoveFire => GameTexts.HintMoveFire,
             Hint.Offer => GameTexts.HintOffer,
             Hint.Eject => GameTexts.HintEject,
+            Hint.SlotsFull => GameTexts.HintSlotsFull,
             _ => GameTexts.HintRocket,
         };
 

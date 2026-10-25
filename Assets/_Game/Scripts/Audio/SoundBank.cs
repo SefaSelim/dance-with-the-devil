@@ -89,7 +89,15 @@ namespace DanceWithTheDevil
         [Tooltip("Stem B runtime volume, dB (spec: -17).")]
         [SerializeField] private float _musicMelodyDb = -17f;
 
+        [Tooltip("The game's music as one track (user decision 2026-10-25, K-8). When set it plays instead of the two " +
+                 "stems; contract 2 muffles it. Not touched by Set, so re-baking keeps it.")]
+        [SerializeField] private AudioClip _musicTrack;
+        [Tooltip("Music track runtime volume, dB.")]
+        [SerializeField] private float _musicTrackDb = -18f;
+
         public SoundEvent[] Events => _events;
+        public AudioClip MusicTrack => _musicTrack;
+        public float MusicTrackDb => _musicTrackDb;
         public AudioClip MusicBase => _musicBase;
         public AudioClip MusicMelody => _musicMelody;
         public float MusicBaseDb => _musicBaseDb;
@@ -104,6 +112,13 @@ namespace DanceWithTheDevil
             _musicMelody = musicMelody;
             _musicBaseDb = musicBaseDb;
             _musicMelodyDb = musicMelodyDb;
+        }
+
+        /// <summary>Sets the single music track (editor setup, tests); null goes back to the two stems.</summary>
+        public void SetMusicTrack(AudioClip track, float trackDb)
+        {
+            _musicTrack = track;
+            _musicTrackDb = trackDb;
         }
 
         public static float DbToLinear(float db) => Mathf.Pow(10f, db / 20f);

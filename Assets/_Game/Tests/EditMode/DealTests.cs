@@ -9,11 +9,17 @@ namespace DanceWithTheDevil.Tests
         private DealDefinition[] _deals;
 
         [SetUp]
-        public void SetUp() => _deals = DealLibrary.CreateDefaults();
+        public void SetUp()
+        {
+            // The code's texts, not the designer's Excel edits (Yazilar.xlsx may reword them at any time).
+            Texts.Load(null);
+            _deals = DealLibrary.CreateDefaults();
+        }
 
         [TearDown]
         public void TearDown()
         {
+            Texts.Reload();
             for (int i = 0; i < _deals.Length; i++)
                 if (_deals[i] != null) Object.DestroyImmediate(_deals[i]);
         }

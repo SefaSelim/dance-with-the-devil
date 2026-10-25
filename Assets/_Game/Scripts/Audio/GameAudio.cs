@@ -6,9 +6,11 @@ namespace DanceWithTheDevil
     /// <summary>
     /// The game's whole audio layer (Phase 6 procedural audio spec; MAIN_GDD §13 Ses, K-8).
     /// 2D pooled AudioSources per event (voice limit, oldest stolen, min gap, pitch/volume jitter), five buses
-    /// (SFX, Voice, UI, MusicBase, MusicMelody) and the two music stems started on the same dspTime and looping.
+    /// (SFX, Voice, UI, MusicBase, MusicMelody) and the music: the bank's single <see cref="SoundBank.MusicTrack"/> when
+    /// set (user decision 2026-10-25), else the two stems started on the same dspTime, all looping.
     /// Contract 2: <see cref="AudioCosts.VoiceMuted"/> mutes the Voice bus instantly; <see cref="AudioCosts.MusicLayerMuted"/>
-    /// fades the melody stem out over 1.5 s of unscaled time. Unscaled events ignore listener pause and use unscaled
+    /// fades the melody stem out over 1.5 s of unscaled time, or with the single track sweeps a low-pass filter down
+    /// over the same time so the music sounds muffled and far away (it never stops). Unscaled events ignore listener pause and use unscaled
     /// cooldowns; audio is never paused on timeScale 0. Listens to existing gameplay events; no per-frame allocations.
     /// Mix trims on top of the baked bank (first listening fixes, no re-bake needed): the rifle is quieter and cycles
     /// through small pitch steps so 6 shots a second do not repeat one identical "pew"; the explosion is a little
@@ -70,6 +72,8 @@ namespace DanceWithTheDevil
         [SerializeField, Min(0.01f)] private float _musicStartDelay = 0.1f;
         [Tooltip("Added to both music stems, dB, so the music sits under the SFX.")]
         [SerializeField, Range(-24f, 6f)] private float _musicTrimDb = -5f;
+        [Tooltip("Single music track after contract 2: low-pass cutoff in Hz (muffled, far away).")]
+        [SerializeField, Range(200f, 5000f)] private float _muffledCutoff = 700f;
 
         [Header("Mix trims (dB added to the bank's event volume)")]
         [Tooltip("rifle_shot (bank -14 dB): the most frequent sound, kept below the rest.")]
@@ -110,7 +114,10 @@ namespace DanceWithTheDevil
         private Slot[] _slots = new Slot[0];
         private AudioSource _musicBase;
         private AudioSource _musicMelody;
+        private AudioSource _musicTrack;
+        private AudioLowPassFilter _musicMuffle;
         private float _melodyFade = 1f;
+        private const float OpenCutoff = 22000f;
         private bool _voiceMuted;
         private int _serial;
         private bool _subscribed;
@@ -128,6 +135,10 @@ namespace DanceWithTheDevil
         public float MelodyFade => _melodyFade;
         public AudioSource MusicBaseSource => _musicBase;
         public AudioSource MusicMelodySource => _musicMelody;
+        /// <summary>The single music track's source (null when the bank has none and the stems play).</summary>
+        public AudioSource MusicTrackSource => _musicTrack;
+        /// <summary>Low-pass cutoff on the single track now, Hz (22 kHz = open, lower after contract 2).</summary>
+        public float MusicTrackCutoff => _musicMuffle != null ? _musicMuffle.cutoffFrequency : OpenCutoff;
         /// <summary>True while the Voice bus is muted (contract 2).</summary>
         public bool VoiceBusMuted => _voiceMuted;
         public SoundBank Bank => _bank;
@@ -185,6 +196,9 @@ namespace DanceWithTheDevil
             _tellHandles.Clear();
             _musicBase = null;
             _musicMelody = null;
+            if (_musicTrack != null) Destroy(_musicTrack.gameObject);
+            _musicTrack = null;
+            _musicMuffle = null;
             _voiceMuted = false;
             _melodyFade = AudioCosts.MusicLayerMuted ? 0f : 1f;
 
@@ -212,7 +226,8 @@ namespace DanceWithTheDevil
             Trim(Cue.CritHit, _critTrimDb);
             _musicTrim = SoundBank.DbToLinear(_musicTrimDb);
 
-            if (bank != null && bank.MusicBase != null && bank.MusicMelody != null) StartMusic(bank);
+            if (bank != null && bank.MusicTrack != null) StartMusicTrack(bank.MusicTrack);
+            else if (bank != null && bank.MusicBase != null && bank.MusicMelody != null) StartMusic(bank);
             ApplyBuses(true);
         }
 
@@ -247,6 +262,30 @@ namespace DanceWithTheDevil
             _musicBase.PlayScheduled(start);
             _musicMelody.PlayScheduled(start);
         }
+
+        /// <summary>
+        /// The single track on its own child object: an AudioLowPassFilter filters every source on its GameObject,
+        /// and the sound pools live on this one.
+        /// </summary>
+        private void StartMusicTrack(AudioClip clip)
+        {
+            var go = new GameObject("MusicTrack");
+            go.transform.SetParent(transform, false);
+            _musicTrack = go.AddComponent<AudioSource>();
+            _musicTrack.playOnAwake = false;
+            _musicTrack.spatialBlend = 0f;
+            _musicTrack.ignoreListenerPause = true;
+            _musicTrack.clip = clip;
+            _musicTrack.loop = true;
+            _musicTrack.priority = 0;
+            _musicMuffle = go.AddComponent<AudioLowPassFilter>();
+            _musicMuffle.cutoffFrequency = MuffleCutoff(_melodyFade);
+            _musicTrack.PlayScheduled(AudioSettings.dspTime + _musicStartDelay);
+        }
+
+        // Even steps on a log scale, so the sweep is heard all the way down, not only at the end.
+        private float MuffleCutoff(float open) =>
+            _muffledCutoff * Mathf.Pow(OpenCutoff / _muffledCutoff, Mathf.Clamp01(open));
 
         private void Update()
         {
@@ -294,6 +333,11 @@ namespace DanceWithTheDevil
             if (_musicBase != null) _musicBase.volume = SoundBank.DbToLinear(_bank.MusicBaseDb) * master * _musicTrim;
             if (_musicMelody != null)
                 _musicMelody.volume = SoundBank.DbToLinear(_bank.MusicMelodyDb) * master * _musicTrim * _melodyFade;
+            if (_musicTrack != null)
+            {
+                _musicTrack.volume = SoundBank.DbToLinear(_bank.MusicTrackDb) * master;
+                _musicMuffle.cutoffFrequency = MuffleCutoff(_melodyFade);
+            }
         }
 
         // ------------------------------------------------------------------ playback API

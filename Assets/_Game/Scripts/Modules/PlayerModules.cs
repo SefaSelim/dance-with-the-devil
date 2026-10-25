@@ -5,13 +5,15 @@ namespace DanceWithTheDevil
 {
     /// <summary>
     /// The player's whisper modules (MAIN_GDD §7; first GDD §6-7): the single offer (approach, 14 s lifetime,
-    /// 0.45 s intentional contact accept), capacity (one per type), right-click reject (60° cone, 3 m), Q selection
-    /// ring with fixed slots (one per <see cref="ModuleType"/>), Q + right-click eject, the shared 0.65 s cooldown,
+    /// 0.45 s intentional contact accept), capacity (<see cref="ModuleCatalog.SlotCount"/> slots, one per type; decision K-23),
+    /// right-click reject (60° cone, 3 m), Q selection ring (one position per slot, each showing its module's icon),
+    /// Q + right-click eject, the shared 0.65 s cooldown,
     /// and applying/removing every module effect on the Rifle and PlayerController in one place
     /// (<see cref="ApplyEffects"/>). Hız (production/design/combo-haste.md §3), Keskin Göz
     /// (production/design/crit-difficulty.md §3) and Delici (user decision 2026-10-25: +2 pierce, −30 % damage per
     /// enemy passed) are rifle only (K-7); Keskin Göz's cost slows Defne's walk while the
-    /// fire button is held (<see cref="UpdateFiringSlow"/>). No offer while every slot is full (A-20).
+    /// fire button is held (<see cref="UpdateFiringSlow"/>). Offers keep coming while every slot is full (K-23): the
+    /// offer is shown blocked ("DOLU") and cannot be accepted until the player ejects a module to free a slot.
     /// Offers are placed by <see cref="ModuleSpawner"/> through <see cref="PresentOffer"/>. Scaled time throughout.
     /// World-side feedback: every reject pulse flashes its cone on the floor (cream on a whiff, the module's colour
     /// when it throws an offer), and Defne's body feedback (<see cref="HurtFeedback"/>) is added here when the scene
@@ -53,15 +55,16 @@ namespace DanceWithTheDevil
         [SerializeField] private Color _rejectWhiffColor = new Color(0.96f, 0.9f, 0.74f);
 
         [Header("Selection ring (first GDD §6)")]
-        [Tooltip("Slot offsets in the camera-flat frame (x = screen right, z = screen up on the floor, y = height), index = ModuleType. Missing entries take the defaults.")]
-        [SerializeField] private Vector3[] _slotOffsets = (Vector3[])DefaultSlotOffsets.Clone();
+        // Renamed from _slotOffsets (index was ModuleType, six entries) so old scene data is not picked up (K-23).
+        [Tooltip("Ring offsets in the camera-flat frame (x = screen right, z = screen up on the floor, y = height), index = slot. Missing entries take the defaults.")]
+        [SerializeField] private Vector3[] _ringOffsets = (Vector3[])DefaultRingOffsets.Clone();
         [Tooltip("While the cursor is within this flat distance of the player, the highlight follows it; outside it is kept.")]
         [SerializeField, Min(0.1f)] private float _selectionRadius = 2.2f;
         [Tooltip("A different slot must be this much closer to the cursor to take the highlight (no flicker on borders).")]
         [SerializeField, Min(0f)] private float _selectionHysteresis = 0.15f;
-        [Tooltip("Slot cube size in metres.")]
-        [SerializeField, Min(0.01f)] private float _slotSize = 0.35f;
-        [Tooltip("Scale of the highlighted slot cube.")]
+        [Tooltip("Scale of each slot's module icon (the icon is ~0.6 m across at 1, so 0.75 = ~0.45 m).")]
+        [SerializeField, Min(0.01f)] private float _slotIconScale = 0.75f;
+        [Tooltip("Extra scale of the highlighted slot's icon.")]
         [SerializeField, Min(1f)] private float _highlightScale = 1.6f;
 
         [Header("Effects (GDD §7)")]
@@ -86,28 +89,32 @@ namespace DanceWithTheDevil
         [Tooltip("Delici cost: fraction of damage a bullet loses per enemy it passes through (design: 0.3 → ×0.7 each).")]
         [SerializeField, Range(0f, 1f)] private float _pierceDamageFalloff = 0.3f;
 
-        /// <summary>Left, up, right, down, up-right, up-left around the player (index = ModuleType).</summary>
-        private static readonly Vector3[] DefaultSlotOffsets =
+        /// <summary>Left, up, right around the player (index = slot).</summary>
+        private static readonly Vector3[] DefaultRingOffsets =
         {
             new Vector3(-1.2f, 1.2f, 0f),
             new Vector3(0f, 1.2f, 1.2f),
             new Vector3(1.2f, 1.2f, 0f),
-            new Vector3(0f, 1.2f, -1.2f),
-            new Vector3(1.1f, 1.2f, 1.1f),
-            new Vector3(-1.1f, 1.2f, 1.1f),
         };
+
+        /// <summary>Ring icon spin about world Y, degrees per second (same as the floating offer).</summary>
+        private const float SlotSpinDegreesPerSecond = 90f;
 
         private PlayerController _player;
         private PlayerInputReader _input;
         private Material[] _materials;
         private ModuleOffer _offer;
         private Transform _slotRoot;
-        private readonly Transform[] _slotCubes = new Transform[ModuleCatalog.Count];
+        private readonly Transform[] _slotPivots = new Transform[ModuleCatalog.SlotCount];
+        private readonly Transform[,] _slotIcons = new Transform[ModuleCatalog.SlotCount, ModuleCatalog.Count];
         private readonly bool[] _equipped = new bool[ModuleCatalog.Count];
+        /// <summary>ModuleType index held by each slot, or -1 when empty.</summary>
+        private readonly int[] _slots = NewEmptySlots();
+        private float _slotSpin;
         private float _readyTime = float.NegativeInfinity;
         private int _smallNoCount;
         private bool _selectionOpen;
-        private int _highlighted = -1;
+        private int _highlighted = -1; // slot index
         private ConeFlash _rejectFlash;
         private bool _firingSlowApplied;
 
@@ -128,8 +135,10 @@ namespace DanceWithTheDevil
         public int SmallNoCount => _smallNoCount;
         /// <summary>True while Q is held (selection ring shown).</summary>
         public bool SelectionOpen => _selectionOpen;
-        /// <summary>The highlighted equipped module while the selection is open, else null.</summary>
-        public ModuleType? Highlighted => _selectionOpen && _highlighted >= 0 ? (ModuleType)_highlighted : (ModuleType?)null;
+        /// <summary>The highlighted (filled) slot while the selection is open, else -1.</summary>
+        public int HighlightedSlot => _selectionOpen && _highlighted >= 0 && _slots[_highlighted] >= 0 ? _highlighted : -1;
+        /// <summary>The module in the highlighted slot while the selection is open, else null.</summary>
+        public ModuleType? Highlighted => SlotType(HighlightedSlot);
         public bool RejectReady => Time.time >= _readyTime;
         public float CooldownRemaining => Mathf.Max(0f, _readyTime - Time.time);
         public float Cooldown => _cooldown;
@@ -142,16 +151,29 @@ namespace DanceWithTheDevil
                 return n;
             }
         }
+        /// <summary>True when all <see cref="ModuleCatalog.SlotCount"/> slots hold a module.</summary>
+        public bool SlotsFull => EquippedCount >= ModuleCatalog.SlotCount;
         public PlayerController Player => _player;
         public Rifle Rifle => _rifle;
         public ModuleThrower Thrower => _thrower;
 
         public bool IsEquipped(ModuleType type) => _equipped[(int)type];
 
-        /// <summary>World position of a fixed slot (around the player, camera-relative).</summary>
-        public Vector3 SlotPosition(ModuleType type)
+        /// <summary>The module in <paramref name="slot"/>, or null when it is empty or out of range.</summary>
+        public ModuleType? SlotType(int slot) =>
+            slot >= 0 && slot < _slots.Length && _slots[slot] >= 0 ? (ModuleType)_slots[slot] : (ModuleType?)null;
+
+        /// <summary>The slot holding <paramref name="type"/>, or -1 when it is not equipped.</summary>
+        public int SlotOf(ModuleType type)
         {
-            Vector3 offset = (int)type < _slotOffsets.Length ? _slotOffsets[(int)type] : Vector3.up;
+            for (int i = 0; i < _slots.Length; i++) if (_slots[i] == (int)type) return i;
+            return -1;
+        }
+
+        /// <summary>World position of a selection ring slot (around the player, camera-relative).</summary>
+        public Vector3 SlotPosition(int slot)
+        {
+            Vector3 offset = slot >= 0 && slot < _ringOffsets.Length ? _ringOffsets[slot] : Vector3.up;
             Vector3 right = Vector3.right;
             Vector3 forward = Vector3.forward;
             if (_player != null && _player.CameraRig != null)
@@ -170,7 +192,7 @@ namespace DanceWithTheDevil
             if (_rifle == null) _rifle = GetComponentInChildren<Rifle>();
             if (_thrower == null) _thrower = GetComponent<ModuleThrower>();
             if (_thrower == null) _thrower = gameObject.AddComponent<ModuleThrower>();
-            PadSlotOffsets();
+            PadRingOffsets();
 
             _materials = ModuleVisuals.CreateMaterials(_moduleMaterial);
             BuildSlots();
@@ -188,31 +210,49 @@ namespace DanceWithTheDevil
             ModuleVisuals.DestroyMaterials(_materials);
         }
 
-        // Scenes saved with fewer module types keep their offsets; new types take the default position.
-        private void PadSlotOffsets()
+        private static int[] NewEmptySlots()
         {
-            int have = _slotOffsets != null ? _slotOffsets.Length : 0;
-            if (have >= ModuleCatalog.Count) return;
-            var offsets = new Vector3[ModuleCatalog.Count];
-            for (int i = 0; i < offsets.Length; i++)
-                offsets[i] = i < have ? _slotOffsets[i] : DefaultSlotOffsets[i];
-            _slotOffsets = offsets;
+            var slots = new int[ModuleCatalog.SlotCount];
+            for (int i = 0; i < slots.Length; i++) slots[i] = -1;
+            return slots;
         }
 
+        // Fewer saved offsets than slots: the missing ones take the default position.
+        private void PadRingOffsets()
+        {
+            int have = _ringOffsets != null ? _ringOffsets.Length : 0;
+            if (have >= ModuleCatalog.SlotCount) return;
+            var offsets = new Vector3[ModuleCatalog.SlotCount];
+            for (int i = 0; i < offsets.Length; i++)
+                offsets[i] = i < have ? _ringOffsets[i] : DefaultRingOffsets[i];
+            _ringOffsets = offsets;
+        }
+
+        // Each slot gets a pivot holding all six icons; only the icon of the slot's module is shown.
         private void BuildSlots()
         {
             _slotRoot = new GameObject(name + "_ModuleSlots").transform;
-            for (int i = 0; i < ModuleCatalog.Count; i++)
+            for (int s = 0; s < ModuleCatalog.SlotCount; s++)
             {
-                _slotCubes[i] = ModuleVisuals.CreatePart("Slot_" + (ModuleType)i, PrimitiveType.Cube, _slotRoot,
-                    Vector3.zero, Vector3.one * _slotSize, _materials[i]);
-                _slotCubes[i].gameObject.SetActive(false);
+                Transform pivot = new GameObject("Slot_" + s).transform;
+                pivot.SetParent(_slotRoot, false);
+                for (int t = 0; t < ModuleCatalog.Count; t++)
+                {
+                    Transform icon = ModuleVisuals.BuildIcon((ModuleType)t, pivot, _materials[t]);
+                    icon.gameObject.SetActive(false);
+                    _slotIcons[s, t] = icon;
+                }
+                pivot.gameObject.SetActive(false);
+                _slotPivots[s] = pivot;
             }
         }
 
         // ------------------------------------------------------------------ offers
 
-        /// <summary>True when a new offer may appear (none active, a free slot, player alive).</summary>
+        /// <summary>
+        /// True when a new offer may appear (none active, player alive, some type not yet equipped). Full slots do not
+        /// stop offers (K-23): the offer then shows blocked until a module is ejected.
+        /// </summary>
         public bool CanPresentOffer =>
             !HasOffer && EquippedCount < ModuleCatalog.Count && (_player == null || !_player.Health.IsDead);
 
@@ -225,7 +265,7 @@ namespace DanceWithTheDevil
             if (!CanPresentOffer) return false;
             if (_offer == null) _offer = ModuleOffer.Create(_materials, (ContactRadius) * 2f);
             _offer.Show(type, floorPosition, _offerLifetime);
-            _offer.IsEquippedDuplicate = IsEquipped(type);
+            RefreshBlocked(_offer);
             OfferAppeared?.Invoke(type);
             return true;
         }
@@ -259,7 +299,8 @@ namespace DanceWithTheDevil
             {
                 if (_selectionOpen)
                 {
-                    if (_highlighted >= 0) TryEject((ModuleType)_highlighted);
+                    ModuleType? highlighted = Highlighted;
+                    if (highlighted.HasValue) TryEject(highlighted.Value);
                     // An empty slot or a cooling pulse never turns into a normal reject (first GDD §6).
                 }
                 else
@@ -292,14 +333,14 @@ namespace DanceWithTheDevil
                 else offer.MoveBy(toPlayer / distance * Mathf.Min(_approachSpeed * dt, distance - _approachStopDistance));
             }
 
-            bool duplicate = IsEquipped(offer.Type);
-            offer.IsEquippedDuplicate = duplicate;
+            // Re-checked every tick: ejecting a module while the offer is up makes it acceptable on the next tick.
+            bool blocked = RefreshBlocked(offer);
 
             Vector3 toCore = transform.position - offer.Position;
             toCore.y = 0f;
             bool contact = toCore.magnitude <= ContactRadius;
-            // Leaving, dodging through it, or a duplicate: progress resets (GDD §7 Niyetli kabul, Kapasite).
-            if (!contact || duplicate || _player.IsDodging)
+            // Leaving, dodging through it, a duplicate or full slots: progress resets (GDD §7 Niyetli kabul, Kapasite).
+            if (!contact || blocked || _player.IsDodging)
             {
                 offer.SetProgress(0f);
                 return;
@@ -313,6 +354,14 @@ namespace DanceWithTheDevil
                 SetEquipped(type, true);
                 Accepted?.Invoke(type);
             }
+        }
+
+        /// <summary>Updates the offer's duplicate / full-slots flags; returns <see cref="ModuleOffer.IsBlocked"/>.</summary>
+        private bool RefreshBlocked(ModuleOffer offer)
+        {
+            offer.IsEquippedDuplicate = IsEquipped(offer.Type);
+            offer.SlotsFull = SlotsFull;
+            return offer.IsBlocked;
         }
 
         // ------------------------------------------------------------------ reject / eject
@@ -374,8 +423,8 @@ namespace DanceWithTheDevil
             _readyTime = Time.time + _cooldown;
 
             Vector3 aim = _player.AimDirection;
+            if (_highlighted >= 0 && _highlighted == SlotOf(type)) _highlighted = -1;
             SetEquipped(type, false);
-            if (_highlighted == (int)type) _highlighted = -1;
             _thrower.Throw(type, transform.position + Vector3.up + aim * 0.5f, aim);
             _smallNoCount++;
             Ejected?.Invoke(type);
@@ -391,24 +440,40 @@ namespace DanceWithTheDevil
                 any |= _equipped[i];
                 _equipped[i] = false;
             }
+            for (int i = 0; i < _slots.Length; i++) _slots[i] = -1;
             _highlighted = -1;
             if (!any) return;
             ApplyEffects(true);
             EquippedChanged?.Invoke();
         }
 
-        /// <summary>Equips directly (debug and tests). Returns false if already equipped. Raises Accepted.</summary>
+        /// <summary>
+        /// Equips directly into the first empty slot (debug and tests). Returns false if already equipped or every
+        /// slot is full. Raises Accepted.
+        /// </summary>
         public bool EquipImmediate(ModuleType type)
         {
-            if (IsEquipped(type)) return false;
+            if (IsEquipped(type) || SlotsFull) return false;
             SetEquipped(type, true);
             Accepted?.Invoke(type);
             return true;
         }
 
+        // Equipping takes the first empty slot (callers guarantee one: blocked offers and EquipImmediate stop when
+        // full); unequipping empties only its own slot, the others keep their positions.
         private void SetEquipped(ModuleType type, bool value)
         {
             bool hadTriple = _equipped[(int)ModuleType.TripleShot];
+            int slot = SlotOf(type);
+            if (value && slot < 0)
+            {
+                slot = Array.IndexOf(_slots, -1);
+                if (slot >= 0) _slots[slot] = (int)type;
+            }
+            else if (!value && slot >= 0)
+            {
+                _slots[slot] = -1;
+            }
             _equipped[(int)type] = value;
             ApplyEffects(hadTriple && !_equipped[(int)ModuleType.TripleShot]);
             EquippedChanged?.Invoke();
@@ -475,18 +540,18 @@ namespace DanceWithTheDevil
             if (!_selectionOpen)
             {
                 _selectionOpen = true;
-                _highlighted = NearestEquippedSlot(cursor, out _); // nearest filled slot on opening
+                _highlighted = NearestFilledSlot(cursor, out _); // nearest filled slot on opening
             }
             else
             {
-                if (_highlighted >= 0 && !_equipped[_highlighted]) _highlighted = -1;
+                if (_highlighted >= 0 && _slots[_highlighted] < 0) _highlighted = -1;
                 if (FlatDistance(cursor, transform.position) <= _selectionRadius)
                 {
-                    int nearest = NearestEquippedSlot(cursor, out float nearestDistance);
+                    int nearest = NearestFilledSlot(cursor, out float nearestDistance);
                     if (nearest >= 0 && nearest != _highlighted)
                     {
                         bool take = _highlighted < 0 ||
-                                    FlatDistance(cursor, SlotPosition((ModuleType)_highlighted)) - nearestDistance > _selectionHysteresis;
+                                    FlatDistance(cursor, SlotPosition(_highlighted)) - nearestDistance > _selectionHysteresis;
                         if (take) _highlighted = nearest;
                     }
                 }
@@ -499,14 +564,14 @@ namespace DanceWithTheDevil
             _highlighted = -1;
         }
 
-        private int NearestEquippedSlot(Vector3 point, out float distance)
+        private int NearestFilledSlot(Vector3 point, out float distance)
         {
             int best = -1;
             distance = float.PositiveInfinity;
-            for (int i = 0; i < ModuleCatalog.Count; i++)
+            for (int i = 0; i < _slots.Length; i++)
             {
-                if (!_equipped[i]) continue;
-                float d = FlatDistance(point, SlotPosition((ModuleType)i));
+                if (_slots[i] < 0) continue;
+                float d = FlatDistance(point, SlotPosition(i));
                 if (d < distance)
                 {
                     distance = d;
@@ -520,15 +585,23 @@ namespace DanceWithTheDevil
         {
             if (_rejectFlash != null) _rejectFlash.Tick(Time.unscaledDeltaTime);
 
-            for (int i = 0; i < ModuleCatalog.Count; i++)
+            // Flat icons spin slowly about world Y so they read from the isometric camera (like the offer).
+            _slotSpin = Mathf.Repeat(_slotSpin + Time.deltaTime * SlotSpinDegreesPerSecond, 360f);
+            for (int s = 0; s < _slotPivots.Length; s++)
             {
-                Transform cube = _slotCubes[i];
-                if (cube == null) continue;
-                bool show = _selectionOpen && _equipped[i];
-                if (cube.gameObject.activeSelf != show) cube.gameObject.SetActive(show);
+                Transform pivot = _slotPivots[s];
+                if (pivot == null) continue;
+                int type = _slots[s];
+                bool show = _selectionOpen && type >= 0;
+                if (pivot.gameObject.activeSelf != show) pivot.gameObject.SetActive(show);
                 if (!show) continue;
-                cube.position = SlotPosition((ModuleType)i);
-                cube.localScale = Vector3.one * (_slotSize * (i == _highlighted ? _highlightScale : 1f));
+                for (int t = 0; t < ModuleCatalog.Count; t++)
+                {
+                    Transform icon = _slotIcons[s, t];
+                    if (icon != null && icon.gameObject.activeSelf != (t == type)) icon.gameObject.SetActive(t == type);
+                }
+                pivot.SetPositionAndRotation(SlotPosition(s), Quaternion.Euler(0f, _slotSpin, 0f));
+                pivot.localScale = Vector3.one * (_slotIconScale * (s == _highlighted ? _highlightScale : 1f));
             }
         }
 

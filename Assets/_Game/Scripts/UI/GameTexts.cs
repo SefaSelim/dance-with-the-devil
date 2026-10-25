@@ -165,10 +165,13 @@ namespace DanceWithTheDevil
             "Oyun ekranı alt: modül yuvalarının sağında. {0} = reddedilen/sökülen modül sayısı.");
         // Empty module slot (the module has never been offered yet).
         private static readonly TextEntry _hudEmptySlot = new TextEntry("hud.empty_slot", "—",
-            "Oyun ekranı alt: hiç teklif edilmemiş modülün boş yuvası.");
+            "Oyun ekranı alt: boş modül yuvası (üç yuva var).");
         // GDD §7: a duplicate offer shows "TAKILI".
         private static readonly TextEntry _hudEquippedDuplicate = new TextEntry("hud.equipped", "TAKILI",
             "Modül teklif şeridi: aynı modül zaten takılıysa sağda çıkan işaret. Kısa tut.");
+        // K-23: an offer that cannot be taken because all three slots are full.
+        private static readonly TextEntry _hudSlotsFull = new TextEntry("hud.slots_full", "DOLU",
+            "Modül teklif şeridi: üç yuva da doluyken sağda çıkan işaret (önce Q + Sağ tık ile birini sök). Kısa tut.");
         // Q held: the highlighted slot.
         private static readonly TextEntry _hudEjectHint = new TextEntry("hud.eject_hint", "Sağ tık: söküp at",
             "Q basılıyken yuvaların üstünde: \"Modül adı · bu yazı\".");
@@ -182,6 +185,7 @@ namespace DanceWithTheDevil
         public static string HudSmallNosFormat => _hudSmallNosFormat.Text;
         public static string HudEmptySlot => _hudEmptySlot.Text;
         public static string HudEquippedDuplicate => _hudEquippedDuplicate.Text;
+        public static string HudSlotsFull => _hudSlotsFull.Text;
         public static string HudEjectHint => _hudEjectHint.Text;
 
         // Pause (Esc).
@@ -275,6 +279,10 @@ namespace DanceWithTheDevil
         private static readonly TextEntry _hintEject = new TextEntry("hint.eject",
             "Q'yu basılı tut + Sağ tık: modülü söküp fırlat",
             "İlk dakika ipucu: ilk modül takıldıktan sonra kısa süre.");
+        // K-23: an offer is up but all three slots are full.
+        private static readonly TextEntry _hintSlotsFull = new TextEntry("hint.slots_full",
+            "Yuvalar dolu · Q basılı + Sağ tık: birini sök",
+            "Alt ipucu: teklif geldiğinde üç yuva da doluysa (her seferinde).");
         private static readonly TextEntry _hintRocket = new TextEntry("hint.rocket",
             "E: roket at · F: pala savur · Space: kaç",
             "İlk dakika ipucu: temel hareket öğrenildikten sonra kısa süre.");
@@ -282,6 +290,7 @@ namespace DanceWithTheDevil
         public static string HintMoveFire => _hintMoveFire.Text;
         public static string HintOffer => _hintOffer.Text;
         public static string HintEject => _hintEject.Text;
+        public static string HintSlotsFull => _hintSlotsFull.Text;
         public static string HintRocket => _hintRocket.Text;
 
         // §7 whisper modules: name, advantage, cost, whisper line. Arrays are indexed by ModuleType

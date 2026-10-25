@@ -7,7 +7,7 @@ using UnityEngine.TestTools;
 namespace DanceWithTheDevil.Tests
 {
     /// <summary>
-    /// Whisper module rules from MAIN_GDD §7: intentional accept, capacity, reject cone and shared cooldown, eject
+    /// Whisper module rules from MAIN_GDD §7: intentional accept, capacity (3 slots, K-23), reject cone and shared cooldown, eject
     /// removing effects, Echo bounce. Objects are built in code, no real input; each test uses its own region.
     /// </summary>
     public sealed class ModuleTests
@@ -253,57 +253,114 @@ namespace DanceWithTheDevil.Tests
         }
 
         [UnityTest]
-        public IEnumerator Offer_AllSlotsEquipped_NoOfferCanAppear()
+        public IEnumerator Offer_SlotsFull_OfferAppearsButBlocksUntilEject()
         {
-            // Arrange
+            // Arrange: all three slots taken (K-23).
             var origin = new Vector3(0f, 0f, 1600f);
             PlayerModules modules = SpawnPlayer(origin);
-            for (int i = 0; i < ModuleCatalog.Count; i++) Assert.IsTrue(modules.EquipImmediate((ModuleType)i));
+            Assert.IsTrue(modules.EquipImmediate(ModuleType.TripleShot));
+            Assert.IsTrue(modules.EquipImmediate(ModuleType.Echo));
+            Assert.IsTrue(modules.EquipImmediate(ModuleType.Density));
+            int echoSlot = modules.SlotOf(ModuleType.Echo);
             yield return null;
 
-            // Act
+            // Act: a fourth type is offered right on the player and touched for longer than the accept time.
             bool canPresent = modules.CanPresentOffer;
-            bool presented = modules.PresentOffer(ModuleType.Echo, origin + new Vector3(0f, 0f, 5f));
+            bool presented = modules.PresentOffer(ModuleType.Haste, origin + new Vector3(0.2f, 0f, 0f));
+            yield return new WaitForSeconds(0.6f);
 
-            // Assert
-            Assert.AreEqual(6, ModuleCatalog.Count);
-            Assert.AreEqual(ModuleCatalog.Count, modules.EquippedCount);
-            Assert.IsFalse(canPresent, "every slot is full");
-            Assert.IsFalse(presented);
-            Assert.IsNull(modules.Current);
+            // Assert: it appeared but is blocked, nothing was accepted.
+            Assert.AreEqual(3, ModuleCatalog.SlotCount);
+            Assert.IsTrue(modules.SlotsFull);
+            Assert.IsTrue(canPresent, "full slots do not stop offers");
+            Assert.IsTrue(presented);
+            Assert.IsNotNull(modules.Current, "the blocked offer stays");
+            Assert.IsTrue(modules.Current.SlotsFull, "shows DOLU");
+            Assert.IsTrue(modules.Current.IsBlocked);
+            Assert.IsFalse(modules.Current.IsEquippedDuplicate);
+            Assert.AreEqual(0f, modules.Current.AcceptProgress, 1e-5f, "no progress while full");
+            Assert.IsFalse(modules.IsEquipped(ModuleType.Haste));
+            Assert.IsFalse(modules.EquipImmediate(ModuleType.Pierce), "no fourth module");
+            Assert.AreEqual(3, modules.EquippedCount);
 
-            // Freeing a slot lets offers come again.
-            yield return new WaitForSeconds(0.7f);
+            // Act: free a slot (the shared cooldown is waited out first) and keep standing on the offer.
+            yield return new WaitForSeconds(0.1f);
             Assert.IsTrue(modules.TryEject(ModuleType.Echo));
-            Assert.IsTrue(modules.CanPresentOffer);
+            yield return new WaitForSeconds(0.6f);
+
+            // Assert: accepted into the freed slot.
+            Assert.IsTrue(modules.IsEquipped(ModuleType.Haste));
+            Assert.AreEqual(echoSlot, modules.SlotOf(ModuleType.Haste), "takes the slot the ejected module left");
+            Assert.IsNull(modules.Current, "the accepted offer is gone");
+            Assert.IsTrue(modules.SlotsFull);
         }
 
         [UnityTest]
         public IEnumerator Spawner_EquippedTypes_AreNeverDrawn()
         {
-            // Arrange: every type but Keskin Göz equipped.
+            // Arrange: three types equipped (all slots full).
             var origin = new Vector3(0f, 0f, 1700f);
             PlayerModules modules = SpawnPlayer(origin);
             modules.EquipImmediate(ModuleType.TripleShot);
-            modules.EquipImmediate(ModuleType.Echo);
             modules.EquipImmediate(ModuleType.Density);
-            modules.EquipImmediate(ModuleType.Haste);
             modules.EquipImmediate(ModuleType.Pierce);
             ModuleSpawner spawner = Spawn("Spawner", origin).AddComponent<ModuleSpawner>();
             spawner.Configure(modules, null, null);
             yield return null;
 
-            // Act / Assert
-            for (int i = 0; i < 20; i++)
+            // Act
+            var drawn = new List<ModuleType>();
+            for (int i = 0; i < 30; i++)
             {
-                Assert.IsTrue(spawner.DrawTypeForTests(out ModuleType type));
-                Assert.AreEqual(ModuleType.CritChance, type, $"draw {i}");
+                Assert.IsTrue(spawner.DrawTypeForTests(out ModuleType type), $"draw {i}");
+                drawn.Add(type);
             }
 
-            // All six equipped: nothing to draw, and no offer can appear.
-            modules.EquipImmediate(ModuleType.CritChance);
-            Assert.IsFalse(spawner.DrawTypeForTests(out _));
-            Assert.IsFalse(modules.CanPresentOffer);
+            // Assert: only the three free types ever come out, and offers still may appear (K-23).
+            CollectionAssert.DoesNotContain(drawn, ModuleType.TripleShot);
+            CollectionAssert.DoesNotContain(drawn, ModuleType.Density);
+            CollectionAssert.DoesNotContain(drawn, ModuleType.Pierce);
+            CollectionAssert.Contains(drawn, ModuleType.Echo);
+            CollectionAssert.Contains(drawn, ModuleType.Haste);
+            CollectionAssert.Contains(drawn, ModuleType.CritChance);
+            Assert.IsTrue(modules.SlotsFull);
+            Assert.IsTrue(modules.CanPresentOffer);
+        }
+
+        [UnityTest]
+        public IEnumerator Slots_AcceptFillsFirstFree_EjectKeepsOthersInPlace()
+        {
+            // Arrange
+            var origin = new Vector3(0f, 0f, 1900f);
+            PlayerModules modules = SpawnPlayer(origin);
+            yield return null;
+
+            // Act: fill in order, eject the middle one, then equip another.
+            modules.EquipImmediate(ModuleType.Echo);
+            modules.EquipImmediate(ModuleType.Density);
+            modules.EquipImmediate(ModuleType.Haste);
+            int densitySlot = modules.SlotOf(ModuleType.Density);
+            Assert.IsTrue(modules.TryEject(ModuleType.Density));
+            ModuleType? freed = modules.SlotType(densitySlot);
+            int echoAfterEject = modules.SlotOf(ModuleType.Echo);
+            int hasteAfterEject = modules.SlotOf(ModuleType.Haste);
+            modules.EquipImmediate(ModuleType.Pierce);
+            int pierceSlot = modules.SlotOf(ModuleType.Pierce);
+            modules.ClearAll();
+
+            // Assert
+            Assert.AreEqual(1, densitySlot, "second accept takes slot 1");
+            Assert.IsNull(freed, "eject empties its slot");
+            Assert.AreEqual(-1, modules.SlotOf(ModuleType.Density));
+            Assert.AreEqual(0, echoAfterEject, "the others keep their positions");
+            Assert.AreEqual(2, hasteAfterEject);
+            Assert.AreEqual(1, pierceSlot, "the next accept fills the first free slot");
+            for (int i = 0; i < ModuleCatalog.SlotCount; i++) Assert.IsNull(modules.SlotType(i), $"slot {i} cleared");
+            Assert.IsNull(modules.SlotType(-1));
+            Assert.IsNull(modules.SlotType(ModuleCatalog.SlotCount));
+            Assert.AreEqual(0, modules.EquippedCount);
+            Assert.IsFalse(modules.SlotsFull);
+            Assert.AreEqual(-1, modules.HighlightedSlot, "selection closed");
         }
 
         [UnityTest]

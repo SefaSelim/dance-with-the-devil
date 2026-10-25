@@ -91,6 +91,30 @@ namespace DanceWithTheDevil.Tests
         }
     
         [UnityTest]
+        public IEnumerator ContractTwo_SingleTrack_IsMuffledNotStopped()
+        {
+            // Arrange: a bank with the single music track (it replaces the stems).
+            AudioClip track = MakeClip("test_track", 44100 * 2);
+            _bank.SetMusicTrack(track, -12f);
+            _audio.Initialize(_bank);
+            yield return null;
+            Assert.IsNotNull(_audio.MusicTrackSource, "the track plays");
+            Assert.IsNull(_audio.MusicBaseSource, "instead of the stems");
+            Assert.IsNull(_audio.MusicMelodySource);
+            Assert.Greater(_audio.MusicTrackCutoff, 20000f, "open before contract 2");
+
+            // Act
+            AudioCosts.MusicLayerMuted = true;
+            yield return new WaitForSecondsRealtime(1.6f);
+            yield return null;
+
+            // Assert
+            Assert.Less(_audio.MusicTrackCutoff, 1000f, "muffled after the 1.5 s sweep");
+            Assert.Greater(_audio.MusicTrackSource.volume, 0f, "still playing");
+            Assert.IsTrue(_audio.MusicTrackSource.isPlaying);
+        }
+
+        [UnityTest]
         public IEnumerator EndRun_StopsGameplaySounds_FadesMusic_KeepsUi()
         {
             yield return null;

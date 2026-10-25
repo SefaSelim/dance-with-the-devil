@@ -6,7 +6,7 @@ namespace DanceWithTheDevil
 {
     /// <summary>
     /// Offer director (MAIN_GDD §7 Sıklık; first GDD §11-12): offers at ~8, ~25 and ~42 s of run time, then every
-    /// 14-20 s after the previous one; never while an offer is unresolved or every slot is full (it waits). Types come
+    /// 14-20 s after the previous one; never while an offer is unresolved (it waits; full slots no longer stop offers, K-23). Types come
     /// from a shuffled bag of every <see cref="ModuleType"/> (six with Hız, Keskin Göz and Delici), no repeat before the bag
     /// empties; types already equipped are skipped (no "TAKILI" duplicates, user decision 2026-10-25). The offer appears ≥4 m from the player on free floor that the
     /// camera sees and the player has line of sight to. Scaled time: stops during hitstop and the contract screen.
@@ -66,7 +66,7 @@ namespace DanceWithTheDevil
         public bool Paused { get; set; }
         public bool HasBegun => _begun;
         public float Elapsed => _elapsed;
-        /// <summary>Run time when the next offer is due (it still waits for a free slot and a valid point).</summary>
+        /// <summary>Run time when the next offer is due (it still waits for the previous offer to close and a valid point).</summary>
         public float NextOfferTime => _nextOfferTime;
         public int OffersSpawned => _offersSpawned;
         /// <summary>The active offer, or null.</summary>

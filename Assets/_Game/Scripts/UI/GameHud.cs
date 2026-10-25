@@ -13,12 +13,13 @@ namespace DanceWithTheDevil
     /// elapsed run time (the run has no end time: D2, K-4); score with the live combo multiplier ("Puan 1200 ×1,5",
     /// shown above ×1,0; the combo itself pops up in the world, see WorldPopups). Top-left: Defne's small block portrait (hair
     /// greys after contract 1, hidden by contract 3) and the "Verdiklerin" strip, one icon per cost taken (the
-    /// newest one pulses). Bottom: one fixed slot per module type (ModuleCatalog.Count; the row narrows from six on) (empty = a dim socket with no name until that module has
-    /// been offered once; equipped = the module's own colour; while Q is held the highlighted slot grows, turns gold
+    /// newest one pulses). Bottom: the player's <see cref="ModuleCatalog.SlotCount"/> module slots in slot order (empty =
+    /// a dim socket "—"; filled = the module's colour and name; while Q is held the highlighted slot grows, turns gold
     /// and "Sağ tık: sök" shows above it), "Küçük hayırlar: N", rocket / machete / dodge / reject pips (reject reads
     /// PlayerModules' real cooldown). While a whisper offer exists (and the Devil is not up): a small banner in the
     /// top-right corner under the score (slides in): its name in the module's colour with the whisper on one line,
-    /// small "+" advantage and "−" cost lines, a shrinking lifetime bar and "TAKILI" left of it on a duplicate.
+    /// small "+" advantage and "−" cost lines, a shrinking lifetime bar and "TAKILI" left of it on a duplicate, or
+    /// "DOLU" while every slot is taken (K-23).
     /// Aim reticle: a chunky pixel crosshair at the mouse during play; the OS cursor is hidden and confined to the
     /// window during play and released on the Devil, ending and pause screens. Adds a <see cref="PauseOverlay"/>
     /// (Esc) when the GameObject has none. The whole HUD hides while the ending screen is visible.
@@ -29,14 +30,15 @@ namespace DanceWithTheDevil
     public sealed class GameHud : MonoBehaviour
     {
         private const int MaxPips = 4;
-        private const int ModuleSlots = ModuleCatalog.Count;
+        private const int ModuleSlots = ModuleCatalog.SlotCount;
         private const int MaxCostIcons = 6;
         private const int TimeCacheSeconds = 3600;
         // The slot row fits ±170 at 640×360 whatever the module count: the pip rows (label + 4 pips) end at −180 and
         // "Küçük hayırlar" (140 wide) starts right of the last highlighted slot and must end before +320.
+        // Three slots: spacing 96, centres 0/±96, extents ±141 (±145 highlighted), "Küçük hayırlar" +149..+289.
         // Five slots: spacing 68, centres 0/±68/±136, extents ±167 (±171 highlighted), "Küçük hayırlar" +175..+315.
         // Six slots: spacing 56, centres ±28/±84/±140, extents ±165 (±169 highlighted), "Küçük hayırlar" +173..+313.
-        private const float SlotSpacing = ModuleSlots <= 5 ? 68f : 336f / ModuleSlots;
+        private const float SlotSpacing = ModuleSlots <= 3 ? 96f : ModuleSlots <= 5 ? 68f : 336f / ModuleSlots;
         private static readonly Vector2 SlotSize = new Vector2(SlotSpacing - 6f, 20f);
         private static readonly Vector2 SlotSizeHighlighted = new Vector2(SlotSpacing + 2f, 26f);
         // Offer banner: top-right corner under the score line.
@@ -122,9 +124,10 @@ namespace DanceWithTheDevil
         private readonly Image[] _slotFill = new Image[ModuleSlots];
         private readonly Text[] _slotLabel = new Text[ModuleSlots];
         private readonly int[] _slotShown = new int[ModuleSlots];
-        private readonly bool[] _offered = new bool[ModuleSlots];
-        private readonly string[] _moduleHex = new string[ModuleSlots];
-        private readonly string[] _ejectStrings = new string[ModuleSlots];
+        private readonly string[] _moduleHex = new string[ModuleCatalog.Count];
+        private readonly string[] _ejectStrings = new string[ModuleCatalog.Count];
+        private Text _offerEquippedText;
+        private bool _offerFullShown;
         private Text _ejectLabel;
         private Text _smallNosText;
         private GameObject _costStrip;
@@ -165,13 +168,13 @@ namespace DanceWithTheDevil
             _onOfferAppeared = OnOfferAppeared;
             _onOfferClosed = OnOfferClosed;
             ResolveReferences();
-            for (int i = 0; i < ModuleSlots; i++)
+            for (int i = 0; i < ModuleCatalog.Count; i++)
             {
                 var type = (ModuleType)i;
                 _moduleHex[i] = ColorUtility.ToHtmlStringRGB(ModuleCatalog.ColorOf(type));
                 _ejectStrings[i] = GameTexts.ModuleName(type) + GameTexts.Separator + GameTexts.HudEjectHint;
-                _slotShown[i] = -1;
             }
+            for (int i = 0; i < ModuleSlots; i++) _slotShown[i] = -1;
             Build();
             UpdateSlots();
 
@@ -252,7 +255,6 @@ namespace DanceWithTheDevil
         private void OnOfferAppeared(ModuleType type)
         {
             int i = (int)type;
-            _offered[i] = true;
             _offerWhisper.text = "<color=#" + _moduleHex[i] + "><b>" + GameTexts.ModuleName(type) + "</b></color>  "
                 + GameTexts.ModuleWhisper(type);
             _offerPlus.text = "+ " + GameTexts.ModuleAdvantage(type);
@@ -359,65 +361,53 @@ namespace DanceWithTheDevil
 
         private void UpdateSlots()
         {
-            int highlighted = -1;
             bool selecting = _modules != null && _modules.SelectionOpen;
-            if (selecting)
-            {
-                ModuleType? h = _modules.Highlighted;
-                if (h.HasValue) highlighted = (int)h.Value;
-            }
+            int highlighted = selecting ? _modules.HighlightedSlot : -1;
 
             for (int i = 0; i < ModuleSlots; i++)
             {
-                bool equipped = _modules != null && _modules.IsEquipped((ModuleType)i);
-                int state = equipped ? 2 : _offered[i] ? 1 : 0;
-                bool lit = equipped && highlighted == i;
-                int code = state * 2 + (lit ? 1 : 0);
-                if (code != _slotShown[i]) ApplySlot(i, state, lit, code);
+                ModuleType? type = _modules != null ? _modules.SlotType(i) : null;
+                bool lit = type.HasValue && highlighted == i;
+                int code = (type.HasValue ? (int)type.Value + 1 : 0) * 2 + (lit ? 1 : 0);
+                if (code != _slotShown[i]) ApplySlot(i, type, lit, code);
             }
 
-            int eject = selecting ? highlighted : -2;
+            // Code = slot × count + type, so a different module in the same slot rewrites the hint.
+            ModuleType? lifted = highlighted >= 0 ? _modules.SlotType(highlighted) : null;
+            int eject = selecting && lifted.HasValue ? highlighted * ModuleCatalog.Count + (int)lifted.Value : -2;
             if (eject == _ejectShown) return;
             _ejectShown = eject;
             bool show = eject >= 0;
             if (_ejectLabel.gameObject.activeSelf != show) _ejectLabel.gameObject.SetActive(show);
             if (!show) return;
-            _ejectLabel.text = _ejectStrings[eject];
-            _ejectLabel.rectTransform.anchoredPosition = new Vector2(SlotX(eject), 32f);
+            _ejectLabel.text = _ejectStrings[(int)lifted.Value];
+            _ejectLabel.rectTransform.anchoredPosition = new Vector2(SlotX(highlighted), 32f);
         }
 
         /// <summary>Centre x of slot <paramref name="i"/>, slots centred on the bottom middle.</summary>
         private static float SlotX(int i) => (i - (ModuleSlots - 1) * 0.5f) * SlotSpacing;
 
-        /// <summary>0 = empty, never offered (no name); 1 = empty, offered before; 2 = equipped (module colour).</summary>
-        private void ApplySlot(int i, int state, bool highlighted, int code)
+        /// <summary>Empty = a dim socket "—"; filled = the module's colour and name.</summary>
+        private void ApplySlot(int i, ModuleType? type, bool highlighted, int code)
         {
             _slotShown[i] = code;
-            var type = (ModuleType)i;
             Color border, fill, labelColor;
             string label;
             FontStyle style = FontStyle.Normal;
-            switch (state)
+            if (type.HasValue)
             {
-                case 2:
-                    border = highlighted ? UiKit.Gold : UiKit.Cream;
-                    fill = ModuleCatalog.ColorOf(type);
-                    label = GameTexts.ModuleName(type);
-                    labelColor = UiKit.Ink;
-                    style = FontStyle.Bold;
-                    break;
-                case 1:
-                    border = SlotEmptyBorder;
-                    fill = SlotEmptyFill;
-                    label = GameTexts.ModuleName(type);
-                    labelColor = UiKit.Dim;
-                    break;
-                default:
-                    border = SlotEmptyBorder;
-                    fill = SlotEmptyFill;
-                    label = GameTexts.HudEmptySlot;
-                    labelColor = SlotEmptyBorder;
-                    break;
+                border = highlighted ? UiKit.Gold : UiKit.Cream;
+                fill = ModuleCatalog.ColorOf(type.Value);
+                label = GameTexts.ModuleName(type.Value);
+                labelColor = UiKit.Ink;
+                style = FontStyle.Bold;
+            }
+            else
+            {
+                border = SlotEmptyBorder;
+                fill = SlotEmptyFill;
+                label = GameTexts.HudEmptySlot;
+                labelColor = SlotEmptyBorder;
             }
             _slotBorder[i].color = border;
             _slotFill[i].color = fill;
@@ -491,8 +481,14 @@ namespace DanceWithTheDevil
             if (!_offerOpen || _modules == null) return;
             ModuleOffer offer = _modules.Current;
             if (offer == null) return;
-            bool duplicate = offer.IsEquippedDuplicate;
-            if (_offerEquipped.activeSelf != duplicate) _offerEquipped.SetActive(duplicate);
+            bool blocked = offer.IsBlocked;
+            if (_offerEquipped.activeSelf != blocked) _offerEquipped.SetActive(blocked);
+            bool full = blocked && !offer.IsEquippedDuplicate;
+            if (full != _offerFullShown)
+            {
+                _offerFullShown = full;
+                _offerEquippedText.text = full ? GameTexts.HudSlotsFull : GameTexts.HudEquippedDuplicate;
+            }
             float t = offer.Lifetime > 0f ? Mathf.Clamp01(offer.TimeLeft / offer.Lifetime) : 0f;
             float w = Mathf.Round(t * OfferTimerWidth);
             if (!Mathf.Approximately(_offerTimer.sizeDelta.x, w)) _offerTimer.sizeDelta = new Vector2(w, _offerTimer.sizeDelta.y);
@@ -718,6 +714,7 @@ namespace DanceWithTheDevil
             Text equipped = UiKit.Label(offer.transform, "Equipped", font, 10, UiKit.Gold, TextAnchor.MiddleRight,
                 left, new Vector2(1f, 0.5f), new Vector2(-4f, 0f), new Vector2(60f, 12f), FontStyle.Bold);
             equipped.text = GameTexts.HudEquippedDuplicate;
+            _offerEquippedText = equipped;
             UiKit.AddShadow(equipped);
             _offerEquipped = equipped.gameObject;
             _offerEquipped.SetActive(false);
@@ -725,10 +722,10 @@ namespace DanceWithTheDevil
                 Vector2.zero, new Vector2(2f, 1f), new Vector2(OfferTimerWidth, 2f)).rectTransform;
             _offer.SetActive(false);
 
-            // Module slots (bottom centre, fixed order = ModuleType).
+            // Module slots (bottom centre, slot order).
             for (int i = 0; i < ModuleSlots; i++)
             {
-                Image fill = UiKit.Framed(_root, "Slot_" + (ModuleType)i, SlotEmptyBorder, SlotEmptyFill, bottom, bottom,
+                Image fill = UiKit.Framed(_root, "Slot_" + i, SlotEmptyBorder, SlotEmptyFill, bottom, bottom,
                     new Vector2(SlotX(i), 8f), SlotSize, 1f);
                 _slotFill[i] = fill;
                 _slotBorder[i] = fill.transform.parent.GetComponent<Image>();
