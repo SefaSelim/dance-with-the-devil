@@ -61,9 +61,11 @@ namespace DanceWithTheDevil
         }
     }
 
-    /// <summary>Runtime placeholder geometry for offers, slots and thrown modules (cube primitives, no colliders).</summary>
+    /// <summary>Runtime geometry for offers, the Q ring and thrown modules (primitives, no colliders).</summary>
     internal static class ModuleVisuals
     {
+        private const int EchoBeads = 10;
+
         public static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         public static readonly int EmissionColorId = Shader.PropertyToID("_EmissionColor");
 
@@ -132,12 +134,14 @@ namespace DanceWithTheDevil
                     }
                     break;
                 case ModuleType.Echo:
-                    // A small core inside a square ring.
-                    CreatePart("Body", PrimitiveType.Cube, icon, Vector3.zero, Vector3.one * 0.2f, m);
-                    CreatePart("Ring_N", PrimitiveType.Cube, icon, new Vector3(0f, 0f, 0.3f), new Vector3(0.6f, 0.1f, 0.1f), m);
-                    CreatePart("Ring_S", PrimitiveType.Cube, icon, new Vector3(0f, 0f, -0.3f), new Vector3(0.6f, 0.1f, 0.1f), m);
-                    CreatePart("Ring_E", PrimitiveType.Cube, icon, new Vector3(0.3f, 0f, 0f), new Vector3(0.1f, 0.1f, 0.6f), m);
-                    CreatePart("Ring_W", PrimitiveType.Cube, icon, new Vector3(-0.3f, 0f, 0f), new Vector3(0.1f, 0.1f, 0.6f), m);
+                    // Yankı: a round core with a ripple of beads around it (a bullet's echo), upright.
+                    CreatePart("Core", PrimitiveType.Sphere, icon, Vector3.zero, Vector3.one * 0.2f, m);
+                    for (int b = 0; b < EchoBeads; b++)
+                    {
+                        float angle = b * Mathf.PI * 2f / EchoBeads;
+                        CreatePart("Bead_" + b, PrimitiveType.Sphere, icon,
+                            new Vector3(Mathf.Cos(angle), Mathf.Sin(angle), 0f) * 0.3f, Vector3.one * 0.085f, m);
+                    }
                     break;
                 case ModuleType.Haste:
                     // A double chevron ">>" (speed), thin bars.
@@ -170,8 +174,11 @@ namespace DanceWithTheDevil
                     CreatePart("Plate_B", PrimitiveType.Cube, icon, new Vector3(0.12f, 0f, 0f), new Vector3(0.05f, 0.34f, 0.3f), m);
                     break;
                 default:
-                    // Density: one big cube.
-                    CreatePart("Body", PrimitiveType.Cube, icon, Vector3.zero, Vector3.one * 0.5f, m);
+                    // Yoğunluk: a heavy round slug with a band round its middle and a short tail (bigger, denser bullets).
+                    CreatePart("Slug", PrimitiveType.Sphere, icon, Vector3.zero, Vector3.one * 0.42f, m);
+                    CreatePart("Band", PrimitiveType.Cylinder, icon, Vector3.zero, new Vector3(0.5f, 0.03f, 0.5f), m)
+                        .localRotation = Quaternion.Euler(90f, 0f, 0f);
+                    CreatePart("Tail", PrimitiveType.Capsule, icon, new Vector3(0f, -0.3f, 0f), new Vector3(0.16f, 0.12f, 0.16f), m);
                     break;
             }
             return icon;

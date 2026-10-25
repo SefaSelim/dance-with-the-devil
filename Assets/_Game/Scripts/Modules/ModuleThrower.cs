@@ -30,6 +30,11 @@ namespace DanceWithTheDevil
         [Tooltip("Layers the module explodes on.")]
         [SerializeField] private LayerMask _hitMask = ~0;
 
+        [Tooltip("Size of the flying module's icon (the Q ring's shape) relative to its ring size.")]
+        [SerializeField, Min(0.05f)] private float _iconScale = 0.7f;
+        [Tooltip("Tumble of the flying icon, degrees per second.")]
+        [SerializeField] private float _iconSpin = 540f;
+
         [Header("Explosion (GDD §7)")]
         [Tooltip("Damage to every enemy in the radius (GDD: 25).")]
         [SerializeField, Min(0f)] private float _damage = 25f;
@@ -49,6 +54,11 @@ namespace DanceWithTheDevil
         private readonly HashSet<IDamageable> _damaged = new HashSet<IDamageable>();
         private ProjectileDetonateHandler _onDetonate;
         private Transform _ownerRoot;
+        private PlayerModules _modules;
+        private Material[] _ownMaterials;
+        // Per pooled flight: its icon holder and one icon per module type (only the thrown type is shown).
+        private readonly Dictionary<Projectile, Transform> _iconHolders = new Dictionary<Projectile, Transform>(8);
+        private readonly Dictionary<Projectile, Transform[]> _icons = new Dictionary<Projectile, Transform[]>(8);
 
         /// <summary>Raised after each explosion with its centre.</summary>
         public event Action<Vector3> Exploded;
@@ -61,6 +71,7 @@ namespace DanceWithTheDevil
             if (_owner == null) _owner = GetComponentInParent<PlayerController>();
             _ownerRoot = _owner != null ? _owner.transform : transform.root;
             _onDetonate = Explode;
+            _modules = GetComponent<PlayerModules>();
             if (_pool == null)
             {
                 _pool = gameObject.AddComponent<ProjectilePool>();
@@ -92,6 +103,51 @@ namespace DanceWithTheDevil
                 OnDetonate = _onDetonate,
             });
             projectile.SetTint(ModuleCatalog.ColorOf(type));
+            ShowIcon(projectile, type);
+        }
+
+        private void LateUpdate()
+        {
+            if (_iconHolders.Count == 0 || _iconSpin == 0f) return;
+            float step = _iconSpin * Time.deltaTime;
+            foreach (KeyValuePair<Projectile, Transform> pair in _iconHolders)
+                if (pair.Key != null && pair.Key.isActiveAndEnabled) pair.Value.Rotate(0.35f * step, step, 0f, Space.Self);
+        }
+
+        private void OnDestroy() => ModuleVisuals.DestroyMaterials(_ownMaterials);
+
+        /// <summary>
+        /// The flying module shows the same shape and colour as in the Q ring instead of the pool's plain cube (whose
+        /// default material rendered magenta in builds). Icons are built once per pooled flight.
+        /// </summary>
+        private void ShowIcon(Projectile projectile, ModuleType type)
+        {
+            if (!_icons.TryGetValue(projectile, out Transform[] icons))
+            {
+                var holder = new GameObject("ModuleIcon").transform;
+                holder.SetParent(projectile.transform, false);
+                holder.localScale = Vector3.one * _iconScale;
+                icons = new Transform[ModuleCatalog.Count];
+                for (int t = 0; t < icons.Length; t++)
+                {
+                    icons[t] = ModuleVisuals.BuildIcon((ModuleType)t, holder, MaterialFor((ModuleType)t));
+                    foreach (Renderer r in icons[t].GetComponentsInChildren<Renderer>(true))
+                        r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                }
+                if (projectile.Visual != null)
+                    foreach (Renderer r in projectile.Visual.GetComponentsInChildren<Renderer>(true)) r.enabled = false;
+                _icons[projectile] = icons;
+                _iconHolders[projectile] = holder;
+            }
+            for (int t = 0; t < icons.Length; t++) icons[t].gameObject.SetActive(t == (int)type);
+        }
+
+        private Material MaterialFor(ModuleType type)
+        {
+            Material material = _modules != null ? _modules.MaterialFor(type) : null;
+            if (material != null) return material;
+            if (_ownMaterials == null) _ownMaterials = ModuleVisuals.CreateMaterials(null);
+            return _ownMaterials[(int)type];
         }
 
         private void Explode(Projectile projectile, Vector3 point, Vector3 normal)

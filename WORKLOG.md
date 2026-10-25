@@ -363,3 +363,14 @@ Every change to this project goes here — from people and from AI tools. Git sh
 - Why: SefaSelim: "3 slot yeri yap … yeni upgrade geldiğinde eski upgrade'i silip yenisini alabileyim"; "q'ya basılı tutunca kutular yerine upgrade iconları göster"; "3'lü atış için farklı bir icon"; "Tense Conversational Pulse … oyunun müziği olarak ekle" (chosen: replaces the in-game music, contract 2 muffles it).
 - Status: committed (Three module slots, module icons in the Q ring, new game music)
 - Notes / risks: in the Editor through MCP: EditMode 67/67, PlayMode 54/54 (+ ModuleSlotCaptureTests explicit), no crash. Captures checked: three HUD slots, "DOLU" strip and X on a full-slots offer, the new hint on one line, Triple Shot bullets, ring icons (Yankı, Delici, Yoğunluk) around Defne. The music loudness (-18 dB) was set by comparison with the old stems, not by listening. Yoğunluk's icon is still a single cube (its own shape, not reported).
+
+### 2026-10-25 — SefaSelim (Claude Code) — branch juice
+- Changed: thrown modules and the Q ring look like their modules (no more boxes or magenta cubes); gameplay sounds quieter so the music leads (SefaSelim's request).
+  - `Scripts/Modules/ModuleType.cs` `ModuleVisuals.BuildIcon`: Yoğunluk (was one big cube) → a round slug with a band and a short tail; Yankı (was a cube in a square of cubes) → a round core with a ripple of 10 beads. Other icons unchanged.
+  - `Scripts/Modules/ModuleThrower.cs`: the flying module shows its icon (same shape and tinted material as the Q ring, from `PlayerModules.MaterialFor`), tumbling (`_iconSpin` 540°/s, `_iconScale` 0.7); the pool's plain runtime cube (no material → magenta in builds) is hidden. Icons built once per pooled flight. `Scripts/Modules/PlayerModules.cs`: new `internal MaterialFor(ModuleType)`.
+  - `Scripts/Audio/GameAudio.cs`: new `_effectsTrimDb` −5 dB on every Sfx and Voice bus sound (UI and music unchanged).
+  - New explicit capture test `ModuleCaptureTests` (equips three modules, holds Q via a queued key, throws two).
+  - No scene, prefab or ProjectSettings change.
+- Why: SefaSelim: "q ya basılı tutunca bazı itemlerin görünümü hala kutu … fırlatınca da pembe oluyor kutu şeklinde … Genel olarak efekt seslerini biraz kıs."
+- Status: committed (Module icons in flight, effects −5 dB)
+- Notes / risks: in the Editor through MCP: EditMode 67/67, PlayMode 54/54 (+11 explicit), no crash; captures checked (ring with the new shapes, Yoğunluk and Yankı in flight). The magenta cube was only reproducible in builds (missing default material); now nothing uses it for thrown modules.

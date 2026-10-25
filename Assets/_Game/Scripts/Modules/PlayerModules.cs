@@ -157,6 +157,10 @@ namespace DanceWithTheDevil
         public Rifle Rifle => _rifle;
         public ModuleThrower Thrower => _thrower;
 
+        /// <summary>The tinted material of a module type (the ring's and the offer's), or null before Awake.</summary>
+        internal Material MaterialFor(ModuleType type) =>
+            _materials != null && (int)type < _materials.Length ? _materials[(int)type] : null;
+
         public bool IsEquipped(ModuleType type) => _equipped[(int)type];
 
         /// <summary>The module in <paramref name="slot"/>, or null when it is empty or out of range.</summary>

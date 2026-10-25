@@ -76,6 +76,8 @@ namespace DanceWithTheDevil
         [SerializeField, Range(200f, 5000f)] private float _muffledCutoff = 700f;
 
         [Header("Mix trims (dB added to the bank's event volume)")]
+        [Tooltip("Every gameplay sound (Sfx and Voice buses; not the UI or the music), so the music sits in front.")]
+        [SerializeField, Range(-24f, 0f)] private float _effectsTrimDb = -5f;
         [Tooltip("rifle_shot (bank -14 dB): the most frequent sound, kept below the rest.")]
         [SerializeField, Range(-24f, 6f)] private float _rifleTrimDb = -3f;
         [Tooltip("explosion (bank -4 dB): rocket blasts stacking with kills must not clip.")]
@@ -382,7 +384,9 @@ namespace DanceWithTheDevil
             source.Stop();
             source.clip = clip;
             source.pitch = finalPitch;
-            source.volume = Mathf.Clamp01(slot.BaseVolume * SoundBank.DbToLinear(jitterDb) * volumeScale * Mathf.Clamp01(MasterVolume) * Mathf.Clamp01(SfxVolume));
+            float effectsTrim = e.Bus == AudioBus.Sfx || e.Bus == AudioBus.Voice ? SoundBank.DbToLinear(_effectsTrimDb) : 1f;
+            source.volume = Mathf.Clamp01(slot.BaseVolume * SoundBank.DbToLinear(jitterDb) * volumeScale * effectsTrim
+                                          * Mathf.Clamp01(MasterVolume) * Mathf.Clamp01(SfxVolume));
             source.panStereo = Mathf.Clamp(pan, -1f, 1f);
             source.mute = e.Bus == AudioBus.Voice && _voiceMuted;
             source.Play();
