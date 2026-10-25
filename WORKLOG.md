@@ -374,3 +374,25 @@ Every change to this project goes here — from people and from AI tools. Git sh
 - Why: SefaSelim: "q ya basılı tutunca bazı itemlerin görünümü hala kutu … fırlatınca da pembe oluyor kutu şeklinde … Genel olarak efekt seslerini biraz kıs."
 - Status: committed (Module icons in flight, effects −5 dB)
 - Notes / risks: in the Editor through MCP: EditMode 67/67, PlayMode 54/54 (+11 explicit), no crash; captures checked (ring with the new shapes, Yoğunluk and Yankı in flight). The magenta cube was only reproducible in builds (missing default material); now nothing uses it for thrown modules.
+
+### 2026-10-25 — SefaSelim (Claude Code) — branch juice
+- Changed: a 3-minute gameplay video, recorded from the Editor and edited (SefaSelim's request).
+  - Toolkit: `video-editing` skill (.claude/skills): raw capture → edit decision list → FFmpeg cuts, crossfades, fades and loudness.
+  - New explicit test `Tests/PlayMode/GameplayVideoCaptureTests.cs`. Each frame is captured as a JPG (async GPU readback, encoded on a worker thread) and the game's own mix goes to a WAV through `AudioRenderer`. Frames and audio stay in sync at 30 fps through `Time.captureFramerate`. The run it records:
+    - 6 s of the main menu, then the Arena played by RunBot;
+    - the Devil's lines and cards held on screen long enough to read;
+    - the Q ring opened and a module thrown, and the machete swung at close enemies;
+    - HAYIR at the end (the run ended on its own in the always-yes ending).
+    - Gameplay sounds play at 0.7× during the recording so the music leads. Output goes to `Logs/VideoCapture` (git-ignored).
+  - Edit, made outside the project:
+    - 13 segments from the 243 s raw recording: menu, the first wave, each death and Devil card, the strongest action stretches, then the last deal, the crumble and the ending ledger;
+    - 0.35 s crossfades, fade in and out, a gentle compressor, loudnorm −14 LUFS.
+    - Result: `Recordings/Dance_with_the_Devil_oynanis.mp4` (git-ignored), 2:58.8, 1920×1080, 30 fps.
+    - FFmpeg comes from the `imageio-ffmpeg` Python package (user site-packages), not the project.
+  - No scene, prefab or ProjectSettings change.
+- Why: SefaSelim: "Oyun içinden 3 dakikalık her şeyi gösteren bir oynanış videosu al … efekt seslerini biraz kıs ki müzik ön plana çıksın."
+- Status: committed (capture test only; the video is not in git)
+- Notes / risks:
+  - The Editor did not crash.
+  - Frames come out upside down on D3D; the edit flips them (vflip).
+  - The Game view is 900×506, upscaled to 1080p.
