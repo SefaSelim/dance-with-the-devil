@@ -27,6 +27,7 @@ namespace DanceWithTheDevil.Tests
             {
                 new SoundEvent("rifle_shot", new[] { sfx }, -14f, 3, 0.05f, 0.05f, 1.5f, AudioBus.Sfx, false, false),
                 new SoundEvent("defne_voice_hurt", new[] { sfx }, -10f, 1, 0f, 0f, 0f, AudioBus.Voice, false, false),
+                new SoundEvent("ui_click", new[] { sfx }, -10f, 2, 0f, 0f, 0f, AudioBus.Ui, true, false),
             }, music, music);
 
             _go = new GameObject("GameAudio");
@@ -87,6 +88,27 @@ namespace DanceWithTheDevil.Tests
             Assert.AreEqual(0f, _audio.MelodyFade, 1e-4f, "melody stem faded out within ~1.6 s unscaled");
             Assert.AreEqual(0f, _audio.MusicMelodySource.volume, 1e-4f);
             Assert.Greater(_audio.MusicBaseSource.volume, 0f, "base stem keeps playing");
+        }
+    
+        [UnityTest]
+        public IEnumerator EndRun_StopsGameplaySounds_FadesMusic_KeepsUi()
+        {
+            yield return null;
+            Assert.AreNotEqual(0, _audio.Play("rifle_shot"));
+            Assert.AreEqual(1, _audio.ActiveVoiceCount("rifle_shot"));
+            Assert.Greater(_audio.MusicBaseSource.volume, 0f);
+
+            _audio.EndRun(0.5f);
+            Assert.IsTrue(_audio.RunEnded);
+            Assert.AreEqual(0, _audio.ActiveVoiceCount("rifle_shot"), "gameplay voices stop at once");
+            yield return new WaitForSecondsRealtime(0.1f);
+            Assert.AreEqual(0, _audio.Play("rifle_shot"), "no gameplay sound after the ending");
+            Assert.AreNotEqual(0, _audio.Play("ui_click"), "ending sting and clicks still play");
+
+            yield return new WaitForSecondsRealtime(0.6f);
+            yield return null;
+            Assert.AreEqual(0f, _audio.MusicBaseSource.volume, 1e-4f, "music faded out");
+            Assert.AreEqual(0f, _audio.MusicMelodySource.volume, 1e-4f);
         }
     }
 }

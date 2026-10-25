@@ -121,6 +121,8 @@ namespace DanceWithTheDevil
         private float _musicTrim = 1f;
         private int _rifleStep;
         private float _lastCrit = float.NegativeInfinity;
+        private bool _runEnded;
+        private float _endFade = 1f;
 
         /// <summary>0..1 melody stem fade (0 after contract 2 has faded it out).</summary>
         public float MelodyFade => _melodyFade;
@@ -129,6 +131,33 @@ namespace DanceWithTheDevil
         /// <summary>True while the Voice bus is muted (contract 2).</summary>
         public bool VoiceBusMuted => _voiceMuted;
         public SoundBank Bank => _bank;
+        /// <summary>True once the ending screen is up: only Ui-bus sounds still play, music fades out.</summary>
+        public bool RunEnded => _runEnded;
+
+        /// <summary>
+        /// The run is over: stops every gameplay voice now, fades the music out over <paramref name="fadeSeconds"/>
+        /// (unscaled) and lets only Ui-bus sounds (ending sting, clicks) play from here. A scene reload resets it.
+        /// </summary>
+        public void EndRun(float fadeSeconds = 1.2f)
+        {
+            if (_runEnded) return;
+            _runEnded = true;
+            _endFadeSeconds = Mathf.Max(0.01f, fadeSeconds);
+            for (int s = 0; s < _slots.Length; s++)
+            {
+                Slot slot = _slots[s];
+                if (slot.Event != null && slot.Event.Bus == AudioBus.Ui) continue;
+                for (int v = 0; v < slot.Voices.Length; v++)
+                {
+                    slot.Voices[v].Source.Stop();
+                    slot.Voices[v].End = float.NegativeInfinity;
+                }
+            }
+            _tellHandles.Clear();
+            _movement.Clear();
+        }
+
+        private float _endFadeSeconds = 1.2f;
 
         private void Awake()
         {
@@ -258,8 +287,10 @@ namespace DanceWithTheDevil
             float target = AudioCosts.MusicLayerMuted ? 0f : 1f;
             _melodyFade = Mathf.MoveTowards(_melodyFade, target, Time.unscaledDeltaTime / _melodyFadeSeconds);
 
+            if (_runEnded) _endFade = Mathf.MoveTowards(_endFade, 0f, Time.unscaledDeltaTime / _endFadeSeconds);
+
             if (_bank == null) return;
-            float master = Mathf.Clamp01(MasterVolume) * Mathf.Clamp01(MusicVolume);
+            float master = Mathf.Clamp01(MasterVolume) * Mathf.Clamp01(MusicVolume) * _endFade;
             if (_musicBase != null) _musicBase.volume = SoundBank.DbToLinear(_bank.MusicBaseDb) * master * _musicTrim;
             if (_musicMelody != null)
                 _musicMelody.volume = SoundBank.DbToLinear(_bank.MusicMelodyDb) * master * _musicTrim * _melodyFade;
@@ -283,6 +314,7 @@ namespace DanceWithTheDevil
             SoundEvent e = slot.Event;
             if (e == null || e.Clips == null || e.Clips.Length == 0) return 0;
             if (e.Bus == AudioBus.Voice && AudioCosts.VoiceMuted) return 0;
+            if (_runEnded && e.Bus != AudioBus.Ui) return 0;
 
             float now = e.Unscaled ? Time.unscaledTime : Time.time;
             if (now < slot.LastStart + e.MinGap) return 0;
@@ -574,6 +606,7 @@ namespace DanceWithTheDevil
                     if (previous == DevilState.Offer || previous == DevilState.Forced) PlayCue(Cue.ReviveShockwave);
                     break;
                 case DevilState.Ended:
+                    EndRun();
                     switch (_devil != null ? _devil.Ending : EndingKind.None)
                     {
                         case EndingKind.KeptYourself: PlayCue(Cue.EndingNoFirst); break;

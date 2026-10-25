@@ -288,3 +288,13 @@ Every change to this project goes here — from people and from AI tools. Git sh
 - Why: SefaSelim: "Oyun içindeki sol üst HUD portresine de çizilmiş Defne portresini koy."
 - Status: committed (Drawn Defne portrait in the HUD)
 - Notes / risks: in the Editor through MCP: EditMode 61/61, PlayMode 50/50, no crash; HUD capture checked at 0 costs (the cost layers were not captured in game).
+
+### 2026-10-25 — SefaSelim (Claude Code) — branch juice
+- Changed: the run stops and goes quiet when the ending screen shows; restart starts a clean run (bug fix, SefaSelim's request).
+  - `Scripts/Devil/DevilDirector.cs` `ShowEnding`: cancels hit-stop, stops and pauses the waves, `Enemy.SpeedMultiplier` 0, disables Defne's `PlayerInputReader`, `Time.timeScale` 0, then enters `Ended`. Before, the always-yes ending left time at 1 after the crumble, so enemies and shots kept going behind the ending.
+  - `Scripts/Audio/GameAudio.cs`: new `EndRun(fadeSeconds)` / `RunEnded`, called on `DevilState.Ended` before the ending sting: stops every non-Ui voice at once, fades both music stems to 0 over 1.2 s unscaled, and drops all non-Ui sounds afterwards (ending sting and clicks still play). Instance state, so a scene reload (Bir daha dene / R) brings audio back; `RunRestart.ResetStatics` already restores time, enemy speed, audio costs and the listener pause.
+  - Tests: `AudioTests.EndRun_StopsGameplaySounds_FadesMusic_KeepsUi`, `DevilFlowTests.AlwaysYes_Ending_FreezesTheRun` (seen failing on the old code: timeScale was 1), the HAYIR ending test also checks the freeze and the restart reset.
+  - No scene, prefab or ProjectSettings change.
+- Why: SefaSelim: "Oyun bitince sesler susmuyor oyun arkada devam ediyor. Onu çöz. Restart atarsa tekrar başlasın."
+- Status: committed (Ending freezes the run and silences the game)
+- Notes / risks: in the Editor through MCP: EditMode 61/61, PlayMode 52/52 (+6 explicit), no crash. Restart was checked through `ResetStatics` in tests, not by pressing R in a played build.

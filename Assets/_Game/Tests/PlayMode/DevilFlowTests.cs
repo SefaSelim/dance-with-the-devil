@@ -100,6 +100,40 @@ namespace DanceWithTheDevil.Tests
             Assert.AreEqual(EndingKind.KeptYourself, director.Ending);
             Assert.AreEqual(0, director.DealsTaken);
             Assert.IsTrue(health.IsDead);
+            Assert.AreEqual(0f, Time.timeScale, "the run is frozen behind the ending");
+            Assert.AreEqual(0f, Enemy.SpeedMultiplier);
+
+            RunRestart.ResetStatics(); // what Restart does before reloading the scene
+            Assert.AreEqual(1f, Time.timeScale);
+            Assert.AreEqual(1f, Enemy.SpeedMultiplier);
+            Assert.IsFalse(AudioListener.pause);
+        }
+
+        [UnityTest]
+        public IEnumerator AlwaysYes_Ending_FreezesTheRun()
+        {
+            (Health health, DevilDirector director) = Build(new Vector3(0f, 0f, 300f));
+
+            for (int deal = 1; deal <= 6; deal++)
+            {
+                Kill(health);
+                float t = 0f;
+                while (director.State != DevilState.Playing && t < 20f) // offered cards get EVET, forced ones pass
+                {
+                    director.Advance();
+                    director.ChooseYes();
+                    t += Time.unscaledDeltaTime;
+                    yield return null;
+                }
+                Assert.AreEqual(DevilState.Playing, director.State, $"revived after contract {deal}");
+                yield return new WaitForSeconds(2.1f); // revive invulnerability
+            }
+            Kill(health);
+            yield return WaitForState(director, DevilState.Ended, 20f);
+
+            Assert.AreEqual(EndingKind.AlwaysYes, director.Ending);
+            Assert.AreEqual(0f, Time.timeScale, "the crumble ran at time 1; the ending must stop the run again");
+            Assert.AreEqual(0f, Enemy.SpeedMultiplier);
         }
     }
 }

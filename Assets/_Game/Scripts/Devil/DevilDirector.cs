@@ -372,7 +372,13 @@ namespace DanceWithTheDevil
 
         private void ShowEnding()
         {
-            SetState(DevilState.Ended);
+            // The run is over: nothing keeps playing behind the ending (waves, enemies, Defne's input, the clock).
+            if (HitStop.Instance != null) HitStop.Instance.CancelAll();
+            if (_waves != null) { _waves.StopSpawning(); _waves.Paused = true; }
+            Enemy.SpeedMultiplier = 0f;
+            if (_targets.Input != null) _targets.Input.enabled = false;
+            Time.timeScale = 0f;
+            SetState(DevilState.Ended); // GameAudio stops gameplay sound and fades the music here
             if (_endingScreen == null) return;
             int smallNos = _modules != null ? _modules.SmallNoCount : 0;
             int score = _score != null ? _score.Score : 0;
