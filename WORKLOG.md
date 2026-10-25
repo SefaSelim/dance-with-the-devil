@@ -311,3 +311,18 @@ Every change to this project goes here — from people and from AI tools. Git sh
 - Why: SefaSelim: enemies turn into a square before bursting; Defne bends weirdly while moving; the Devil cut-out loses the blacks that belong to him.
 - Status: committed (Death flash removed, smoother locomotion, Devil key keeps inner blacks)
 - Notes / risks: in the Editor through MCP: EditMode 61/61, PlayMode 52/52 (+7 explicit), no crash. Checked captures: Devil card (inner blacks solid) and movement frames (upright, alternating legs); movement was not judged at full resolution in live play. Untracked `Assets/Character/Creature NPC Pack/` (someone's new import) left out of this commit.
+
+### 2026-10-25 — SefaSelim (Claude Code) — branch juice
+- Changed: the enemies use the team's new Creature NPC Pack clips (SefaSelim's request).
+  - Toolkit: none of the agents fit better than doing it here: it is Editor import and data wiring in the existing enemy builder, checked in Unity (clip timing measured from the hand speed, frames captured).
+  - Added to git: `Assets/Character/Creature NPC Pack/` (12 Mixamo "mutant" FBX, LFS) with its import settings: Rig Humanoid, avatar from each file, clips in place (root rotation and height baked, XZ not), loops on idle / breathing idle / walking / run; "mutant swiping" (2.67 s) split into two clips: `mutant swipe windup` (frames 10–34, arms rising) and `mutant swipe strike` (34–61, the swing; peak about 0.07 s in).
+  - New `Editor/CreaturePackSetup.cs`, menu Dance/Enemies/Use Creature Pack Clips: configures those imports, fills the anim sets, then runs Dance/Enemies/Build Enemy Models.
+  - `Data/anim_enemy_chaser.asset`: Idle/Walk/Run → mutant idle / walking / run, WalkBack/RunBack/strafes → none, Tell → mutant swipe windup (TellSpeed 1.85, ends with the 0.45 s tell), Attack → mutant swipe strike (AttackSpeed 1.6), Death → mutant dying (reserved, not played), PlaybackSpeed 1.1 → 1.5. `anim_enemy_runner.asset`: same locomotion, no Tell (keeps the procedural crouch), Attack → swipe strike (2.0), Death → mutant dying, PlaybackSpeed 1.35 → 1.9. `anim_enemy_shooter.asset`: Idle → mutant breathing idle, Attack firing rifle → mutant swipe strike (1.5 → 1.6), Death → mutant dying; walk, back-off and strafes from the shooter pack kept.
+  - `Scripts/Enemies/EnemyAnimSet.cs`: new `TellSpeed` (default 1); `Editor/EnemyModelBuilder.cs`: the Tell state uses it.
+  - Rebuilt: `Art/Animation/Enemy_{Chaser,Runner,Shooter}.controller`, `Prefabs/enemy_{chaser,runner,shooter}.prefab` (same paths and GUIDs; prefab diff is the Animator controller reference refresh only).
+  - New explicit capture test `EnemyAnimCaptureTests` (one enemy of each type comes at Defne).
+  - Docs: MAIN_GDD §6, §13 + change log 13:20.
+  - No scene or ProjectSettings change. Not used: mutant jumping, flexing muscles and the turn clips.
+- Why: SefaSelim: "Assets/Character/Creature NPC Pack Buraya enemyler için bazı animasyonlar koydum onları da kullan."
+- Status: committed (Enemies use the Creature NPC Pack clips)
+- Notes / risks: in the Editor through MCP: EditMode 61/61, PlayMode 52/52 (+8 explicit), no crash. Captures checked: hunched run and swipe on the Chaser and Runner, feet on the floor. The mutant run covers ~1.8 m/s at 1×, so the fast Runner still slides a little at 7.5 m/s.

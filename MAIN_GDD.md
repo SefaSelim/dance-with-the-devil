@@ -1,6 +1,6 @@
 # MAIN GDD — Dance with the Devil (Bir Şey Olmaz)
 
-**Son güncelleme: 2026-10-25 12:12 (UTC+3)**
+**Son güncelleme: 2026-10-25 13:20 (UTC+3)**
 
 > **Bu dosya projenin tek ve yaşayan Game Design Document'ıdır.** Sürüm numarası yoktur (GDD2, GDD3…
 > diye gitmez). Yeni bir mekanik eklendiğinde, var olan bir mekanik değiştiğinde ya da bir tasarım kararı
@@ -153,7 +153,7 @@ saçılır; düşmanın üstünde daha büyük bir "KRİTİK! N" yazısı (N: ve
 ile bükülme halkası atar (§13). Not: roketin 40 hasarı bugünkü bütün düşmanları zaten öldürdüğü için roket kritiği hasar
 olarak fark yaratmaz; yalnız görünür ve ek puanını verir.
 
-## 6. Düşmanlar — 🟡 (Takipçi, Koşucu ve Nişancı oyunda, Synty modelleriyle ve geçici animasyonlarla; patlayan imp ve kalkanlı iri Minimum kapsam dışında)
+## 6. Düşmanlar — 🟡 (Takipçi, Koşucu ve Nişancı oyunda, Synty modelleriyle ve ekibin yaratık animasyonlarıyla; patlayan imp ve kalkanlı iri Minimum kapsam dışında)
 
 Canlar dalgalarla artmaz. Ön işaret süreleri hiçbir sözleşmeden etkilenmez (okunabilirlik).
 
@@ -162,8 +162,11 @@ Canlar dalgalarla artmaz. Ön işaret süreleri hiçbir sözleşmeden etkilenmez
 turuncu-kırmızı, Nişancı şarap-macenta). Nişancının mermisi küp değil, parlayan turuncu bir büyü küresidir: arkasında
 ~4 m'lik sönen bir iz ve korlar bırakır, böylece yaklaşan mermi uzaktan okunur (2026-10-25). **2026-10-25:** düşmanlar artık parlamaz (kenar ışığı kapalı), Defne'yle aynı
 parlaklıktadır. Ölünce kendi dokularının renklerinde küçük piksellere dağılırlar (§13). Takipçi'nin ön işaretinde kollarını açması korunur.
-**Animasyonlar geçicidir 🧪:** şimdilik nişancı paketinin yürüme, koşu ve vurulma klipleri kullanılır; saldırı ve ölüm
-klipleri ekibin ekleyeceği animasyon paketiyle gelecek (⬜).
+**Animasyonlar (🟡, 2026-10-25):** ekibin eklediği yaratık paketiyle hareket ederler. Takipçi ve Koşucu kambur bir
+yaratık gibi bekler, yürür ve koşar; atıldıkları anda pençe savururlar. Takipçi'nin ön işareti pençeyi kaldırmasıdır
+(kolları yukarı açılır), Koşucu'nunki çömelmedir (ikisi bilerek farklı okunur). Nişancı soluk alarak bekler, geri çekilip
+yana kayarken nişancı paketinin adımlarını kullanır, küreyi fırlatırken pençe savurur. Vurulunca üst gövde sarsılır.
+Ölüm klibi hazırdır ama oynatılmaz: düşmanlar ölünce piksellere dağılır.
 
 | Tür | Can | Hız | Davranış ve ön işaret | Hasar | Tehdit puanı |
 |---|---|---|---|---|---|
@@ -451,7 +454,7 @@ kalktı, kombo yazıları dünyada görünür, §11b); altta altı sabit modül 
 avantaj, tek satır bedel; takılı modülün sökme ipucu "Sağ tık: söküp at". Duraklatma panelinin başlığı "Mola"dır. Ek olarak HUD'da Defne'nin küçük fotoğrafı (ekibin çiziminden portre; bedelleri sonuç ekranındaki gibi taşır: 1 yarı solgun, 4 yüz peçesi, 5 daha karanlık, 6 gri; Sözleşme 3 bedeliyle kaybolur) ve roket
 şarjları. Bağlamsal ipuçları ilk dakikada sırayla gelir, oyunu durdurmaz. Renk tek ayırt edici değildir.
 
-## 13. Görsel ve ses yönü — 🟡 (takip kamerası, pikselli görüntü, dış çizgi, Synty düşmanlar, piksel dağılması, şok dalgası halkaları, kombo görüntü efektleri, elle çizilmiş Şeytan ve kayıtlı savaş sesleri var; düşman saldırı/ölüm animasyonları ve toon ışık yok)
+## 13. Görsel ve ses yönü — 🟡 (takip kamerası, pikselli görüntü, dış çizgi, Synty düşmanlar, piksel dağılması, şok dalgası halkaları, kombo görüntü efektleri, elle çizilmiş Şeytan ve kayıtlı savaş sesleri var; yaratık animasyonlu düşmanlar var; toon ışık yok)
 
 - **Görünüm:** Defne'yi takip eden ortografik izometrik kamera (35° eğim, 45° dönüş, metre başına ~20 piksel, K-14); karakterlerde 1 piksellik koyu dış çizgi; karakterler sahnenin en parlak ve en doygun şeyleri, zemin ve duvarlar koyu ve sakin; düşük çözünürlükte (640×360) çizilip nokta filtresiyle büyütülen, hafif
   pikselli voksel görünüm; düz gölgeli toon ışık; 1 px dış çizgi; kamera kayarken titreme olmaz.
@@ -463,9 +466,8 @@ avantaj, tek satır bedel; takılı modülün sökme ipucu "Sağ tık: söküp a
   (İsteğe bağlı katman).
 - **Karakterler:** 🟡 Düşmanlar dokulu Synty POLYGON Dark Fantasy karakterleridir (Takipçi: boynuzlu şeytan, Koşucu:
   iskelet, Nişancı: cadı), kimlik renklerine boyanmış (kırmızı / turuncu-kırmızı / şarap-macenta); 2026-10-25'ten beri
-  parlamazlar (kenar ışığı kapalı, Defne'yle aynı parlaklık); ölünce kendi renklerinde küçük piksellere dağılırlar, Takipçi'nin ön işaretinde kollarını açması korunur (bkz. §6). 🧪 Animasyonlar
-  geçicidir: nişancı paketinin yürüme, koşu ve vurulma klipleri; saldırı ve ölüm klipleri ekibin ekleyeceği animasyon
-  paketiyle gelecek.
+  parlamazlar (kenar ışığı kapalı, Defne'yle aynı parlaklık); ölünce kendi renklerinde küçük piksellere dağılırlar. 🟡 Animasyonları ekibin yaratık paketinden gelir: kambur
+  bekleme, yürüme, koşu ve atılırken pençe savurma; Takipçi pençesini kaldırarak, Koşucu çömelerek uyarır (bkz. §6).
   **Defne** artık kullanıcının eklediği dokulu 3B model ve hazır animasyonlarla oynar (nişanlı bekleme, yürüme, koşu, geri
   geri koşma, yana koşma; vurulunca üst gövde sarsılır). Hareket yönü nişana göre okunur: nişan alırken geri geri ya da
   yana koşar. Elinde gerçek bir AK tüfek var; roket atınca bir an omzuna RPG alır (atılan roket namludan çıkar, tüp boş
@@ -603,3 +605,4 @@ seçenek seçerse değiştirilir:
 - 2026-10-25 05:00 — SefaSelim (Claude Code) — K-22: kombo hasarla sıfırlanmaz, yalnız 3 sn isabetsizlik ya da ölüm; ×2 sonrası her öldürmede 0,75 güçlü eşik efekti (§11b); kritik taban %5 → %12 (tüfek en çok %47), kritik isabet başına +25 × çarpan puan, metalik kritik sesi, altın-beyaz kıvılcım, büyük "KRİTİK!" yazısı (§5, §11); altıncı modül Delici (+2 delme, delişte %30 zayıflama), altı yuva (§7, §8, §12, §14); Şeytan kartı sağ altta, EVET sağda sabit, HAYIR solda ve artık basılı tutulur, düğme dolgu göstergesi (§8, §13, K-2).
 - 2026-10-25 12:06 — SefaSelim (Claude Code) — Nişancı mermisi izli, parlayan bir küre oldu; sonuç ekranı taşmıyor ve Defne'nin çizilmiş portresini gösteriyor; ana menü ekibin çizimiyle 2B'ye döndü (§6, §11, §12).
 - 2026-10-25 12:12 — SefaSelim (Claude Code) — HUD'daki küçük portre de ekibin çizdiği Defne portresi oldu, bedelleri üstünde gösterir (§12).
+- 2026-10-25 13:20 — SefaSelim (Claude Code) — Düşmanlar ekibin eklediği yaratık animasyon paketini kullanıyor: kambur bekleme/yürüme/koşu, atılırken pençe savurma, Takipçi'nin ön işareti pençeyi kaldırmak; Koşucu çömelmeyi korur, Nişancı küreyi pençeyle fırlatır (§6, §13).

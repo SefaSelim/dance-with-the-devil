@@ -45,6 +45,8 @@ namespace DanceWithTheDevil
         [Range(0.25f, 3f)] public float PlaybackSpeed = 1f;
         [Tooltip("Playback speed of the Hit clip (a quick flinch, not a stagger).")]
         [Range(0.25f, 3f)] public float HitSpeed = 1.6f;
+        [Tooltip("Playback speed of the Tell clip (fit it to the type's tell duration).")]
+        [Range(0.25f, 3f)] public float TellSpeed = 1f;
         [Tooltip("Playback speed of the Attack clip.")]
         [Range(0.25f, 3f)] public float AttackSpeed = 1f;
     }

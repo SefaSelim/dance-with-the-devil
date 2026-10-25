@@ -12,20 +12,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fbc661804e9ab8948b1ef7c80b4658c3, type: 3}
   m_Name: anim_enemy_chaser
   m_EditorClassIdentifier: Game.Runtime::DanceWithTheDevil.EnemyAnimSet
-  Idle: {fileID: -203655887218126122, guid: 56e5c6bfac4c1864181c6ec0f2f3b11b, type: 3}
-  Walk: {fileID: -203655887218126122, guid: 296db203666e9a843bea686e7ee46e40, type: 3}
-  Run: {fileID: -203655887218126122, guid: f2a8297745b4e714d957b7eb24b76a06, type: 3}
-  WalkBack: {fileID: -203655887218126122, guid: fc1ad6c1c10598d4cb0c8441ca01dcb3, type: 3}
-  RunBack: {fileID: -203655887218126122, guid: 1f2047b3e1596294b921dc50f59e0387, type: 3}
-  StrafeLeft: {fileID: -203655887218126122, guid: c20b6b24d5034224e89be4e783bff1d2, type: 3}
-  StrafeRight: {fileID: -203655887218126122, guid: 9d799a599cfd718499a3ac5d2e0fc622, type: 3}
-  StrafeLeftRun: {fileID: -203655887218126122, guid: 4bf9818993272ca46ada5ac4faad69d7, type: 3}
-  StrafeRightRun: {fileID: -203655887218126122, guid: 9e58ae7931cf7a94ba230d9cdbb4f0d7, type: 3}
+  Idle: {fileID: -203655887218126122, guid: d3db492e5d1faff47839b1a8c37af507, type: 3}
+  Walk: {fileID: -203655887218126122, guid: f74b0b7e9bfb19644b8f47a58094d4c8, type: 3}
+  Run: {fileID: -203655887218126122, guid: 3085e660235083f4f905b113eb191dcc, type: 3}
+  WalkBack: {fileID: 0}
+  RunBack: {fileID: 0}
+  StrafeLeft: {fileID: 0}
+  StrafeRight: {fileID: 0}
+  StrafeLeftRun: {fileID: 0}
+  StrafeRightRun: {fileID: 0}
   Hit: {fileID: -203655887218126122, guid: 20b26255cb9cc914fb2271e6ccf008ac, type: 3}
-  Tell: {fileID: 0}
-  Attack: {fileID: 0}
-  Death: {fileID: 0}
+  Tell: {fileID: -203655887218126122, guid: 70fe2e8aa7e22284daf78bb27144ad42, type: 3}
+  Attack: {fileID: 4061839508520268033, guid: 70fe2e8aa7e22284daf78bb27144ad42, type: 3}
+  Death: {fileID: -203655887218126122, guid: 674d1fd4823b345428bc24b488c82339, type: 3}
   RunSpeed: 4.2
-  PlaybackSpeed: 1.1
+  PlaybackSpeed: 1.5
   HitSpeed: 1.6
-  AttackSpeed: 1
+  TellSpeed: 1.85
+  AttackSpeed: 1.6

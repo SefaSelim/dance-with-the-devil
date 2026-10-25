@@ -272,6 +272,7 @@ namespace DanceWithTheDevil.Editor
             {
                 AnimatorState tell = root.AddState(EnemyBodyAnimator.TellState);
                 tell.motion = set.Tell;
+                tell.speed = set.TellSpeed;
                 AnimatorStateTransition to = root.AddAnyStateTransition(tell);
                 to.AddCondition(AnimatorConditionMode.If, 0f, EnemyBodyAnimator.TellParameter);
                 to.hasExitTime = false;
