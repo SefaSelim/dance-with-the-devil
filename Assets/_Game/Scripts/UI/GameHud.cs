@@ -95,6 +95,11 @@ namespace DanceWithTheDevil
         private RectTransform _reticle;
         private GameObject _portrait;
         private DefnePortrait _portraitView;
+        // Drawn portrait (UiTheme.PortraitSprite) and its cost layers: grey copy (contract 1 half, 6 full), face veil
+        // (contract 4) and a darker tint (contract 5), as on the ending screen.
+        private Image _portraitArt;
+        private Image _portraitGrey;
+        private Image _portraitVeil;
         private RectTransform _hpBack;
         private RectTransform _hpFill;
         private RectTransform _hpLost;
@@ -516,6 +521,7 @@ namespace DanceWithTheDevil
                 _shownTaken = taken;
                 if (_costStrip.activeSelf != taken > 0) _costStrip.SetActive(taken > 0);
                 if (_portraitView != null) _portraitView.ApplyCosts(taken);
+                ApplyDrawnPortraitCosts(taken);
             }
 
             if (_pulseIndex < 0) return;
@@ -629,12 +635,20 @@ namespace DanceWithTheDevil
             Image portrait = UiKit.Framed(_root, "Portrait", UiKit.Cream, new Color(0.12f, 0.24f, 0.28f, 1f), tl, tl,
                 new Vector2(6f, -6f), new Vector2(40f, 40f));
             _portrait = portrait.transform.parent.gameObject;
-            if (_portraitSprite != null)
+            UiTheme theme = UiKit.Theme;
+            Sprite drawn = _portraitSprite != null ? _portraitSprite : theme != null ? theme.PortraitSprite : null;
+            if (drawn != null)
             {
-                Image art = UiKit.Stretch(portrait.transform, "Art").gameObject.AddComponent<Image>();
-                art.sprite = _portraitSprite;
-                art.preserveAspect = true;
-                art.raycastTarget = false;
+                _portraitArt = PortraitLayer(portrait.transform, "Art", drawn, Color.white);
+                Sprite grey = theme != null ? theme.PortraitGreySprite : null;
+                if (grey != null) _portraitGrey = PortraitLayer(portrait.transform, "Grey", grey, new Color(1f, 1f, 1f, 0f));
+                // Contract 4 "Yüzü": a dark smudge over the eyes and glasses (face centre ~9% above the crop centre).
+                Vector2 m = new Vector2(0.5f, 0.5f);
+                Vector2 side = ((RectTransform)portrait.transform).sizeDelta;
+                _portraitVeil = UiKit.Box(portrait.transform, "FaceVeil", new Color(0.03f, 0.02f, 0.04f, 0.92f), m, m,
+                    new Vector2(0.04f * side.x, 0.1f * side.y), new Vector2(0.62f * side.x, 0.36f * side.y));
+                if (theme != null && theme.GlowSprite != null) _portraitVeil.sprite = theme.GlowSprite;
+                _portraitVeil.gameObject.SetActive(false);
             }
             else
             {
@@ -748,6 +762,30 @@ namespace DanceWithTheDevil
             text.resizeTextMaxSize = text.fontSize;
             text.resizeTextMinSize = Mathf.Max(6, Mathf.RoundToInt(text.fontSize * 0.7f));
             return text;
+        }
+
+        private static Image PortraitLayer(Transform parent, string name, Sprite sprite, Color color)
+        {
+            Image image = UiKit.Stretch(parent, name).gameObject.AddComponent<Image>();
+            image.sprite = sprite;
+            image.color = color;
+            image.preserveAspect = true;
+            image.raycastTarget = false;
+            return image;
+        }
+
+        /// <summary>The drawn portrait shows the costs paid so far (1 half grey, 4 face veil, 5 darker, 6 all grey).</summary>
+        private void ApplyDrawnPortraitCosts(int taken)
+        {
+            if (_portraitArt == null) return;
+            float dark = taken >= 5 ? 0.72f : 1f;
+            _portraitArt.color = new Color(dark, dark, dark, 1f);
+            if (_portraitGrey != null)
+            {
+                float grey = taken >= 6 ? 1f : taken >= 1 ? 0.5f : 0f;
+                _portraitGrey.color = new Color(dark, dark, dark, grey);
+            }
+            if (_portraitVeil != null) _portraitVeil.gameObject.SetActive(taken >= 4);
         }
 
         private Pips BuildPipRow(Font font, string label, float y)

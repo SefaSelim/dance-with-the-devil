@@ -280,3 +280,11 @@ Every change to this project goes here — from people and from AI tools. Git sh
 - Why: SefaSelim: ranged enemies shoot cubes; ending text spills and has no portrait; main menu with the Devil-player drawing, 2D, effects.
 - Status: committed (Orb projectile, ending fit + drawn portrait, 2D main menu)
 - Notes / risks: in the Editor through MCP: EditMode 61/61, PlayMode 50/50 (+6 explicit captures), no crash. Captures checked: menu, 2-contract and 6-contract endings (ledger fits; the always-yes portrait crumbles away as designed), orbs in flight. The HUD's top-left portrait is still the block portrait.
+
+### 2026-10-25 — SefaSelim (Claude Code) — branch juice
+- Changed: the HUD's top-left portrait uses the drawn Defne portrait (SefaSelim's request).
+  - `Scripts/UI/GameHud.cs`: when `_portraitSprite` is empty it uses `UiTheme.PortraitSprite`; cost layers like the ending screen: grey copy (`UiTheme.PortraitGreySprite`) at 50% from contract 1 and 100% at contract 6, a dark face veil from contract 4, darker tint from contract 5 (`ApplyDrawnPortraitCosts`); contract 3 still hides the whole portrait. The block portrait stays as the fallback without the theme sprite.
+  - Docs: MAIN_GDD §12 + change log 12:12.
+- Why: SefaSelim: "Oyun içindeki sol üst HUD portresine de çizilmiş Defne portresini koy."
+- Status: committed (Drawn Defne portrait in the HUD)
+- Notes / risks: in the Editor through MCP: EditMode 61/61, PlayMode 50/50, no crash; HUD capture checked at 0 costs (the cost layers were not captured in game).

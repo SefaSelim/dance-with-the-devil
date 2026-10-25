@@ -1,6 +1,6 @@
 # MAIN GDD — Dance with the Devil (Bir Şey Olmaz)
 
-**Son güncelleme: 2026-10-25 12:06 (UTC+3)**
+**Son güncelleme: 2026-10-25 12:12 (UTC+3)**
 
 > **Bu dosya projenin tek ve yaşayan Game Design Document'ıdır.** Sürüm numarası yoktur (GDD2, GDD3…
 > diye gitmez). Yeni bir mekanik eklendiğinde, var olan bir mekanik değiştiğinde ya da bir tasarım kararı
@@ -448,7 +448,7 @@ paneller, düğmeler, Şeytan kartı ve son ekranındaki defter satırları kıs
 İlk GDD §11 korunur: üstte can, süre ve puan ("Puan", kombo çarpanı yanında: "Puan 1200 ×1,5"; sağ üstteki kombo sayacı
 kalktı, kombo yazıları dünyada görünür, §11b); altta altı sabit modül yuvası
 (her türe bir yuva) ile ret/kaçış hazır göstergeleri ("Hayır [Sağ tık]", "Kaçış [Space]"); teklif şeridinde (sağ üst) tek satır
-avantaj, tek satır bedel; takılı modülün sökme ipucu "Sağ tık: söküp at". Duraklatma panelinin başlığı "Mola"dır. Ek olarak HUD'da Defne'nin küçük fotoğrafı (Sözleşme 3 bedeli) ve roket
+avantaj, tek satır bedel; takılı modülün sökme ipucu "Sağ tık: söküp at". Duraklatma panelinin başlığı "Mola"dır. Ek olarak HUD'da Defne'nin küçük fotoğrafı (ekibin çiziminden portre; bedelleri sonuç ekranındaki gibi taşır: 1 yarı solgun, 4 yüz peçesi, 5 daha karanlık, 6 gri; Sözleşme 3 bedeliyle kaybolur) ve roket
 şarjları. Bağlamsal ipuçları ilk dakikada sırayla gelir, oyunu durdurmaz. Renk tek ayırt edici değildir.
 
 ## 13. Görsel ve ses yönü — 🟡 (takip kamerası, pikselli görüntü, dış çizgi, Synty düşmanlar, piksel dağılması, şok dalgası halkaları, kombo görüntü efektleri, elle çizilmiş Şeytan ve kayıtlı savaş sesleri var; düşman saldırı/ölüm animasyonları ve toon ışık yok)
@@ -602,3 +602,4 @@ seçenek seçerse değiştirilir:
 - 2026-10-25 03:30 — SefaSelim (Claude Code) — Kritik vuruş (%5 ×2, bütün silahlar), beşinci modül Keskin Göz ve Sözleşme 3'e +%15 kritik (K-20; §5, §7, §8, §11); Yankı sekme sonrası yarım menzil (§7); kullanıcı kararıyla zorluk ×2, mermi cehennemi, ~5 dk koşu hedefi 🧪 geçici (K-21; §3, §10); dolu yuvada ve takılı türde teklif yok, A-20 kapandı (§7, §15); kombo sayacı kalktı, dünyada kombo/kritik yazıları ve puan yanında çarpan (§11b, §12); küçük piksel dağılması, güçlü sarsıntı, şok dalgası halkaları, düşmanların parlaması kapandı (§6, §13); sade düğmeler, DOTween açılışları, sağ üstte teklif şeridi, beş yuva, tam ekran menü arka planı (§12); elle çizilmiş Şeytan (§8, §13); kayıtlı savaş/düşman sesleri (§13).
 - 2026-10-25 05:00 — SefaSelim (Claude Code) — K-22: kombo hasarla sıfırlanmaz, yalnız 3 sn isabetsizlik ya da ölüm; ×2 sonrası her öldürmede 0,75 güçlü eşik efekti (§11b); kritik taban %5 → %12 (tüfek en çok %47), kritik isabet başına +25 × çarpan puan, metalik kritik sesi, altın-beyaz kıvılcım, büyük "KRİTİK!" yazısı (§5, §11); altıncı modül Delici (+2 delme, delişte %30 zayıflama), altı yuva (§7, §8, §12, §14); Şeytan kartı sağ altta, EVET sağda sabit, HAYIR solda ve artık basılı tutulur, düğme dolgu göstergesi (§8, §13, K-2).
 - 2026-10-25 12:06 — SefaSelim (Claude Code) — Nişancı mermisi izli, parlayan bir küre oldu; sonuç ekranı taşmıyor ve Defne'nin çizilmiş portresini gösteriyor; ana menü ekibin çizimiyle 2B'ye döndü (§6, §11, §12).
+- 2026-10-25 12:12 — SefaSelim (Claude Code) — HUD'daki küçük portre de ekibin çizdiği Defne portresi oldu, bedelleri üstünde gösterir (§12).
