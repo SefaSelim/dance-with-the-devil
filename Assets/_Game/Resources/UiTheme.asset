@@ -34,4 +34,7 @@ MonoBehaviour:
   ButtonFrameScale: 6
   ButtonFrameColor: {r: 0.62, g: 0.58, b: 0.52, a: 0.75}
   DevilSprite: {fileID: 21300000, guid: b56039a27b09e1f43a870b5d9dfb9cb0, type: 3}
+  PlayerArtSprite: {fileID: 21300000, guid: 915ee0e4afb08d74db476257871b97df, type: 3}
+  PortraitSprite: {fileID: 21300000, guid: 89e7fab42d4f365418ffd388f986ebd6, type: 3}
+  PortraitGreySprite: {fileID: 21300000, guid: d4694009e74e49c40ac17d98eb280f25, type: 3}
   MinFramedSize: {x: 40, y: 30}

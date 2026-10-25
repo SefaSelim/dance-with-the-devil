@@ -10,8 +10,8 @@ namespace DanceWithTheDevil
     /// <summary>
     /// Main menu UI (design/ux/main-menu.md §2), built in code like the other screens: title and four buttons on the
     /// left (Başla, Ayarlar, Emeği Geçenler, Çıkış), a settings panel and a credits panel. Keyboard, mouse and gamepad
-    /// navigate it; Esc / pad East closes an open panel. Başla fades to black and loads the arena. The 3D side (Defne,
-    /// the Devil behind her) lives in the scene, see <see cref="MainMenuStage"/>.
+    /// navigate it; Esc / pad East closes an open panel. Başla fades to black and loads the arena. The 2D stage behind
+    /// it (drawing of Defne with the Devil, engraving, glow, embers, fog) lives in the scene, see <see cref="MainMenuStage"/>.
     /// </summary>
     public sealed class MainMenuScreen : MonoBehaviour
     {
@@ -221,8 +221,9 @@ namespace DanceWithTheDevil
             Text hint = UiKit.Label(column, "Hint", body, 10, UiKit.Dim, TextAnchor.MiddleLeft, tl, tl,
                 new Vector2(40f, -282f), new Vector2(200f, 14f));
             hint.text = GameTexts.MenuHint;
-            Text footer = UiKit.Label(_root, "Footer", body, 12, UiKit.Light, TextAnchor.MiddleCenter, bottom, bottom,
-                new Vector2(90f, 10f), new Vector2(360f, 16f));
+            // Under the menu column (it used to sit over Defne's legs in the 2D menu).
+            Text footer = UiKit.Label(_root, "Footer", body, 12, UiKit.Light, TextAnchor.MiddleLeft, Vector2.zero,
+                Vector2.zero, new Vector2(40f, 14f), new Vector2(260f, 16f));
             footer.text = GameTexts.MenuFooter;
             UiKit.AddShadow(footer);
 

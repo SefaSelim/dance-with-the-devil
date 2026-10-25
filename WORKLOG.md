@@ -256,3 +256,27 @@ Every change to this project goes here — from people and from AI tools. Git sh
 - Why: SefaSelim's feedback above.
 - Status: committed (Devil card layout, hold HAYIR, combo rule, crit sound/score/12%, Delici)
 - Notes / risks: in the Editor through MCP: EditMode 61/61, PlayMode 50/50 (+4 explicit), no crash. The crit sound was not listened to by me (tune `_critTrimDb`). The 6-module HUD row is tight (50-wide slots).
+
+### 2026-10-25 — SefaSelim (Claude Code, ui-programmer agent) — branch juice
+- Changed: ending ledger overflow fixed and the drawn Defne portrait; main menu turned 2D around the new drawing `Assets/Devil-player.jpeg`.
+  - `Scripts/UI/EndingScreen.cs`: content stacked by real wrapped heights (title, body, portrait + ledger, closing, small nos, retry); ledger 504 wide, sized to its rows, one row object per contract (row = taller of its two cells, font 11; the transparent-colour-tag stagger replaced by rows appearing one by one with DOTween); row font shrinks up to 2 and then the content scales down from the top if it would reach the score line. Portrait: new fields `_portraitSprite`, `_portraitGreySprite` (empty = UiTheme); costs on the drawing: 1 half grey, 4 face veil, 5 darker, 6 all grey; always-yes = grey 8×8 tiles that crumble (ReduceMotion: gone). No sprite = old block portrait.
+  - `Scripts/UI/UiTheme.cs`: + `PlayerArtSprite`, `PortraitSprite`, `PortraitGreySprite`.
+  - `Editor/DevilArtBuilder.cs`: Dance/UI/Build Devil Art also builds `Art/UI/devil_player.png` (keyed, flood fill from top/left/right edges keeps enclosed dark areas opaque), `Art/UI/defne_portrait.png` and `defne_portrait_grey.png` (432² crop, dark vignette) and sets them on the theme. `MainMenuBuilder.BuildTheme` picks them up too.
+  - `Editor/MainMenuBuilder.cs`: menu scene without Defne model, plinth, ground, sigil, candelabra, lights and fog; orthographic clearing camera; one `MenuBackdrop` camera canvas (engraving, RedGlow, FogBack, EmbersBack, DefneAndDevil, EmbersFront, FogFront). `mat_menu_stone.mat` no longer used (left in place).
+  - `Scripts/UI/MainMenuStage.cs`: rewritten for the 2D stage (breathing, sway, glow pulse, pooled embers and fog wisps, ReduceMotion = still). `MainMenuScreen.cs`: comment only.
+  - Docs: `design/ux/main-menu.md` §3d.
+- Why: SefaSelim's request (ending ledger spilling below the frame, missing portrait, 2D menu with the new drawing).
+- Status: uncommitted; code only. Needs in the Editor: Dance/UI/Build Devil Art, then Dance/UI/Build Theme + Main Menu (rewrites `UiTheme.asset`, `MainMenu.unity`, creates the 3 PNGs).
+- Notes / risks: not compiled or run by the agent (no Unity). Key and crop not checked visually; the face veil is an approximation of contract 4. Assets/Devil-player.jpeg(.meta) still untracked.
+
+### 2026-10-25 — SefaSelim (Claude Code) — branch juice
+- Changed: Nişancı orb projectile; integration of the ui-programmer entry above (ending fit + drawn portrait + 2D menu), which is now committed with this one.
+  - Toolkit: `technical-artist` + `unity-vfx-game-feel` skill (orb), `ui-programmer` (entry above).
+  - Orb: new `Editor/EnemyOrbBuilder.cs` (Dance/VFX/Build Enemy Orb) → `Prefabs/proj_enemy_orb.prefab` (core 0.33 m pulsing, halo 0.75 m #FF7A1A, TrailRenderer 0.3 s tapering orange → deep red, ember particles ~40/s) and `Art/Materials/VFX/mat_vfx_enemy_orb_{core,halo,ember,trail}.mat`; new `Scripts/Feel/ProjectileParticles.cs` (clears/restarts the orb's particles on pooled launch); `ShooterBrain.cs` + `_projectilePrefab` (cube fallback when empty); `EnemyModelBuilder.cs` assigns it on the shooter. Hit size, speed, range and damage unchanged.
+  - Me: `MainMenuBuilder.cs` generates a smooth radial `Art/UI/menu_soft_glow.png` for the menu glow (the Synty Glow_01 sprite showed stepped octagon rings) at alpha 0.3; the drawing is right-aligned to the screen edge (its image border cut the Devil with a hard vertical line); `MainMenuScreen` footer moved under the menu column (it covered Defne's legs). New explicit capture tests `EndingCaptureTests` (always-yes after 7 deaths, HAYIR at death 3) and `OrbCaptureTests`.
+  - Added to git: `Assets/Devil-player.jpeg` (+meta), `Art/UI/devil_player.png`, `defne_portrait.png`, `defne_portrait_grey.png`, `menu_soft_glow.png`; `devil_handdraw.png` re-saved by the builder.
+  - Rebuilt in the Editor: Dance/VFX/Build Enemy Orb, Dance/Enemies/Build Enemy Models (`enemy_shooter.prefab` › ShooterBrain › `_projectilePrefab` = proj_enemy_orb), Dance/UI/Build Devil Art, Dance/UI/Build Theme + Main Menu (`UiTheme.asset`, `MainMenu.unity` 2D), Dance/Placeholders/Build Arena Scene (`Arena.unity`).
+  - Docs: MAIN_GDD §6, §11, §12, change log 12:06; design/ux/main-menu.md §3d (agent).
+- Why: SefaSelim: ranged enemies shoot cubes; ending text spills and has no portrait; main menu with the Devil-player drawing, 2D, effects.
+- Status: committed (Orb projectile, ending fit + drawn portrait, 2D main menu)
+- Notes / risks: in the Editor through MCP: EditMode 61/61, PlayMode 50/50 (+6 explicit captures), no crash. Captures checked: menu, 2-contract and 6-contract endings (ledger fits; the always-yes portrait crumbles away as designed), orbs in flight. The HUD's top-left portrait is still the block portrait.

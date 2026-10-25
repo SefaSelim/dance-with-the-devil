@@ -1650,6 +1650,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Game.Runtime::DanceWithTheDevil.ShooterBrain
   _pool: {fileID: 0}
+  _projectilePrefab: {fileID: 3995275634295387088, guid: 1849dc918cb5da64fb0ade4a74d5f497, type: 3}
   _projectileMaterial: {fileID: 2100000, guid: 80f33ed4b502f48419fb6bda5bb2895d, type: 2}
   _muzzleHeight: 1
   _muzzleForward: 0.5

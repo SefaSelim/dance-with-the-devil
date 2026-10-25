@@ -83,6 +83,22 @@ Wireframe (1920×1080 reference, scales):
 - Menu backdrop: the engraving sits on a screen-space canvas behind the 3D stage, full view height for any aspect,
   feathered edges (no visible rectangle).
 
+## 3d. 2D menu stage and the drawn ending portrait (2026-10-25, SefaSelim)
+
+- Menu: no 3D stage any more (Defne model, plinth, sigil, candelabra and lights removed; the camera only clears).
+  One screen-space camera canvas behind the menu UI (1920×1080, height matched): Doré engraving (dim red, breathing) →
+  red glow behind the characters (pulsing) → fog wisps → back embers → `devil_player.png` (Defne with the Devil, black
+  keyed, full height, bottom-anchored at 64% of the width: clear of the left column at 4:3, 16:9 and 21:9, breathes
+  ±0.8% and sways ±0.45° around its bottom edge) → front embers → low fog. Embers = ~54 pooled UI squares (orange,
+  spark, red cinder, ash) rising with wind and wobble. ReduceMotion = still picture, no embers or fog.
+- Ending: Defne's drawn portrait (`defne_portrait.png`, square crop, dark vignette) replaces the block portrait when
+  present. Costs: contract 1 Rengi = half drained (grey copy at 55%), 4 Yüzü = dark veil over the eyes, 5 Zamanı =
+  darker frame and image, 6 Kendisi = fully grey; always-yes = grey shell that falls apart as 8×8 tiles
+  (ReduceMotion: it just disappears).
+- Ending layout: every block stacks by its real wrapped height; the ledger is 504 wide and sized to its rows (row =
+  the taller of its two cells, 11 pt); "Küçük hayırların" and "Bir daha dene" sit below the panels; if it still would
+  not fit above the score line the row font shrinks by up to 2, then the content scales down from the top.
+
 ## 4. Accessibility (minimum)
 Keyboard + mouse + gamepad navigation on the menu; screen shake slider (0 = off) feeds `PixelCameraRig.GlobalShakeScale`;
 no colour-only meaning added.

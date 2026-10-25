@@ -32,9 +32,12 @@ namespace DanceWithTheDevil
         }
 
         [Header("References")]
-        [Tooltip("Enemy projectile pool. Empty = one is added to this object (runtime cubes with the material below).")]
+        [Tooltip("Enemy projectile pool. Empty = one is added to this object, using the prefab below.")]
         [SerializeField] private ProjectilePool _pool;
-        [Tooltip("Material for the runtime orb cubes when the pool is created automatically (orange).")]
+        [Tooltip("Orb prefab for the automatic pool (glowing core, trail, embers; proj_enemy_orb). Empty = runtime cubes " +
+                 "with the material below. Visual only: hit radius, speed and range come from this brain.")]
+        [SerializeField] private Projectile _projectilePrefab;
+        [Tooltip("Material for the runtime cubes when no orb prefab is set (orange).")]
         [SerializeField] private Material _projectileMaterial;
 
         [Header("Aim")]
@@ -132,7 +135,7 @@ namespace DanceWithTheDevil
             if (_pool == null)
             {
                 _pool = gameObject.AddComponent<ProjectilePool>();
-                _pool.Configure(null, _projectileMaterial);
+                _pool.Configure(_projectilePrefab, _projectileMaterial);
             }
         }
 

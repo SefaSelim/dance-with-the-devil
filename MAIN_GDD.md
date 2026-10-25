@@ -1,6 +1,6 @@
 # MAIN GDD — Dance with the Devil (Bir Şey Olmaz)
 
-**Son güncelleme: 2026-10-25 05:00 (UTC+3)**
+**Son güncelleme: 2026-10-25 12:06 (UTC+3)**
 
 > **Bu dosya projenin tek ve yaşayan Game Design Document'ıdır.** Sürüm numarası yoktur (GDD2, GDD3…
 > diye gitmez). Yeni bir mekanik eklendiğinde, var olan bir mekanik değiştiğinde ya da bir tasarım kararı
@@ -159,7 +159,8 @@ Canlar dalgalarla artmaz. Ön işaret süreleri hiçbir sözleşmeden etkilenmez
 
 **Görünüş (🟡, 2026-10-24):** düşmanlar dokulu Synty POLYGON Dark Fantasy karakterleridir: **Takipçi** boynuzlu bir
 şeytan, **Koşucu** bir iskelet, **Nişancı** bir cadı. Her biri kendi kimlik rengine boyanır (Takipçi kırmızı, Koşucu
-turuncu-kırmızı, Nişancı şarap-macenta). **2026-10-25:** düşmanlar artık parlamaz (kenar ışığı kapalı), Defne'yle aynı
+turuncu-kırmızı, Nişancı şarap-macenta). Nişancının mermisi küp değil, parlayan turuncu bir büyü küresidir: arkasında
+~4 m'lik sönen bir iz ve korlar bırakır, böylece yaklaşan mermi uzaktan okunur (2026-10-25). **2026-10-25:** düşmanlar artık parlamaz (kenar ışığı kapalı), Defne'yle aynı
 parlaklıktadır. Ölünce kendi dokularının renklerinde küçük piksellere dağılırlar (§13). Takipçi'nin ön işaretinde kollarını açması korunur.
 **Animasyonlar geçicidir 🧪:** şimdilik nişancı paketinin yürüme, koşu ve vurulma klipleri kullanılır; saldırı ve ölüm
 klipleri ekibin ekleyeceği animasyon paketiyle gelecek (⬜).
@@ -375,7 +376,9 @@ ayarlanacak.
 
 **Küçük hayırlar:** defterde puansız tek satır: "Küçük hayırların: N" (savaşta reddedilen ve sökülen modüller, karar K-9).
 
-**Sonlarda Defne:** sonuç ekranında Defne'nin blok portresi koşunun bıraktığı hâliyle görünür (1. ölümde HAYIR: tam renkli; sonraki HAYIR: alınan bedeller; hep EVET: gri kabuk dağılır).
+**Sonlarda Defne:** sonuç ekranında Defne'nin çizilmiş portresi (ekibin çiziminden, 2026-10-25) koşunun bıraktığı
+hâliyle görünür (Sözleşme 1: yarı solgun, 4: yüzünde karanlık bir peçe, 5: daha karanlık, 6: tamamen gri); defter
+satırları kartın içine sığar, uzun satırlar alt satıra geçer (1. ölümde HAYIR: tam renkli; sonraki HAYIR: alınan bedeller; hep EVET: gri kabuk dağılır).
 
 **Sonuç ekranı:** skor yerine **"Aldıkların / Verdiklerin"** defteri gösterilir ("Verdiklerin" üstünde küçük not: *Defne'den*).
 İlk GDD §10 skoru en altta, küçük kalır; ekranda **"Puan"** diye yazar. 1. ölümde hayır denirse defter: "Aldıkların:
@@ -423,8 +426,9 @@ ateş et" (oyuncu hem yürüyüp hem ateş edince söner); ilk teklif gelince "�
 
 **Ana menü ve ayarlar (kullanıcı isteği 2026-10-24):** oyun ana menüyle açılır. Solda başlık "Bir Şey Olmaz", altında
 "Dance with the Devil" ve dört düğme: **Başla** (ekran kararır, arena başlar), **Ayarlar**, **Emeği Geçenler**, **Çıkış**.
-Sağda Defne, iki şamdan arasında, kırmızı bir mühür halkasının üstünde silahıyla bekler ve yavaşça sağa sola döner;
-arkasında kırmızıya boyanmış, yavaşça "nefes alan" geçici bir Şeytan gravürü (Gustave Doré) durur. Menü arka planı
+Menü 2B'dir (2026-10-25): sağda ekibin çizimi durur, Defne silahıyla önde, Şeytan arkasında, kolu omzunda; çizim
+hafifçe nefes alır ve sallanır. Arkada kırmızıya boyanmış, loş bir Şeytan gravürü (Gustave Doré), yumuşak kırmızı bir
+parıltı, havada süzülen korlar, kıvılcımlar, kül ve yavaş sis vardır (azaltılmış hareketle hepsi durur). Menü arka planı
 her ekran oranında ekranı doldurur, kenarları yumuşakça kararır (2026-10-25). Altta "Hayır demeyi
 öğrenmelisin." yazar. Menü fare, klavye (ok tuşları/W-S, Enter) ve gamepad ile gezilir; Esc ya da gamepad B açık
 paneli kapatır.
@@ -597,3 +601,4 @@ seçenek seçerse değiştirilir:
 - 2026-10-24 21:30 — SefaSelim (Claude Code) — Kombo ve skor çarpanı eklendi (§11b, K-18); dördüncü fısıltı modülü Hız (yalnız tüfek, K-7 korunur) ve dört sabit yuva, Sözleşme 4'e +%25 saldırı hızı (§5, §7, §8, K-19); dört modül takılıyken teklif sorusu açıldı (A-20); düşmanlar Synty POLYGON Dark Fantasy modelleri oldu (geçici animasyonlarla, §6, §13); menü, duraklatma, son ve Şeytan kartı düğmeleri Synty düğmeleri oldu (§12); kombo eşiklerinde post-processing efektleri (§13); bütün oyun metinleri samimi Türkçeyle yeniden yazıldı, bedel adları üçüncü kişi oldu (Rengi, Sesi, …; §2, §7, §8, §11, §12).
 - 2026-10-25 03:30 — SefaSelim (Claude Code) — Kritik vuruş (%5 ×2, bütün silahlar), beşinci modül Keskin Göz ve Sözleşme 3'e +%15 kritik (K-20; §5, §7, §8, §11); Yankı sekme sonrası yarım menzil (§7); kullanıcı kararıyla zorluk ×2, mermi cehennemi, ~5 dk koşu hedefi 🧪 geçici (K-21; §3, §10); dolu yuvada ve takılı türde teklif yok, A-20 kapandı (§7, §15); kombo sayacı kalktı, dünyada kombo/kritik yazıları ve puan yanında çarpan (§11b, §12); küçük piksel dağılması, güçlü sarsıntı, şok dalgası halkaları, düşmanların parlaması kapandı (§6, §13); sade düğmeler, DOTween açılışları, sağ üstte teklif şeridi, beş yuva, tam ekran menü arka planı (§12); elle çizilmiş Şeytan (§8, §13); kayıtlı savaş/düşman sesleri (§13).
 - 2026-10-25 05:00 — SefaSelim (Claude Code) — K-22: kombo hasarla sıfırlanmaz, yalnız 3 sn isabetsizlik ya da ölüm; ×2 sonrası her öldürmede 0,75 güçlü eşik efekti (§11b); kritik taban %5 → %12 (tüfek en çok %47), kritik isabet başına +25 × çarpan puan, metalik kritik sesi, altın-beyaz kıvılcım, büyük "KRİTİK!" yazısı (§5, §11); altıncı modül Delici (+2 delme, delişte %30 zayıflama), altı yuva (§7, §8, §12, §14); Şeytan kartı sağ altta, EVET sağda sabit, HAYIR solda ve artık basılı tutulur, düğme dolgu göstergesi (§8, §13, K-2).
+- 2026-10-25 12:06 — SefaSelim (Claude Code) — Nişancı mermisi izli, parlayan bir küre oldu; sonuç ekranı taşmıyor ve Defne'nin çizilmiş portresini gösteriyor; ana menü ekibin çizimiyle 2B'ye döndü (§6, §11, §12).

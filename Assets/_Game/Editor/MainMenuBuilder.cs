@@ -10,21 +10,17 @@ namespace DanceWithTheDevil.Editor
 {
     /// <summary>
     /// Builds the UI theme asset (Synty Interface Dark Fantasy HUD sprites, Pirata One / Markazi fonts) and the
-    /// MainMenu scene (design/ux/main-menu.md): Defne on a plinth between two candelabra, the Devil engraving behind
-    /// her on a screen-space backdrop canvas (full view height for any aspect, feathered edges, behind the 3D stage),
-    /// cold key light and a red back light, and the code-built menu UI. Sets the build list to
-    /// MainMenu (0) then Arena (1).
+    /// MainMenu scene (design/ux/main-menu.md): a 2D stage on a screen-space camera canvas (the Doré engraving, a red
+    /// glow, the keyed drawing of Defne with the Devil behind her, embers and fog animated by MainMenuStage), a plain
+    /// clearing camera and the code-built menu UI. Sets the build list to MainMenu (0) then Arena (1).
     /// </summary>
     public static class MainMenuBuilder
     {
         private const string ThemePath = "Assets/_Game/Resources/UiTheme.asset";
         private const string MenuScenePath = "Assets/_Game/Scenes/MainMenu.unity";
         private const string ArenaScenePath = "Assets/_Game/Scenes/Arena.unity";
-        private const string DevilImagePath = "Assets/_Game/Art/UI/devil_placeholder_dore.jpg";
-        private const string MaterialsFolder = "Assets/_Game/Art/Materials";
         private const string Synty = "Assets/Synty/InterfaceDarkFantasyHUD";
         private const string SyntySprites = Synty + "/Sprites/DarkFantasy/SPR_DarkFantasy_";
-        private const string Polygon = "Assets/PolygonDarkFantasy/Prefabs";
 
         [MenuItem("Dance/UI/Build Theme + Main Menu")]
         public static void BuildAll()
@@ -61,6 +57,12 @@ namespace DanceWithTheDevil.Editor
             theme.ButtonFrameSprite = Sprite("Frame_Box_Small_01");
             var devilArt = AssetDatabase.LoadAssetAtPath<Sprite>(DevilArtBuilder.OutputPath);
             if (devilArt != null) theme.DevilSprite = devilArt;
+            var playerArt = AssetDatabase.LoadAssetAtPath<Sprite>(DevilArtBuilder.PlayerArtPath);
+            if (playerArt != null) theme.PlayerArtSprite = playerArt;
+            var portrait = AssetDatabase.LoadAssetAtPath<Sprite>(DevilArtBuilder.PortraitPath);
+            if (portrait != null) theme.PortraitSprite = portrait;
+            var portraitGrey = AssetDatabase.LoadAssetAtPath<Sprite>(DevilArtBuilder.PortraitGreyPath);
+            if (portraitGrey != null) theme.PortraitGreySprite = portraitGrey;
             EditorUtility.SetDirty(theme);
             AssetDatabase.SaveAssets();
             if (theme.ButtonPrefab == null || theme.SmallButtonPrefab == null)
@@ -71,6 +73,41 @@ namespace DanceWithTheDevil.Editor
                 Debug.Log("MainMenuBuilder: UI theme built at " + ThemePath);
         }
 
+        private const string SoftGlowPath = "Assets/_Game/Art/UI/menu_soft_glow.png";
+
+        /// <summary>A 256² white radial gradient (alpha = (1 − r)², uncompressed) for the menu glow and fog.</summary>
+        private static Sprite SoftGlowSprite()
+        {
+            if (!System.IO.File.Exists(SoftGlowPath))
+            {
+                const int size = 256;
+                var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+                var pixels = new Color32[size * size];
+                for (int y = 0; y < size; y++)
+                {
+                    for (int x = 0; x < size; x++)
+                    {
+                        float dx = (x + 0.5f) / size * 2f - 1f;
+                        float dy = (y + 0.5f) / size * 2f - 1f;
+                        float r = Mathf.Clamp01(Mathf.Sqrt(dx * dx + dy * dy));
+                        float a = (1f - r) * (1f - r);
+                        pixels[y * size + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(a * 255f));
+                    }
+                }
+                tex.SetPixels32(pixels);
+                System.IO.File.WriteAllBytes(SoftGlowPath, tex.EncodeToPNG());
+                Object.DestroyImmediate(tex);
+                AssetDatabase.ImportAsset(SoftGlowPath);
+                var importer = (TextureImporter)AssetImporter.GetAtPath(SoftGlowPath);
+                importer.textureType = TextureImporterType.Sprite;
+                importer.textureCompression = TextureImporterCompression.Uncompressed;
+                importer.alphaIsTransparency = true;
+                importer.mipmapEnabled = false;
+                importer.SaveAndReimport();
+            }
+            return AssetDatabase.LoadAssetAtPath<Sprite>(SoftGlowPath);
+        }
+
         private static Sprite Sprite(string name) => AssetDatabase.LoadAssetAtPath<Sprite>(SyntySprites + name + ".png");
 
         [MenuItem("Dance/UI/Build Main Menu Scene")]
@@ -78,99 +115,27 @@ namespace DanceWithTheDevil.Editor
         {
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
+            // 2D menu: no lights or 3D stage; the camera only clears and carries the backdrop canvas.
             RenderSettings.ambientMode = AmbientMode.Flat;
             RenderSettings.ambientLight = new Color(0.09f, 0.08f, 0.12f);
-            RenderSettings.fog = true;
-            RenderSettings.fogMode = FogMode.Linear;
-            RenderSettings.fogColor = new Color(0.03f, 0.02f, 0.04f);
-            RenderSettings.fogStartDistance = 7f;
-            RenderSettings.fogEndDistance = 16f;
+            RenderSettings.fog = false;
             RenderSettings.skybox = null;
 
-            // Camera: a little low, Defne right of centre (the menu column sits on the left).
             var camGo = new GameObject("Main Camera") { tag = "MainCamera" };
             var cam = camGo.AddComponent<Camera>();
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0.03f, 0.02f, 0.04f);
-            cam.fieldOfView = 32f;
+            cam.orthographic = true;
+            cam.orthographicSize = 5f;
             cam.nearClipPlane = 0.1f;
             cam.farClipPlane = 40f;
-            camGo.transform.position = new Vector3(-0.6f, 1.35f, -5.6f);
-            camGo.transform.rotation = Quaternion.LookRotation(new Vector3(0f, 1.05f, 0f) - camGo.transform.position);
+            camGo.transform.position = new Vector3(0f, 0f, -10f);
             camGo.AddComponent<AudioListener>();
 
-            // Cold key light from the front left, red back light behind her, a faint warm fill.
-            var keyGo = new GameObject("Key_Moon");
-            var key = keyGo.AddComponent<Light>();
-            key.type = LightType.Directional;
-            key.color = new Color(0.62f, 0.7f, 0.92f);
-            key.intensity = 0.9f;
-            key.shadows = LightShadows.Soft;
-            keyGo.transform.rotation = Quaternion.Euler(28f, 35f, 0f);
-
-            var backGo = new GameObject("Back_DevilRed");
-            var back = backGo.AddComponent<Light>();
-            back.type = LightType.Point;
-            back.color = new Color(1f, 0.16f, 0.1f);
-            back.intensity = 6f;
-            back.range = 6f;
-            backGo.transform.position = new Vector3(1.3f, 2.0f, 1.2f);
-
-            // Ground: a dark disc of stone, the plinth and the sigil ring glowing on it.
-            Material stone = StoneMaterial();
-            var ground = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            ground.name = "Ground";
-            ground.transform.position = new Vector3(0.6f, -0.05f, 1f);
-            ground.transform.localScale = new Vector3(14f, 0.05f, 14f);
-            ground.GetComponent<Renderer>().sharedMaterial = stone;
-            Object.DestroyImmediate(ground.GetComponent<Collider>());
-
-            Vector3 defnePos = new Vector3(0.95f, 0.18f, 0.2f);
-            var plinth = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            plinth.name = "Plinth";
-            plinth.transform.position = new Vector3(defnePos.x, 0.09f, defnePos.z);
-            plinth.transform.localScale = new Vector3(1.5f, 0.09f, 1.5f);
-            plinth.GetComponent<Renderer>().sharedMaterial = stone;
-            Object.DestroyImmediate(plinth.GetComponent<Collider>());
-
             UiTheme theme = AssetDatabase.LoadAssetAtPath<UiTheme>(ThemePath);
-            Transform sigil = null;
-            if (theme != null && theme.SigilSprite != null)
-            {
-                var sigilGo = new GameObject("Sigil");
-                var sr = sigilGo.AddComponent<SpriteRenderer>();
-                sr.sprite = theme.SigilSprite;
-                sr.color = new Color(0.85f, 0.12f, 0.1f, 0.55f);
-                sigilGo.transform.position = new Vector3(defnePos.x, 0.19f, defnePos.z);
-                sigilGo.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
-                float size = Mathf.Max(theme.SigilSprite.bounds.size.x, 0.01f);
-                sigilGo.transform.localScale = Vector3.one * (2.2f / size);
-                sigil = sigilGo.transform;
-            }
-
-            // Defne: the game model, idling with the rifle, turned three-quarters to the camera.
-            var defnePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(CharacterBuilder.DefnePrefabPath);
-            GameObject defne = null;
-            if (defnePrefab != null)
-            {
-                defne = (GameObject)PrefabUtility.InstantiatePrefab(defnePrefab, scene);
-                defne.name = "Defne";
-                defne.transform.position = defnePos;
-                defne.transform.rotation = Quaternion.Euler(0f, 200f, 0f);
-                foreach (var r in defne.GetComponentsInChildren<Renderer>()) r.shadowCastingMode = ShadowCastingMode.On;
-            }
-            else Debug.LogWarning("MainMenuBuilder: char_defne.prefab missing; run Dance/Character/Build Defne first.");
-
-            // The Devil: the engraving on a screen-space backdrop behind the whole stage, multiplied deep red.
-            Transform devil = BuildBackdrop(cam);
-
-            // Candelabra either side of the plinth (decor: colliders removed).
-            Place(Polygon + "/Props/SM_Prop_Candelabra_01.prefab", new Vector3(-0.35f, 0f, 0.9f), 20f, scene);
-            Place(Polygon + "/Props/SM_Prop_Candelabra_01.prefab", new Vector3(2.35f, 0f, 1.2f), -25f, scene);
-
             var stageGo = new GameObject("MenuStage");
             var stage = stageGo.AddComponent<MainMenuStage>();
-            stage.Configure(defne != null ? defne.transform : null, devil, back, sigil);
+            BuildStage(cam, theme, stage);
 
             var menuGo = new GameObject("MainMenu");
             menuGo.AddComponent<MainMenuScreen>();
@@ -187,74 +152,106 @@ namespace DanceWithTheDevil.Editor
         }
 
         /// <summary>
-        /// The Devil engraving as a backdrop that always fills the view height (any aspect ratio): a Screen Space -
-        /// Camera canvas on the menu camera, drawn at 30 m so the whole 3D stage stands in front of it. The image
-        /// (feathered on all four sides, DevilArtBuilder.BuildMenuBackdrop) is 112% of the view height, right of
-        /// centre so his face sits above Defne, and its width follows its aspect; beyond its soft edges the camera's
-        /// dark clear colour shows, so no rectangle edge is ever visible. MainMenuStage breathes its scale (rest 1.04).
+        /// The 2D stage on one Screen Space - Camera canvas behind the menu UI (1920×1080 reference, height matched, so
+        /// every layer keeps its size and only the visible width changes with the aspect ratio). Back to front: the
+        /// Doré engraving (feathered, full height, deep red), a red glow behind the characters, fog wisps, back embers,
+        /// Defne with the Devil (keyed drawing, full height, bottom-anchored at 64% of the width so the left menu column
+        /// stays clear at 4:3 … 21:9), front embers and a low fog. MainMenuStage animates it (ReduceMotion = still).
         /// </summary>
-        private static Transform BuildBackdrop(Camera cam)
+        private static void BuildStage(Camera cam, UiTheme theme, MainMenuStage stage)
         {
-            Sprite sprite = DevilArtBuilder.BuildMenuBackdrop();
-            var canvasGo = new GameObject("DevilBackdrop", typeof(RectTransform));
+            var canvasGo = new GameObject("MenuBackdrop", typeof(RectTransform));
             var canvas = canvasGo.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceCamera;
             canvas.worldCamera = cam;
-            canvas.planeDistance = 30f;
+            canvas.planeDistance = 10f;
             canvas.sortingOrder = -100;
             var scaler = canvasGo.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920f, 1080f);
             scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
             scaler.matchWidthOrHeight = 1f;
+            Transform root = canvasGo.transform;
+            // A smooth generated radial glow: the Synty Glow_01 sprite showed stepped octagon rings at this size.
+            Sprite glowSprite = SoftGlowSprite();
 
-            var artGo = new GameObject("DevilEngraving", typeof(RectTransform));
-            var rect = (RectTransform)artGo.transform;
-            rect.SetParent(canvasGo.transform, false);
-            rect.anchorMin = new Vector2(0.62f, -0.06f);
-            rect.anchorMax = new Vector2(0.62f, 1.06f);
-            rect.pivot = new Vector2(0.5f, 0.5f);
+            // Doré engraving: 112% of the view height, behind everything, dimmer than before so the drawing reads.
+            Sprite engraving = DevilArtBuilder.BuildMenuBackdrop();
+            RectTransform devil = FullHeight(root, "DevilEngraving", engraving, 0.62f, -0.06f, 1.06f,
+                new Vector2(0.5f, 0.5f), engraving != null ? new Color(0.46f, 0.1f, 0.09f, 1f) : Color.clear, 0.88f);
+            devil.localScale = Vector3.one * 1.04f;
+
+            // Red glow behind the characters.
+            Image glow = null;
+            if (glowSprite != null)
+            {
+                glow = NewImage(root, "RedGlow", glowSprite, new Color(0.8f, 0.12f, 0.06f, 0.3f));
+                var rect = glow.rectTransform;
+                rect.anchorMin = rect.anchorMax = new Vector2(0.66f, 0.5f);
+                rect.pivot = new Vector2(0.5f, 0.5f);
+                rect.anchoredPosition = Vector2.zero;
+                rect.sizeDelta = new Vector2(1300f, 1150f);
+            }
+
+            RectTransform fogBack = Layer(root, "FogBack");
+            RectTransform embersBack = Layer(root, "EmbersBack");
+
+            Sprite player = theme != null ? theme.PlayerArtSprite : null;
+            if (player == null) player = AssetDatabase.LoadAssetAtPath<Sprite>(DevilArtBuilder.PlayerArtPath);
+            if (player == null)
+                Debug.LogWarning("MainMenuBuilder: devil_player.png missing; run Dance/UI/Build Devil Art first.");
+            // Right edge on the screen edge: the drawing's Devil is cut by the image border, which would show as a
+            // hard vertical line anywhere else. Any aspect keeps the left part (empty black) behind the menu column.
+            RectTransform characters = FullHeight(root, "DefneAndDevil", player, 1f, 0f, 1f, new Vector2(1f, 0f),
+                player != null ? Color.white : Color.clear, 0.746f);
+
+            RectTransform embersFront = Layer(root, "EmbersFront");
+            RectTransform fogFront = Layer(root, "FogFront");
+
+            stage.Configure(devil, characters, glow, fogBack, fogFront, embersBack, embersFront, glowSprite);
+        }
+
+        /// <summary>An image as tall as the given anchor span at <paramref name="x"/>, width from its aspect.</summary>
+        private static RectTransform FullHeight(Transform parent, string name, Sprite sprite, float x, float yMin,
+            float yMax, Vector2 pivot, Color color, float fallbackAspect)
+        {
+            Image image = NewImage(parent, name, sprite, color);
+            RectTransform rect = image.rectTransform;
+            rect.anchorMin = new Vector2(x, yMin);
+            rect.anchorMax = new Vector2(x, yMax);
+            rect.pivot = pivot;
             rect.offsetMin = Vector2.zero;
             rect.offsetMax = Vector2.zero;
-            rect.localScale = Vector3.one * 1.04f;
-            var image = artGo.AddComponent<Image>();
-            image.sprite = sprite;
-            image.color = sprite != null ? new Color(0.62f, 0.13f, 0.11f, 1f) : new Color(0f, 0f, 0f, 0f);
-            image.raycastTarget = false;
-            var fitter = artGo.AddComponent<AspectRatioFitter>();
+            var fitter = image.gameObject.AddComponent<AspectRatioFitter>();
             fitter.aspectMode = AspectRatioFitter.AspectMode.HeightControlsWidth;
-            fitter.aspectRatio = sprite != null && sprite.rect.height > 0f ? sprite.rect.width / sprite.rect.height : 0.88f;
+            fitter.aspectRatio = sprite != null && sprite.rect.height > 0f
+                ? sprite.rect.width / sprite.rect.height : fallbackAspect;
             return rect;
         }
 
-        private static Material StoneMaterial()
+        private static Image NewImage(Transform parent, string name, Sprite sprite, Color color)
         {
-            EnsureFolder(MaterialsFolder);
-            string path = MaterialsFolder + "/mat_menu_stone.mat";
-            var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
-            if (mat == null)
-            {
-                mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-                AssetDatabase.CreateAsset(mat, path);
-            }
-            mat.SetColor("_BaseColor", new Color(0.11f, 0.1f, 0.12f));
-            mat.SetFloat("_Smoothness", 0.15f);
-            EditorUtility.SetDirty(mat);
-            return mat;
+            var go = new GameObject(name, typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            var image = go.AddComponent<Image>();
+            image.sprite = sprite;
+            image.color = color;
+            image.raycastTarget = false;
+            return image;
         }
 
-        private static void Place(string prefabPath, Vector3 position, float yaw, Scene scene)
+        /// <summary>An empty full-canvas layer (MainMenuStage fills it with pooled embers or fog at runtime).</summary>
+        private static RectTransform Layer(Transform parent, string name)
         {
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
-            if (prefab == null)
-            {
-                Debug.LogWarning("MainMenuBuilder: missing " + prefabPath);
-                return;
-            }
-            var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, scene);
-            go.transform.SetPositionAndRotation(position, Quaternion.Euler(0f, yaw, 0f));
-            PrefabUtility.UnpackPrefabInstance(go, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
-            foreach (var c in go.GetComponentsInChildren<Collider>(true)) Object.DestroyImmediate(c);
+            var go = new GameObject(name, typeof(RectTransform));
+            var rect = (RectTransform)go.transform;
+            rect.SetParent(parent, false);
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.pivot = Vector2.zero;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            return rect;
         }
 
         private static void SetBuildScenes()

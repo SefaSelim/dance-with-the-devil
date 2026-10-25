@@ -59,6 +59,14 @@ namespace DanceWithTheDevil
         [Tooltip("Hand-drawn Devil for the Devil screen (black keyed out; built by Dance/UI/Build Devil Art). " +
                  "DevilScreen uses it when its own sprite field is empty.")]
         public Sprite DevilSprite;
+        [Tooltip("Defne with the Devil behind her (Assets/Devil-player.jpeg, black keyed out): the main menu's 2D " +
+                 "stage. Built by Dance/UI/Build Devil Art.")]
+        public Sprite PlayerArtSprite;
+        [Tooltip("Square crop of Defne's head and shoulders on a dark vignette: the ending portrait (EndingScreen uses " +
+                 "it when its own field is empty). Built by Dance/UI/Build Devil Art.")]
+        public Sprite PortraitSprite;
+        [Tooltip("Greyscale copy of PortraitSprite: the ending's colour costs (Rengi, Kendisi) and the grey shell.")]
+        public Sprite PortraitGreySprite;
 
         [Tooltip("Panels smaller than this keep the flat frame (a 10-unit pip cannot carry an ornate border).")]
         public Vector2 MinFramedSize = new Vector2(40f, 30f);

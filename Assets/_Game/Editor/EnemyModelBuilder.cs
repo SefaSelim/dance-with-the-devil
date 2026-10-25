@@ -165,6 +165,7 @@ namespace DanceWithTheDevil.Editor
         /// <summary>Root settings that come from the anim set (after the root components exist).</summary>
         public static void ConfigureRoot(GameObject root, EnemyType type)
         {
+            if (type == EnemyType.Shooter) AssignShooterProjectile(root);
             EnemyAnimSet set = LoadOrCreateAnimSet(SpecFor(type));
             var characterAnimator = root.GetComponent<CharacterAnimator>();
             if (characterAnimator == null) return;
@@ -172,6 +173,24 @@ namespace DanceWithTheDevil.Editor
             SerializedProperty run = so.FindProperty("_animRunSpeed");
             if (run != null) run.floatValue = set.RunSpeed;
             else Debug.LogWarning("EnemyModelBuilder: CharacterAnimator has no '_animRunSpeed'.");
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        /// <summary>The Shooter fires the glowing orb prefab (built if missing) instead of runtime cubes.</summary>
+        private static void AssignShooterProjectile(GameObject root)
+        {
+            var brain = root.GetComponent<ShooterBrain>();
+            if (brain == null) return;
+            Projectile orb = EnemyOrbBuilder.LoadOrBuild();
+            if (orb == null)
+            {
+                Debug.LogWarning("EnemyModelBuilder: enemy orb prefab could not be built; the shooter keeps the cube shots.");
+                return;
+            }
+            var so = new SerializedObject(brain);
+            SerializedProperty prefab = so.FindProperty("_projectilePrefab");
+            if (prefab != null) prefab.objectReferenceValue = orb;
+            else Debug.LogWarning("EnemyModelBuilder: ShooterBrain has no '_projectilePrefab'.");
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
