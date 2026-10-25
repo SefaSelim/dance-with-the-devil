@@ -11,7 +11,7 @@ namespace DanceWithTheDevil
     /// pistol grip, left hand under the handguard) and the weapon socket at goal × grip (before
     /// <see cref="CharacterAnimator"/> adds the recoil kick to the weapon inside the socket).
     /// Tuning: select the Body in Play mode; the inspector edits the active weapon's profile (kept after Play mode,
-    /// it is an asset) and the Scene view shows move/rotate handles for the weapon and the left-hand point.
+    /// it is an asset) and the Scene view shows move/rotate handles for the weapon and both hands.
     /// A profile that was never fitted (or "Refit from animation") fits itself on the first frames: barrel level along
     /// the facing, pistol grip in the animated right fist, both hands then held on the weapon (right on the trigger,
     /// left under the handguard).
@@ -100,7 +100,7 @@ namespace DanceWithTheDevil
             {
                 _goalPosition = _animator.GetIKPosition(AvatarIKGoal.RightHand);
                 _goalRotation = _animator.GetIKRotation(AvatarIKGoal.RightHand);
-                    _hasGoal = true;
+                _hasGoal = true;
                 _ikFrames++;
             }
 
@@ -117,13 +117,18 @@ namespace DanceWithTheDevil
         {
             WeaponHoldProfile profile = ActiveProfile;
             if (!_hasGoal || profile == null || _socket == null) return;
+            if (!profile.Fitted && _ikFrames < FitAfterFrames) return; // wait until the clip has left the bind pose
+            GripFor(profile, out Vector3 gripPosition, out Quaternion gripRotation, out float leftWeight);
+            // Fingers first: the curl is relative to the hand, and the fit measures the closed fist.
+            if (profile.UseRightHandIK) CurlFingers(true, profile.GripFingerCurl, profile.TriggerFingerCurl, 1f);
+            if (profile.UseLeftHandIK && leftWeight > 0f)
+                CurlFingers(false, profile.SupportFingerCurl, profile.SupportFingerCurl, leftWeight);
             if (!profile.Fitted)
             {
-                // Bones are final for this frame here; wait a few frames so the clip has left the bind pose.
-                if (_ikFrames < FitAfterFrames) return;
+                // Bones are final for this frame here.
                 FitProfile(profile);
+                GripFor(profile, out gripPosition, out gripRotation, out leftWeight);
             }
-            GripFor(profile, out Vector3 gripPosition, out Quaternion gripRotation, out float leftWeight);
             Vector3 weaponPosition = _goalPosition + _goalRotation * gripPosition;
             Quaternion weaponRotation = _goalRotation * gripRotation;
 
@@ -174,6 +179,41 @@ namespace DanceWithTheDevil
             lower.rotation = Quaternion.AngleAxis(elbowWanted - elbowNow, bendAxis) * lower.rotation;
             upper.rotation = Quaternion.FromToRotation(hand.position - a, target - a) * upper.rotation;
             hand.rotation = handRotation;
+        }
+
+        // Share of the finger curl taken by the knuckle, middle and end joints.
+        private static readonly float[] CurlPerJoint = { 1f, 1.1f, 0.7f };
+
+        /// <summary>
+        /// Closes a hand's four fingers toward its palm: each joint is bent to <paramref name="grip"/> degrees (the
+        /// index finger to <paramref name="index"/>) from the bone before it, scaled per joint, blended by
+        /// <paramref name="weight"/> from the animated curl. The thumb keeps the animation.
+        /// </summary>
+        private void CurlFingers(bool right, float grip, float index, float weight)
+        {
+            Transform hand = _animator.GetBoneTransform(right ? HumanBodyBones.RightHand : HumanBodyBones.LeftHand);
+            if (hand == null || !HandAxes(right, Quaternion.identity, out _, out Vector3 palm)) return;
+            HumanBodyBones first = right ? HumanBodyBones.RightIndexProximal : HumanBodyBones.LeftIndexProximal;
+            for (int finger = 0; finger < 4; finger++)
+            {
+                float degrees = finger == 0 ? index : grip;
+                Transform before = hand;
+                for (int joint = 0; joint < 3; joint++)
+                {
+                    Transform bone = _animator.GetBoneTransform(first + finger * 3 + joint);
+                    if (bone == null) break;
+                    Transform next = joint < 2 ? _animator.GetBoneTransform(first + finger * 3 + joint + 1)
+                        : bone.childCount > 0 ? bone.GetChild(0) : null;
+                    if (next == null) break;
+                    Vector3 previous = bone.position - before.position;
+                    Vector3 axis = Vector3.Cross(previous, palm); // turning about it moves the finger toward the palm
+                    if (axis.sqrMagnitude < 1e-10f) break;
+                    float now = Vector3.SignedAngle(previous, next.position - bone.position, axis);
+                    float wanted = degrees * CurlPerJoint[joint];
+                    bone.rotation = Quaternion.AngleAxis((wanted - now) * weight, axis) * bone.rotation;
+                    before = bone;
+                }
+            }
         }
 
         /// <summary>
@@ -385,14 +425,24 @@ namespace DanceWithTheDevil
             else profile.Corrections.Add(c);
         }
 
-        /// <summary>Editor tuning: sets the left-hand point from a world pose (relative to the weapon in the hands now).</summary>
-        public void SetLeftHandWorldPose(Vector3 position, Quaternion rotation)
+        /// <summary>Editor tuning: sets a hand bone's pose from a world pose (relative to the weapon in the hands now).</summary>
+        public void SetHandWorldPose(bool right, Vector3 position, Quaternion rotation)
         {
             WeaponHoldProfile profile = ActiveProfile;
             if (profile == null || _socket == null) return;
             Quaternion inverseWeapon = Quaternion.Inverse(_socket.rotation);
-            profile.LeftHandPosition = inverseWeapon * (position - _socket.position);
-            profile.LeftHandRotation = (inverseWeapon * rotation).eulerAngles;
+            Vector3 local = inverseWeapon * (position - _socket.position);
+            Vector3 euler = (inverseWeapon * rotation).eulerAngles;
+            if (right)
+            {
+                profile.RightHandPosition = local;
+                profile.RightHandRotation = euler;
+            }
+            else
+            {
+                profile.LeftHandPosition = local;
+                profile.LeftHandRotation = euler;
+            }
         }
 
         private static Vector3 DeltaEuler(Vector3 from, Vector3 to) => new Vector3(

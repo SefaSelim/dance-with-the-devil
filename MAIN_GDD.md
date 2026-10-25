@@ -1,6 +1,6 @@
 # MAIN GDD — Dance with the Devil (Bir Şey Olmaz)
 
-**Son güncelleme: 2026-10-25 13:20 (UTC+3)**
+**Son güncelleme: 2026-10-25 14:58 (UTC+3)**
 
 > **Bu dosya projenin tek ve yaşayan Game Design Document'ıdır.** Sürüm numarası yoktur (GDD2, GDD3…
 > diye gitmez). Yeni bir mekanik eklendiğinde, var olan bir mekanik değiştiğinde ya da bir tasarım kararı
@@ -454,6 +454,12 @@ kalktı, kombo yazıları dünyada görünür, §11b); altta altı sabit modül 
 avantaj, tek satır bedel; takılı modülün sökme ipucu "Sağ tık: söküp at". Duraklatma panelinin başlığı "Mola"dır. Ek olarak HUD'da Defne'nin küçük fotoğrafı (ekibin çiziminden portre; bedelleri sonuç ekranındaki gibi taşır: 1 yarı solgun, 4 yüz peçesi, 5 daha karanlık, 6 gri; Sözleşme 3 bedeliyle kaybolur) ve roket
 şarjları. Bağlamsal ipuçları ilk dakikada sırayla gelir, oyunu durdurmaz. Renk tek ayırt edici değildir.
 
+**Yazılar tek Excel dosyasında (✅, 2026-10-25):** oyuncunun gördüğü bütün yazılar (menü, HUD, ipuçları, Şeytan kartı
+ve sözleşmeler, son ekranı, kombo yazıları) `Assets/_Game/Texts/Yazilar.xlsx` dosyasındadır. Tasarımcı yalnız **Metin**
+sütununu değiştirir (`{0}` gibi yer tutucular korunur); dosya kaydedilip Unity'ye dönülünce oyun yeni yazıyı gösterir.
+Boş bırakılan hücrede koddaki varsayılan yazı görünür. Koda sonradan eklenen yazılar "Dance/Texts/Excel'i Güncelle"
+ile tabloya girer.
+
 ## 13. Görsel ve ses yönü — 🟡 (takip kamerası, pikselli görüntü, dış çizgi, Synty düşmanlar, piksel dağılması, şok dalgası halkaları, kombo görüntü efektleri, elle çizilmiş Şeytan ve kayıtlı savaş sesleri var; yaratık animasyonlu düşmanlar var; toon ışık yok)
 
 - **Görünüm:** Defne'yi takip eden ortografik izometrik kamera (35° eğim, 45° dönüş, metre başına ~20 piksel, K-14); karakterlerde 1 piksellik koyu dış çizgi; karakterler sahnenin en parlak ve en doygun şeyleri, zemin ve duvarlar koyu ve sakin; düşük çözünürlükte (640×360) çizilip nokta filtresiyle büyütülen, hafif
@@ -606,3 +612,4 @@ seçenek seçerse değiştirilir:
 - 2026-10-25 12:06 — SefaSelim (Claude Code) — Nişancı mermisi izli, parlayan bir küre oldu; sonuç ekranı taşmıyor ve Defne'nin çizilmiş portresini gösteriyor; ana menü ekibin çizimiyle 2B'ye döndü (§6, §11, §12).
 - 2026-10-25 12:12 — SefaSelim (Claude Code) — HUD'daki küçük portre de ekibin çizdiği Defne portresi oldu, bedelleri üstünde gösterir (§12).
 - 2026-10-25 13:20 — SefaSelim (Claude Code) — Düşmanlar ekibin eklediği yaratık animasyon paketini kullanıyor: kambur bekleme/yürüme/koşu, atılırken pençe savurma, Takipçi'nin ön işareti pençeyi kaldırmak; Koşucu çömelmeyi korur, Nişancı küreyi pençeyle fırlatır (§6, §13).
+- 2026-10-25 14:58 — SefaSelim (Claude Code) — Oyuncunun gördüğü bütün yazılar tek Excel dosyasından (Yazilar.xlsx, Metin sütunu) okunuyor (§12).

@@ -5,7 +5,7 @@ namespace DanceWithTheDevil.Editor
 {
     /// <summary>
     /// Tuning UI for <see cref="WeaponHold"/>. In Play mode, select Defne's "Body" (or press the button on the
-    /// player): the Scene view shows a move/rotate handle on the weapon in her hands and one on the left-hand point;
+    /// player): the Scene view shows a move/rotate handle on the weapon in her hands and one on each hand;
     /// dragging them writes the active weapon's <see cref="WeaponHoldProfile"/> asset (so it survives leaving Play
     /// mode). "Edit" chooses whether the weapon handle changes the base grip (every clip) or only a correction for
     /// the clip playing most right now (e.g. run). Tip: pause (Ctrl+Shift+P) and step frames while tuning a clip.
@@ -18,6 +18,7 @@ namespace DanceWithTheDevil.Editor
         private static EditTarget _target = EditTarget.BaseGrip;
         private static bool _weaponHandle = true;
         private static bool _leftHandHandle = true;
+        private static bool _rightHandHandle = true;
         private UnityEditor.Editor _profileEditor;
 
         public override void OnInspectorGUI()
@@ -43,6 +44,7 @@ namespace DanceWithTheDevil.Editor
                 "Base grip: every clip. Current clip correction: only the clip playing most now."), _target);
             _weaponHandle = EditorGUILayout.Toggle("Show weapon handle", _weaponHandle);
             _leftHandHandle = EditorGUILayout.Toggle("Show left-hand handle", _leftHandHandle);
+            _rightHandHandle = EditorGUILayout.Toggle("Show right-hand handle", _rightHandHandle);
 
             using (new EditorGUI.DisabledScope(profile == null))
             {
@@ -104,20 +106,29 @@ namespace DanceWithTheDevil.Editor
             }
 
             if (_leftHandHandle && profile.UseLeftHandIK)
+                HandHandle(hold, profile, socket, false, profile.LeftHandPosition, profile.LeftHandRotation,
+                    new Color(0.4f, 0.9f, 1f), "Left hand");
+            if (_rightHandHandle && profile.UseRightHandIK)
+                HandHandle(hold, profile, socket, true, profile.RightHandPosition, profile.RightHandRotation,
+                    new Color(1f, 0.6f, 0.3f), "Right hand");
+        }
+
+        /// <summary>Move/rotate handle on a hand bone's pose (given in the weapon's frame); dragging writes the profile.</summary>
+        private static void HandHandle(WeaponHold hold, WeaponHoldProfile profile, Transform socket, bool right,
+            Vector3 localPosition, Vector3 localEuler, Color color, string label)
+        {
+            Vector3 position = socket.position + socket.rotation * localPosition;
+            Quaternion rotation = socket.rotation * Quaternion.Euler(localEuler);
+            Handles.color = color;
+            Handles.SphereHandleCap(0, position, Quaternion.identity, 0.04f, EventType.Repaint);
+            Handles.Label(position + Vector3.up * 0.08f, label);
+            EditorGUI.BeginChangeCheck();
+            Handles.TransformHandle(ref position, ref rotation);
+            if (EditorGUI.EndChangeCheck())
             {
-                Vector3 position = socket.position + socket.rotation * profile.LeftHandPosition;
-                Quaternion rotation = socket.rotation * Quaternion.Euler(profile.LeftHandRotation);
-                Handles.color = new Color(0.4f, 0.9f, 1f);
-                Handles.SphereHandleCap(0, position, Quaternion.identity, 0.04f, EventType.Repaint);
-                Handles.Label(position + Vector3.up * 0.08f, "Left hand");
-                EditorGUI.BeginChangeCheck();
-                Handles.TransformHandle(ref position, ref rotation);
-                if (EditorGUI.EndChangeCheck())
-                {
-                    Undo.RecordObject(profile, "Move left-hand grip");
-                    hold.SetLeftHandWorldPose(position, rotation);
-                    EditorUtility.SetDirty(profile);
-                }
+                Undo.RecordObject(profile, right ? "Move right-hand grip" : "Move left-hand grip");
+                hold.SetHandWorldPose(right, position, rotation);
+                EditorUtility.SetDirty(profile);
             }
         }
 

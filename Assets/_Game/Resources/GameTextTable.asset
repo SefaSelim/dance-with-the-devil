@@ -1,0 +1,316 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 19305ab38632c8747914c0ddf1c085e3, type: 3}
+  m_Name: GameTextTable
+  m_EditorClassIdentifier: Game.Runtime::DanceWithTheDevil.GameTextTable
+  _keys:
+  - card.continue
+  - card.cost_mechanical
+  - card.cost_visible
+  - card.give
+  - card.no
+  - card.no_keys
+  - card.no_stakes
+  - card.take
+  - card.yes
+  - card.yes_keys
+  - card.yes_stakes
+  - combo.broken_damage
+  - combo.broken_timeout
+  - combo.multiplier
+  - combo.popup_combo
+  - combo.popup_crit
+  - combo.popup_tier
+  - combo.score_with_multiplier
+  - combo.title
+  - common.separator
+  - credits.body
+  - credits.title
+  - deal.1.cost_mechanical
+  - deal.1.cost_name
+  - deal.1.cost_visible
+  - deal.1.ledger_given
+  - deal.1.ledger_given_detail
+  - deal.1.ledger_taken
+  - deal.1.offer
+  - deal.1.upgrade
+  - deal.2.cost_mechanical
+  - deal.2.cost_name
+  - deal.2.cost_visible
+  - deal.2.ledger_given
+  - deal.2.ledger_given_detail
+  - deal.2.ledger_taken
+  - deal.2.offer
+  - deal.2.upgrade
+  - deal.3.cost_mechanical
+  - deal.3.cost_name
+  - deal.3.cost_visible
+  - deal.3.ledger_given
+  - deal.3.ledger_given_detail
+  - deal.3.ledger_taken
+  - deal.3.offer
+  - deal.3.upgrade
+  - deal.4.cost_mechanical
+  - deal.4.cost_name
+  - deal.4.cost_visible
+  - deal.4.ledger_given
+  - deal.4.ledger_given_detail
+  - deal.4.ledger_taken
+  - deal.4.offer
+  - deal.4.upgrade
+  - deal.5.cost_mechanical
+  - deal.5.cost_name
+  - deal.5.cost_visible
+  - deal.5.ledger_given
+  - deal.5.ledger_given_detail
+  - deal.5.ledger_taken
+  - deal.5.offer
+  - deal.5.upgrade
+  - deal.6.cost_mechanical
+  - deal.6.cost_name
+  - deal.6.cost_visible
+  - deal.6.ledger_given
+  - deal.6.ledger_given_detail
+  - deal.6.ledger_taken
+  - deal.6.offer
+  - deal.6.upgrade
+  - devil.always_yes
+  - devil.first_appearance
+  - devil.no_first_death
+  - devil.no_later
+  - ending.always_yes.title
+  - ending.diminished.closing
+  - ending.diminished.gone
+  - ending.diminished.title
+  - ending.diminished.yes_count
+  - ending.kept_yourself.body
+  - ending.kept_yourself.closing
+  - ending.kept_yourself.title
+  - ending.retry
+  - ending.retry_keys
+  - hint.eject
+  - hint.move_fire
+  - hint.offer
+  - hint.rocket
+  - hud.dodge
+  - hud.eject_hint
+  - hud.empty_slot
+  - hud.equipped
+  - hud.given
+  - hud.machete
+  - hud.reject
+  - hud.rocket
+  - hud.score
+  - hud.small_nos
+  - intro.goal
+  - intro.line
+  - ledger.empty
+  - ledger.given
+  - ledger.given_note
+  - ledger.score
+  - ledger.small_nos
+  - ledger.taken
+  - menu.back
+  - menu.credits
+  - menu.footer
+  - menu.hint
+  - menu.quit
+  - menu.settings
+  - menu.start
+  - menu.subtitle
+  - menu.title
+  - module.crit_chance.advantage
+  - module.crit_chance.cost
+  - module.crit_chance.name
+  - module.crit_chance.whisper
+  - module.density.advantage
+  - module.density.cost
+  - module.density.name
+  - module.density.whisper
+  - module.echo.advantage
+  - module.echo.cost
+  - module.echo.name
+  - module.echo.whisper
+  - module.haste.advantage
+  - module.haste.cost
+  - module.haste.name
+  - module.haste.whisper
+  - module.pierce.advantage
+  - module.pierce.cost
+  - module.pierce.name
+  - module.pierce.whisper
+  - module.triple_shot.advantage
+  - module.triple_shot.cost
+  - module.triple_shot.name
+  - module.triple_shot.whisper
+  - pause.quit
+  - pause.resume
+  - pause.title
+  - settings.fullscreen
+  - settings.master
+  - settings.music
+  - settings.off
+  - settings.on
+  - settings.sfx
+  - settings.shake
+  - settings.title
+  _values:
+  - '[Enter] devam'
+  - "Say\u0131larla:"
+  - "G\xF6r\xFCrs\xFCn:"
+  - 'Sana:'
+  - HAYIR
+  - "[H] bas\u0131l\u0131 tut"
+  - oyun biter
+  - 'Ondan:'
+  - EVET
+  - "[Enter] bas\u0131l\u0131 tut"
+  - "dirilirsin \xB7 bedeli kal\u0131c\u0131"
+  - KIRILDI
+  - "S\xD6ND\xDC"
+  - "\xD7{0},{1}"
+  - '{0} KOMBO'
+  - "KR\u0130T\u0130K! {0}"
+  - "{0} KOMBO!\n\xD7{1},{2}"
+  - "{0}  <color=#FFD24D>\xD7{1},{2}</color>"
+  - KOMBO
+  - " \xB7 "
+  - "Dance with the Devil ekibi \u2014 Women Game Jam 2026\n\nMek\xE2n: Synty POLYGON Dark Fantasy\nAray\xFCz: Synty Interface Dark Fantasy HUD\nYaz\u0131 tipleri: Pirata One, Markazi Text (SIL OFL)\nAnimasyonlar: Adobe Mixamo \xB7 Silahlar: Low Poly Weapons VOL.1\nEfekt dokular\u0131: Kenney (CC0)\n\u015Eeytan \xE7izimi (ge\xE7ici): Gustave Dor\xE9 grav\xFCr\xFC (kamu mal\u0131)\nSesler ve m\xFCzik: oyunun i\xE7inde \xFCretildi"
+  - "Eme\u011Fi Ge\xE7enler"
+  - "Hi\xE7bir \u015Fey."
+  - Rengi
+  - "D\xFCnya %30 solar, Defne'nin rengi \xE7ekilir."
+  - Rengi
+  - 
+  - "Roket g\xFCc\xFC"
+  - "Sana iki kat g\xFC\xE7l\xFC roket, hem de daha s\u0131k. Ondan m\u0131? Biraz renk. Fark etmez bile."
+  - "Roket hasar\u0131 iki kat\u0131 (40 \u2192 80), patlama alan\u0131 iki kat\u0131 (yar\u0131\xE7ap 2,5 \u2192 3,5 m), dolum %40 h\u0131zl\u0131 (6,0 \u2192 4,3 sn)"
+  - "Can s\u0131n\u0131r\u0131 100 \u2192 80"
+  - Sesi
+  - "Defne'nin sesi ve m\xFCzi\u011Fin bir k\u0131sm\u0131 susar (uyar\u0131 sesleri kal\u0131r); can \xE7ubu\u011Fu k\u0131sal\u0131r."
+  - Sesi
+  - "can s\u0131n\u0131r\u0131 \u221220"
+  - "Pala dalgas\u0131, +1 ka\xE7\u0131\u015F"
+  - "Sana pala dalgas\u0131, bir ka\xE7\u0131\u015F hakk\u0131 daha. Ondan da sesini al\u0131yorum. Nas\u0131lsa hep susuyordu."
+  - "Pala savurunca \xF6ne bir dalga da \xE7\u0131kar; ka\xE7\u0131\u015F hakk\u0131 1 \u2192 2"
+  - "D\xFC\u015Fmanlar %15 daha h\u0131zl\u0131"
+  - "Arkada\u015Flar\u0131"
+  - "Ekrandaki k\xFC\xE7\xFCk foto\u011Fraf kaybolur."
+  - "Arkada\u015Flar\u0131"
+  - "d\xFC\u015Fmanlar %15 daha h\u0131zl\u0131"
+  - Delen mermi, +%15 kritik
+  - "Mermilerin delip ge\xE7sin, arada bir de \xE7ifte vursun. Ondan da arkada\u015Flar\u0131n\u0131 al\u0131yorum. Zaten onlara hi\xE7 vakti yoktu."
+  - "T\xFCfek mermileri 2 d\xFC\u015Fman\u0131 daha delip ge\xE7er (kalkan\u0131 delmez); b\xFCt\xFCn silahlarda +%15 kritik \u015Fans\u0131"
+  - "Can s\u0131n\u0131r\u0131 80 \u2192 60"
+  - "Y\xFCz\xFC"
+  - "Defne'nin y\xFCz\xFCnden par\xE7alar kopar, geri gelmez (vurulma alan\u0131 k\xFC\xE7\xFClmez)."
+  - "Y\xFCz\xFC"
+  - "can s\u0131n\u0131r\u0131 \u221220"
+  - "+%10 hasar, +%25 sald\u0131r\u0131 h\u0131z\u0131"
+  - "Biraz daha sert, biraz daha seri. Ondan y\xFCz\xFCn\xFC al\u0131yorum. Aynaya bakm\u0131yordu nas\u0131lsa."
+  - "B\xFCt\xFCn hasar %10, sald\u0131r\u0131 h\u0131z\u0131 %25 artar (t\xFCfek saniyede 6 \u2192 7,5 at\u0131\u015F, pala beklemesi 0,5 \u2192 0,4 sn)"
+  - "Dirilince koruma s\xFCresi yok; ka\xE7\u0131\u015F beklemesi iki kat\u0131 (1,6 \u2192 3,2 sn)"
+  - "Zaman\u0131"
+  - "Ekran\u0131n kenarlar\u0131 karar\u0131r."
+  - "Zaman\u0131"
+  - "dirilince koruma yok, ka\xE7\u0131\u015F beklemesi \xD72"
+  - +1 roket
+  - "Bir roket daha. Ondan da zaman\u0131n\u0131 al\u0131yorum. Nas\u0131lsa kendine hi\xE7 ay\u0131rm\u0131yordu."
+  - "Bir roket hakk\u0131 daha (2 \u2192 3)"
+  - "Tu\u015Flar 0,25 sn ge\xE7 tepki verir"
+  - Kendisi
+  - "Defne griye d\xF6ner."
+  - Kendisi
+  - 
+  - "Hi\xE7bir \u015Fey"
+  - "Son anla\u015Fma: ondan geriye ne kald\u0131ysa.\nBu sefer sormuyorum."
+  - "\u2014"
+  - "Bir \u015Fey olmad\u0131, de\u011Fil mi?"
+  - "P\u0131\u015Ft! Sana diyorum. Evet, ekrandaki sen."
+  - "Daha ilk seferden hay\u0131r m\u0131? Amma s\u0131k\u0131c\u0131s\u0131n."
+  - "\u015Eimdi mi hay\u0131r diyorsun? Ald\u0131klar\u0131m bende kal\u0131yor ama."
+  - "Oysa hay\u0131r da diyebilirdin."
+  - "Hay\u0131r biraz ge\xE7 geldi. Ama geldi."
+  - 'Defne''den gidenler:'
+  - "Eksildin ama h\xE2l\xE2 ayaktas\u0131n."
+  - '{0} kere evet dedin.'
+  - "Defne oldu\u011Fu yere \xE7\xF6kt\xFC, nefes nefese. Sa\xE7lar\u0131 h\xE2l\xE2 k\u0131v\u0131rc\u0131k, h\xE2l\xE2 reng\xE2renk."
+  - "Yar\u0131n bir \u015Feye hay\u0131r diyecek. Belki ikisine."
+  - "Kaybettin ama kendin kald\u0131n."
+  - Bir daha dene
+  - '[R]'
+  - "Q'yu bas\u0131l\u0131 tut + Sa\u011F t\u0131k: mod\xFCl\xFC s\xF6k\xFCp f\u0131rlat"
+  - "WASD: y\xFCr\xFC \xB7 Fare: ni\u015Fan al \xB7 Sol t\u0131k: ate\u015F et"
+  - "\xDCst\xFCne git, bekle: kabul \xB7 Sa\u011F t\u0131k: hay\u0131r de"
+  - "E: roket at \xB7 F: pala savur \xB7 Space: ka\xE7"
+  - "Ka\xE7\u0131\u015F [Space]"
+  - "Sa\u011F t\u0131k: s\xF6k\xFCp at"
+  - "\u2014"
+  - TAKILI
+  - Verdiklerin
+  - 'Pala [F]'
+  - "Hay\u0131r [Sa\u011F t\u0131k]"
+  - 'Roket [E]'
+  - Puan {0}
+  - "K\xFC\xE7\xFCk hay\u0131rlar: {0}"
+  - "Dayanabildi\u011Fin kadar dayan. Arkas\u0131 kesilmez."
+  - "Defne bu gece de her \u015Feye evet dedi. \"Bir \u015Fey olmaz.\""
+  - "Ald\u0131klar\u0131n: hi\xE7bir \u015Fey \xB7 Verdiklerin: hi\xE7bir \u015Fey. Kendin kald\u0131n."
+  - Verdiklerin
+  - Defne'den
+  - 'Puan: {0}'
+  - "K\xFC\xE7\xFCk hay\u0131rlar\u0131n: {0}"
+  - "Ald\u0131klar\u0131n"
+  - Geri
+  - "Eme\u011Fi Ge\xE7enler"
+  - "Hay\u0131r demeyi \xF6\u011Frenmelisin."
+  - "Enter: se\xE7 \xB7 Esc: geri"
+  - "\xC7\u0131k\u0131\u015F"
+  - Ayarlar
+  - "Ba\u015Fla"
+  - Dance with the Devil
+  - "Bir \u015Eey Olmaz"
+  - "T\xFCfekte +%20 kritik \u015Fans\u0131"
+  - "Ate\u015F ederken yava\u015Flars\u0131n (y\xFCr\xFCme 6 \u2192 5,1 m/sn)"
+  - "Keskin G\xF6z"
+  - "G\xF6z\xFCn\xFC k\u0131s, tam ortadan vur. Biraz a\u011F\u0131r y\xFCr\xFCrs\xFCn, bir \u015Fey olmaz."
+  - "Mermi hasar\u0131 \xD71,6"
+  - "G\xF6vden \xD71,5 b\xFCy\xFCr, daha kolay vurulursun"
+  - "Yo\u011Funluk"
+  - "Daha sert vur. Biraz irile\u015Firsin, kimse fark etmez."
+  - Mermiler duvardan bir kez seker
+  - "Seken mermi sana da \xE7arpar (yar\u0131m hasar), 2. duvarda s\xF6ner"
+  - "Yank\u0131"
+  - "Duvardan seker. Arada bir sana d\xF6ner. Bir \u015Fey olmaz."
+  - "T\xFCfek at\u0131\u015F h\u0131z\u0131 \xD71,4 (6 \u2192 8,4 at\u0131\u015F/sn)"
+  - "Mermiler ni\u015Fandan rastgele \xB16\xB0 sapar"
+  - "H\u0131z"
+  - "Daha h\u0131zl\u0131 s\u0131k. Nereye mi gider? A\u015Fa\u011F\u0131 yukar\u0131 oraya."
+  - "Mermi 2 d\xFC\u015Fman\u0131 daha deler (t\xFCfek)"
+  - "Her deli\u015Fte mermi %30 zay\u0131flar"
+  - Delici
+  - "Bir mermi, \xFC\xE7 d\xFC\u015Fman. Sondaki biraz g\u0131d\u0131klan\u0131r, o kadar."
+  - "Tek at\u0131\u015Fta 3 mermi (\xB112\xB0), hepsi tam hasar"
+  - "Her at\u0131\u015F seni ni\u015Fan\u0131n tersine iter"
+  - "\xDC\xE7l\xFC At\u0131\u015F"
+  - "Bir tetik, \xFC\xE7 mermi. Az\u0131c\u0131k teper, o kadar."
+  - "Ana men\xFC"
+  - 'Devam [Esc]'
+  - Mola
+  - Tam ekran
+  - Genel ses
+  - "M\xFCzik"
+  - "Kapal\u0131"
+  - "A\xE7\u0131k"
+  - Efektler
+  - "Ekran sars\u0131nt\u0131s\u0131"
+  - Ayarlar

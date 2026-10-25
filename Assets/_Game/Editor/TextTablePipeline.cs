@@ -271,21 +271,14 @@ namespace DanceWithTheDevil.Editor
     /// <summary>Re-imports the text table whenever Unity imports a changed <c>Yazilar.xlsx</c> (saved from Excel).</summary>
     public sealed class TextTablePostprocessor : AssetPostprocessor
     {
-        private static bool _queued;
-
         private static void OnPostprocessAllAssets(string[] imported, string[] deleted, string[] moved, string[] movedFrom)
         {
             foreach (string path in imported)
             {
                 if (!string.Equals(path, TextTablePipeline.XlsxPath, StringComparison.OrdinalIgnoreCase)) continue;
-                if (_queued) return;
-                _queued = true;
-                // Outside the import callback, so creating the table asset does not nest inside this import.
-                EditorApplication.delayCall += () =>
-                {
-                    _queued = false;
-                    TextTablePipeline.Import();
-                };
+                // Right here, not on EditorApplication.delayCall: that queue is not run while the editor sits in the
+                // background, and the table asset is a different path, so writing it cannot loop back to this file.
+                TextTablePipeline.Import();
                 return;
             }
         }

@@ -13,10 +13,18 @@ MonoBehaviour:
   m_Name: hold_launcher
   m_EditorClassIdentifier: Game.Runtime::DanceWithTheDevil.WeaponHoldProfile
   Fitted: 1
-  GripPosition: {x: -0.005999782, y: -0.23675507, z: 0.011091046}
-  GripRotation: {x: 2.971502, y: 35.991978, z: 56.143604}
+  GripPoint: {x: 0, y: -0.05, z: 0.235}
+  SupportPoint: {x: 0, y: 0.02, z: 0.36}
+  GripPosition: {x: -0.25126982, y: -0.23702179, z: 0.08430821}
+  GripRotation: {x: 2.2769716, y: 46.187653, z: 77.00559}
+  UseRightHandIK: 1
+  RightHandPosition: {x: 0.023215294, y: -0.09521043, z: 0.12520218}
+  RightHandRotation: {x: 348.7705, y: 266.47565, z: 284.591}
   UseLeftHandIK: 1
-  LeftHandPosition: {x: 0, y: -0.02, z: 0.2}
-  LeftHandRotation: {x: 0, y: 0, z: 90}
+  LeftHandPosition: {x: -0.04487562, y: -0.01999998, z: 0.32110786}
+  LeftHandRotation: {x: 273.38928, y: 119.826546, z: 104.24294}
   LeftHandWeight: 1
+  GripFingerCurl: 75
+  TriggerFingerCurl: 30
+  SupportFingerCurl: 35
   Corrections: []

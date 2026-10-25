@@ -15,13 +15,16 @@ MonoBehaviour:
   Fitted: 1
   GripPoint: {x: -0.015, y: -0.015, z: -0.06}
   SupportPoint: {x: -0.015, y: 0.075, z: 0.22}
-  GripPosition: {x: -0.007002557, y: -0.25454158, z: 0.21588546}
-  GripRotation: {x: 3.4912658, y: 36.023315, z: 55.94906}
+  GripPosition: {x: -0.0066328407, y: -0.26114094, z: 0.18168819}
+  GripRotation: {x: 3.5738914, y: 36.090195, z: 55.961834}
   UseRightHandIK: 1
-  RightHandPosition: {x: -0.0044715498, y: -0.060271144, z: -0.20411499}
-  RightHandRotation: {x: 348.7705, y: 266.47574, z: 284.59088}
+  RightHandPosition: {x: 0.010901737, y: -0.052888393, z: -0.17401403}
+  RightHandRotation: {x: 348.77048, y: 266.47574, z: 284.59085}
   UseLeftHandIK: 1
-  LeftHandPosition: {x: -0.0598757, y: 0.034999967, z: 0.18110773}
-  LeftHandRotation: {x: 273.38922, y: 119.82409, z: 104.245384}
+  LeftHandPosition: {x: -0.05987569, y: 0.034999967, z: 0.18110774}
+  LeftHandRotation: {x: 273.38922, y: 119.82324, z: 104.24628}
   LeftHandWeight: 1
+  GripFingerCurl: 75
+  TriggerFingerCurl: 30
+  SupportFingerCurl: 35
   Corrections: []

@@ -7,8 +7,9 @@ namespace DanceWithTheDevil
     /// <summary>
     /// How a weapon sits in a humanoid's hands, as data the team tunes by hand (see <see cref="WeaponHold"/>).
     /// The grip is relative to the right-hand IK goal of the playing animation (so every clip carries the weapon
-    /// along); the left hand is pulled by IK onto a point given relative to the weapon. Per-clip corrections are
-    /// added on top, blended by how much each clip plays. It is an asset, so changes made in Play mode are kept.
+    /// along); both hand bones are then put on poses given relative to the weapon (right on the trigger, left under
+    /// the handguard). Per-clip corrections are added on top, blended by how much each clip plays. It is an asset,
+    /// so changes made in Play mode are kept.
     /// </summary>
     [CreateAssetMenu(menuName = "Dance/Weapon Hold Profile", fileName = "hold_weapon")]
     public sealed class WeaponHoldProfile : ScriptableObject
@@ -22,7 +23,7 @@ namespace DanceWithTheDevil
             public Vector3 Position;
             [Tooltip("Extra grip rotation for this clip, degrees.")]
             public Vector3 Rotation;
-            [Tooltip("Left-hand IK weight for this clip (-1 = use the profile's weight).")]
+            [Tooltip("Left hand on the weapon for this clip (-1 = use the profile's weight).")]
             [Range(-1f, 1f)] public float LeftHandWeight;
         }
 
@@ -41,23 +42,31 @@ namespace DanceWithTheDevil
         [Tooltip("Weapon rotation relative to the right-hand IK goal, degrees. The weapon's +Z is the barrel.")]
         public Vector3 GripRotation = Vector3.zero;
 
-        [Header("Trigger hand (right, IK)")]
-        [Tooltip("Turn the right hand onto the pistol grip with IK (the weapon still follows the animated hand).")]
+        [Header("Trigger hand (right)")]
+        [Tooltip("Put the right hand on the pistol grip (the weapon still follows the animated hand).")]
         public bool UseRightHandIK = true;
-        [Tooltip("Right-hand IK point on the weapon (its local frame, metres): the wrist behind the pistol grip.")]
+        [Tooltip("Right hand bone (wrist) position on the weapon, in its local frame (metres): behind the pistol grip.")]
         public Vector3 RightHandPosition = new Vector3(0.02f, -0.05f, -0.12f);
-        [Tooltip("Right-hand IK rotation on the weapon (its local frame, degrees).")]
+        [Tooltip("Right hand bone rotation on the weapon, in its local frame (degrees).")]
         public Vector3 RightHandRotation = Vector3.zero;
 
-        [Header("Support hand (left, IK)")]
-        [Tooltip("Pull the left hand onto the weapon with IK.")]
+        [Header("Support hand (left)")]
+        [Tooltip("Put the left hand on the weapon.")]
         public bool UseLeftHandIK = true;
-        [Tooltip("Left-hand grip point on the weapon (its local frame, metres): the handguard of a rifle.")]
+        [Tooltip("Left hand bone (wrist) position on the weapon, in its local frame (metres): under the handguard of a rifle.")]
         public Vector3 LeftHandPosition = new Vector3(0f, -0.02f, 0.2f);
-        [Tooltip("Left-hand rotation on the weapon (its local frame, degrees).")]
+        [Tooltip("Left hand bone rotation on the weapon, in its local frame (degrees).")]
         public Vector3 LeftHandRotation = new Vector3(0f, 0f, 90f);
-        [Tooltip("Left-hand IK weight (0 = the animation's hand, 1 = on the weapon).")]
+        [Tooltip("Left hand blend (0 = the animation's hand, 1 = on the weapon).")]
         [Range(0f, 1f)] public float LeftHandWeight = 1f;
+
+        [Header("Fingers (degrees per joint, from the knuckle)")]
+        [Tooltip("How far the right middle, ring and little fingers close round the pistol grip.")]
+        [Range(0f, 110f)] public float GripFingerCurl = 75f;
+        [Tooltip("How far the right index finger bends onto the trigger.")]
+        [Range(0f, 110f)] public float TriggerFingerCurl = 30f;
+        [Tooltip("How far the left fingers close round the handguard.")]
+        [Range(0f, 110f)] public float SupportFingerCurl = 35f;
 
         [Header("Per-clip corrections")]
         [Tooltip("Added to the grip while a clip plays, weighted by that clip's blend weight.")]
