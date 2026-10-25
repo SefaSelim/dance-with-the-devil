@@ -13,10 +13,15 @@ MonoBehaviour:
   m_Name: hold_rifle
   m_EditorClassIdentifier: Game.Runtime::DanceWithTheDevil.WeaponHoldProfile
   Fitted: 1
-  GripPosition: {x: -0.005870847, y: -0.2381019, z: 0.006486354}
-  GripRotation: {x: 3.5944724, y: 36.095226, z: 55.95931}
+  GripPoint: {x: -0.015, y: -0.015, z: -0.06}
+  SupportPoint: {x: -0.015, y: 0.075, z: 0.22}
+  GripPosition: {x: -0.007002557, y: -0.25454158, z: 0.21588546}
+  GripRotation: {x: 3.4912658, y: 36.023315, z: 55.94906}
+  UseRightHandIK: 1
+  RightHandPosition: {x: -0.0044715498, y: -0.060271144, z: -0.20411499}
+  RightHandRotation: {x: 348.7705, y: 266.47574, z: 284.59088}
   UseLeftHandIK: 1
-  LeftHandPosition: {x: 0, y: -0.02, z: 0.2}
-  LeftHandRotation: {x: 0, y: 0, z: 90}
+  LeftHandPosition: {x: -0.0598757, y: 0.034999967, z: 0.18110773}
+  LeftHandRotation: {x: 273.38922, y: 119.82409, z: 104.245384}
   LeftHandWeight: 1
   Corrections: []

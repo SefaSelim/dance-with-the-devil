@@ -29,11 +29,25 @@ namespace DanceWithTheDevil
         [Tooltip("Set after the first automatic fit (WeaponHold). Clear it to fit again from the animation's hands.")]
         public bool Fitted;
 
+        [Header("Weapon points (used by the automatic fit)")]
+        [Tooltip("Where the right fist closes on the weapon, in its local frame (metres): the pistol grip.")]
+        public Vector3 GripPoint = new Vector3(-0.015f, -0.015f, -0.06f);
+        [Tooltip("Where the left fist closes on the weapon, in its local frame (metres): under the handguard.")]
+        public Vector3 SupportPoint = new Vector3(-0.015f, 0.075f, 0.22f);
+
         [Header("Grip (right hand)")]
         [Tooltip("Weapon position relative to the right-hand IK goal, metres.")]
         public Vector3 GripPosition = new Vector3(0f, -0.03f, 0f);
         [Tooltip("Weapon rotation relative to the right-hand IK goal, degrees. The weapon's +Z is the barrel.")]
         public Vector3 GripRotation = Vector3.zero;
+
+        [Header("Trigger hand (right, IK)")]
+        [Tooltip("Turn the right hand onto the pistol grip with IK (the weapon still follows the animated hand).")]
+        public bool UseRightHandIK = true;
+        [Tooltip("Right-hand IK point on the weapon (its local frame, metres): the wrist behind the pistol grip.")]
+        public Vector3 RightHandPosition = new Vector3(0.02f, -0.05f, -0.12f);
+        [Tooltip("Right-hand IK rotation on the weapon (its local frame, degrees).")]
+        public Vector3 RightHandRotation = Vector3.zero;
 
         [Header("Support hand (left, IK)")]
         [Tooltip("Pull the left hand onto the weapon with IK.")]

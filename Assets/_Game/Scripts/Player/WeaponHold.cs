@@ -6,13 +6,15 @@ namespace DanceWithTheDevil
     /// Places the held weapon of an imported humanoid from a <see cref="WeaponHoldProfile"/> every frame and pulls the
     /// left hand onto it with IK. Put it on the GameObject with the <see cref="Animator"/> (the "Body"); the base
     /// layer needs IK Pass on (Dance/Character/Build Defne sets it).
-    /// Frame order: the Animator plays the clips, <see cref="OnAnimatorIK"/> reads the right-hand goal of this frame and
-    /// sets the left-hand IK onto the weapon's support point, then <see cref="LateUpdate"/> puts the weapon socket at
-    /// goal × grip (before <see cref="CharacterAnimator"/> adds the recoil kick to the weapon inside the socket).
+    /// Frame order: the Animator plays the clips, <see cref="OnAnimatorIK"/> reads the right-hand goal of this frame, then
+    /// <see cref="LateUpdate"/> puts both hands on the weapon (a two-bone arm solve on the bones: right hand round the
+    /// pistol grip, left hand under the handguard) and the weapon socket at goal × grip (before
+    /// <see cref="CharacterAnimator"/> adds the recoil kick to the weapon inside the socket).
     /// Tuning: select the Body in Play mode; the inspector edits the active weapon's profile (kept after Play mode,
     /// it is an asset) and the Scene view shows move/rotate handles for the weapon and the left-hand point.
-    /// A profile that was never fitted fits itself on the first frame: barrel from the right hand toward the left hand,
-    /// support point where the left hand already is.
+    /// A profile that was never fitted (or "Refit from animation") fits itself on the first frames: barrel level along
+    /// the facing, pistol grip in the animated right fist, both hands then held on the weapon (right on the trigger,
+    /// left under the handguard).
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Animator))]
@@ -20,7 +22,15 @@ namespace DanceWithTheDevil
     {
         private const int MaxClips = 8;
         private const int FitAfterFrames = 5;
-        private const float DefaultSupportReach = 0.2f;
+        // Hand poses on the weapon, in its frame (+Z barrel, +Y up, +X right), that the fit puts the hands in:
+        // trigger hand along the barrel, tipped up a little, palm to the left against the pistol grip; support hand
+        // palm up under the handguard, fingers across to the right and forward.
+        private static readonly Vector3 TriggerHandDirection = new Vector3(0f, 0.35f, 1f);
+        private static readonly Vector3 TriggerPalm = Vector3.left;
+        private static readonly Vector3 SupportHandDirection = new Vector3(0.75f, 0f, 0.65f);
+        private static readonly Vector3 SupportPalm = Vector3.up;
+        // The support palm sits this far below the handguard's centre line.
+        private const float SupportPalmDrop = 0.04f;
 
         [Tooltip("Transform under the right hand that carries the weapons (\"WeaponSocket\").")]
         [SerializeField] private Transform _socket;
@@ -90,26 +100,17 @@ namespace DanceWithTheDevil
             {
                 _goalPosition = _animator.GetIKPosition(AvatarIKGoal.RightHand);
                 _goalRotation = _animator.GetIKRotation(AvatarIKGoal.RightHand);
-                _hasGoal = true;
+                    _hasGoal = true;
                 _ikFrames++;
             }
 
-            WeaponHoldProfile profile = ActiveProfile;
-            if (profile == null || _socket == null || !profile.Fitted) return; // unfitted: animation hands until LateUpdate fits it
-
-            if (layerIndex == 0) UpdateDominantClip();
-            GripFor(profile, out Vector3 gripPosition, out Quaternion gripRotation, out float leftWeight);
-            Vector3 weaponPosition = _goalPosition + _goalRotation * gripPosition;
-            Quaternion weaponRotation = _goalRotation * gripRotation;
-
-            float weight = profile.UseLeftHandIK ? leftWeight : 0f;
-            _animator.SetIKPositionWeight(AvatarIKGoal.LeftHand, weight);
-            _animator.SetIKRotationWeight(AvatarIKGoal.LeftHand, weight);
-            if (weight > 0f)
-            {
-                _animator.SetIKPosition(AvatarIKGoal.LeftHand, weaponPosition + weaponRotation * profile.LeftHandPosition);
-                _animator.SetIKRotation(AvatarIKGoal.LeftHand, weaponRotation * Quaternion.Euler(profile.LeftHandRotation));
-            }
+            if (layerIndex == 0 && ActiveProfile != null && ActiveProfile.Fitted) UpdateDominantClip();
+            // The hands are put on the weapon by HoldHand in LateUpdate (on the bones), not by the humanoid IK: on this
+            // retargeted rig the IK goals sit ~20 cm off the hand bones and do not follow them rigidly.
+            _animator.SetIKPositionWeight(AvatarIKGoal.RightHand, 0f);
+            _animator.SetIKRotationWeight(AvatarIKGoal.RightHand, 0f);
+            _animator.SetIKPositionWeight(AvatarIKGoal.LeftHand, 0f);
+            _animator.SetIKRotationWeight(AvatarIKGoal.LeftHand, 0f);
         }
 
         private void LateUpdate()
@@ -122,9 +123,57 @@ namespace DanceWithTheDevil
                 if (_ikFrames < FitAfterFrames) return;
                 FitProfile(profile);
             }
-            GripFor(profile, out Vector3 gripPosition, out Quaternion gripRotation, out _);
-            _socket.SetPositionAndRotation(_goalPosition + _goalRotation * gripPosition, _goalRotation * gripRotation);
+            GripFor(profile, out Vector3 gripPosition, out Quaternion gripRotation, out float leftWeight);
+            Vector3 weaponPosition = _goalPosition + _goalRotation * gripPosition;
+            Quaternion weaponRotation = _goalRotation * gripRotation;
+
+            // Hands first (the socket hangs under the right hand), then the weapon where the grip says.
+            if (profile.UseRightHandIK)
+                HoldHand(true, weaponPosition + weaponRotation * profile.RightHandPosition,
+                    weaponRotation * Quaternion.Euler(profile.RightHandRotation), 1f);
+            if (profile.UseLeftHandIK && leftWeight > 0f)
+                HoldHand(false, weaponPosition + weaponRotation * profile.LeftHandPosition,
+                    weaponRotation * Quaternion.Euler(profile.LeftHandRotation), leftWeight);
+            _socket.SetPositionAndRotation(weaponPosition, weaponRotation);
             KeepUniformScale();
+        }
+
+        /// <summary>
+        /// Puts a hand bone at a world pose (blended by <paramref name="weight"/> from the animated one) with a two-bone
+        /// arm solve: the elbow stays in the arm's animated bending plane, the upper arm and forearm keep their lengths,
+        /// the hand then takes the rotation. Fingers keep their animated curl.
+        /// </summary>
+        private void HoldHand(bool right, Vector3 position, Quaternion rotation, float weight)
+        {
+            Transform upper = _animator.GetBoneTransform(right ? HumanBodyBones.RightUpperArm : HumanBodyBones.LeftUpperArm);
+            Transform lower = _animator.GetBoneTransform(right ? HumanBodyBones.RightLowerArm : HumanBodyBones.LeftLowerArm);
+            Transform hand = _animator.GetBoneTransform(right ? HumanBodyBones.RightHand : HumanBodyBones.LeftHand);
+            if (upper == null || lower == null || hand == null) return;
+            weight = Mathf.Clamp01(weight);
+            Vector3 target = Vector3.Lerp(hand.position, position, weight);
+            Quaternion handRotation = Quaternion.Slerp(hand.rotation, rotation, weight);
+
+            Vector3 a = upper.position, b = lower.position, c = hand.position;
+            float upperLength = (b - a).magnitude, lowerLength = (c - b).magnitude;
+            if (upperLength < 1e-4f || lowerLength < 1e-4f) return;
+            float reach = Mathf.Clamp((target - a).magnitude, 0.01f, (upperLength + lowerLength) * 0.999f);
+
+            Vector3 bendAxis = Vector3.Cross(c - a, b - a);
+            if (bendAxis.sqrMagnitude < 1e-8f) bendAxis = Vector3.Cross(c - a, Vector3.down);
+            if (bendAxis.sqrMagnitude < 1e-8f) return;
+            bendAxis.Normalize();
+
+            // Interior angles now and wanted (law of cosines), applied about the bending plane's normal.
+            float shoulderNow = Vector3.Angle(c - a, b - a);
+            float elbowNow = Vector3.Angle(a - b, c - b);
+            float shoulderWanted = Mathf.Acos(Mathf.Clamp(
+                (lowerLength * lowerLength - upperLength * upperLength - reach * reach) / (-2f * upperLength * reach), -1f, 1f)) * Mathf.Rad2Deg;
+            float elbowWanted = Mathf.Acos(Mathf.Clamp(
+                (reach * reach - upperLength * upperLength - lowerLength * lowerLength) / (-2f * upperLength * lowerLength), -1f, 1f)) * Mathf.Rad2Deg;
+            upper.rotation = Quaternion.AngleAxis(shoulderWanted - shoulderNow, bendAxis) * upper.rotation;
+            lower.rotation = Quaternion.AngleAxis(elbowWanted - elbowNow, bendAxis) * lower.rotation;
+            upper.rotation = Quaternion.FromToRotation(hand.position - a, target - a) * upper.rotation;
+            hand.rotation = handRotation;
         }
 
         /// <summary>
@@ -195,28 +244,119 @@ namespace DanceWithTheDevil
 
         /// <summary>
         /// First fit of a fresh profile: barrel level along the body's facing (the body faces the aim, so shots and
-        /// barrel agree), grip in the right palm, support point on the handguard <see cref="DefaultSupportReach"/>
-        /// metres ahead of the grip, where the left hand is pulled by IK.
+        /// barrel agree) with the weapon's <see cref="WeaponHoldProfile.GripPoint"/> (pistol grip) in the animated right
+        /// fist; both hands then go onto the weapon (<see cref="HandPoseFor"/>), the right one round the pistol grip
+        /// (on the trigger), the left one palm up under the handguard (<see cref="WeaponHoldProfile.SupportPoint"/>). The animation's own
+        /// left hand is not used: the Basic Shooter clips stand bladed (chest ~45° right) with the left hand low at the
+        /// side, which would point the barrel down and sideways.
         /// </summary>
         private void FitProfile(WeaponHoldProfile profile)
         {
-            Transform right = _animator.GetBoneTransform(HumanBodyBones.RightHand);
-            if (right == null) return;
+            if (!FistCentre(true, out Vector3 rightFist)) return;
             Vector3 forward = transform.forward;
             forward.y = 0f;
             if (forward.sqrMagnitude < 1e-4f) return;
 
             Quaternion weaponRotation = Quaternion.LookRotation(forward.normalized, Vector3.up);
-            Vector3 weaponPosition = right.position + Vector3.down * 0.03f;
+            Vector3 weaponPosition = rightFist - weaponRotation * profile.GripPoint;
             Quaternion inverseGoal = Quaternion.Inverse(_goalRotation);
             profile.GripPosition = inverseGoal * (weaponPosition - _goalPosition);
             profile.GripRotation = (inverseGoal * weaponRotation).eulerAngles;
-            profile.LeftHandPosition = new Vector3(0f, -0.02f, DefaultSupportReach);
-            profile.LeftHandRotation = new Vector3(0f, 0f, 90f); // palm up under the handguard
+
+            Quaternion inverseWeapon = Quaternion.Inverse(weaponRotation);
+            if (HandPoseFor(true, weaponPosition, weaponRotation, profile.GripPoint, TriggerHandDirection, TriggerPalm,
+                    out Vector3 handPosition, out Quaternion handRotation))
+            {
+                profile.RightHandPosition = inverseWeapon * (handPosition - weaponPosition);
+                profile.RightHandRotation = (inverseWeapon * handRotation).eulerAngles;
+            }
+            if (HandPoseFor(false, weaponPosition, weaponRotation, profile.SupportPoint + Vector3.down * SupportPalmDrop,
+                    SupportHandDirection, SupportPalm, out handPosition, out handRotation))
+            {
+                profile.LeftHandPosition = inverseWeapon * (handPosition - weaponPosition);
+                profile.LeftHandRotation = (inverseWeapon * handRotation).eulerAngles;
+            }
+            profile.Corrections.Clear(); // they were relative to the old grip
             profile.Fitted = true;
 #if UNITY_EDITOR
             UnityEditor.EditorUtility.SetDirty(profile);
 #endif
+        }
+
+        /// <summary>
+        /// The hand bone pose that puts a hand on the weapon, from this frame's animated hand: the bone is turned so the
+        /// hand direction and palm become <paramref name="direction"/> / <paramref name="palm"/> (weapon frame), and
+        /// placed so the fist (right) or palm (left) lands on <paramref name="point"/>.
+        /// </summary>
+        private bool HandPoseFor(bool right, Vector3 weaponPosition, Quaternion weaponRotation, Vector3 point,
+            Vector3 direction, Vector3 palm, out Vector3 handPosition, out Quaternion handRotation)
+        {
+            handPosition = Vector3.zero;
+            handRotation = Quaternion.identity;
+            Transform hand = _animator.GetBoneTransform(right ? HumanBodyBones.RightHand : HumanBodyBones.LeftHand);
+            if (hand == null || !HandAxes(right, Quaternion.identity, out Vector3 handDirection, out Vector3 handPalm)) return false;
+            Vector3 grip;
+            if (right)
+            {
+                if (!FistCentre(true, out grip)) return false;
+            }
+            else
+            {
+                Transform knuckle = _animator.GetBoneTransform(HumanBodyBones.LeftMiddleProximal);
+                if (knuckle == null) return false;
+                grip = (hand.position + knuckle.position) * 0.5f; // palm centre
+            }
+            Vector3 gripInBone = Quaternion.Inverse(hand.rotation) * (grip - hand.position);
+
+            Quaternion now = Quaternion.LookRotation(handDirection, handPalm);
+            Quaternion wanted = weaponRotation * Quaternion.LookRotation(direction.normalized, palm);
+            handRotation = wanted * Quaternion.Inverse(now) * hand.rotation;
+            handPosition = weaponPosition + weaponRotation * point - handRotation * gripInBone;
+            return true;
+        }
+
+        /// <summary>
+        /// A hand's direction (wrist to middle knuckle) and palm normal in the weapon's frame. The palm comes from the
+        /// index and little knuckles, its side set by the way the middle finger curls.
+        /// </summary>
+        private bool HandAxes(bool right, Quaternion inverseWeapon, out Vector3 direction, out Vector3 palm)
+        {
+            direction = palm = Vector3.zero;
+            Transform hand = _animator.GetBoneTransform(right ? HumanBodyBones.RightHand : HumanBodyBones.LeftHand);
+            Transform middle = _animator.GetBoneTransform(right ? HumanBodyBones.RightMiddleProximal : HumanBodyBones.LeftMiddleProximal);
+            Transform index = _animator.GetBoneTransform(right ? HumanBodyBones.RightIndexProximal : HumanBodyBones.LeftIndexProximal);
+            Transform little = _animator.GetBoneTransform(right ? HumanBodyBones.RightLittleProximal : HumanBodyBones.LeftLittleProximal);
+            if (hand == null || middle == null || index == null || little == null) return false;
+            direction = inverseWeapon * (middle.position - hand.position);
+            Vector3 across = inverseWeapon * (index.position - little.position);
+            palm = Vector3.Cross(direction, across);
+            // The knuckle order is not mirrored the same way on every rig: the fingers curl toward the palm, so the
+            // middle finger's bend settles the side.
+            Transform tip = _animator.GetBoneTransform(right ? HumanBodyBones.RightMiddleDistal : HumanBodyBones.LeftMiddleDistal);
+            if (tip != null)
+            {
+                Vector3 curl = Vector3.ProjectOnPlane(inverseWeapon * (tip.position - middle.position), direction);
+                if (curl.sqrMagnitude > 1e-6f && Vector3.Dot(palm, curl) < 0f) palm = -palm;
+            }
+            if (direction.sqrMagnitude < 1e-8f || palm.sqrMagnitude < 1e-8f) return false;
+            direction.Normalize();
+            palm.Normalize();
+            return true;
+        }
+
+        /// <summary>Centre of a closed fist: the mean of the middle finger's three joints, else 8 cm past the wrist.</summary>
+        private bool FistCentre(bool right, out Vector3 centre)
+        {
+            Transform hand = _animator.GetBoneTransform(right ? HumanBodyBones.RightHand : HumanBodyBones.LeftHand);
+            Transform a = _animator.GetBoneTransform(right ? HumanBodyBones.RightMiddleProximal : HumanBodyBones.LeftMiddleProximal);
+            Transform b = _animator.GetBoneTransform(right ? HumanBodyBones.RightMiddleIntermediate : HumanBodyBones.LeftMiddleIntermediate);
+            Transform c = _animator.GetBoneTransform(right ? HumanBodyBones.RightMiddleDistal : HumanBodyBones.LeftMiddleDistal);
+            centre = Vector3.zero;
+            if (hand == null) return false;
+            if (a != null && b != null && c != null) centre = (a.position + b.position + c.position) / 3f;
+            else if (a != null) centre = hand.position + (a.position - hand.position) * 1.3f;
+            else centre = hand.position + hand.up * 0.08f;
+            return true;
         }
 
         // ------------------------------------------------------------------ editor tuning
