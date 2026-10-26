@@ -461,3 +461,32 @@ Every change to this project goes here — from people and from AI tools. Git sh
   - In the Editor through MCP: EditMode 67/67, PlayMode 55/55, no crash.
   - Captures checked from the side and from the game camera: the tracer runs level from the muzzle flash.
   - Impact effects still appear at 1 m, ~35 cm under the drawn tracer; hard to see from the game camera.
+
+### 2026-10-27 — SefaSelim (Claude Code) — branch juice
+- Changed: the run is fitted onto the Synty graveyard map SefaSelim placed in Arena.unity (their placement, with the old block arena and gothic dressing removed and a whole-map NavMesh bake, is committed here with this work).
+  - Toolkit: `team-level` skill at team.size individual, so only the `level-designer` agent ran; the others are folded into it. It wrote the plan `production/levels/graveyard-arena/layout.md` from a survey of the map (2 m height grid + every prop with position and colliders). The Unity work was done in the main session.
+  - New `Editor/GraveyardArenaSetup.cs`, menu Dance/Arena/Fit Graveyard Map. It finds objects by name and position, saves the scene, and logs every change. Run once:
+    - Open space: 62 objects removed. The middle crypt group (SM_Prop_Crypt_01 (1) with glass, door, Base_Floor_Combined_01 (2) and its sarcophagus; deleted rather than moved, because both suggested spots hid Defne from the camera or blocked the SE lane) and every Props object inside a 5.5 × 4.5 m ellipse round the start.
+    - Gaps cut in the fence: N, S, SE, E (gate + Fence_Cemetary_01 (22)), wide W; plus the statues, stones, ruins, tree and log in those lanes.
+    - 95 colliders removed from clutter (Corpses, Characters, Lights, Miscellaneous, Foliage, Cover, Tomb_Stone_05/06 slabs, Tree_Trunk_01, candles, books, bones…). The Ground floor patches keep theirs: they are the floor, not grass.
+    - Entrances: 8 instead of 4: Spawn_North/NorthEast/East/SouthEast/South/West/WestNorth/NorthWest under SpawnPoints, each with an Entrance_* floor plate and a Warning_* (cloned from the North ones), wired into WaveDirector `_spawnPoints`/`_warnings` (4 → 8).
+    - New root "PlayBounds": 11 invisible BoxColliders (1 × 3 m) 0.5 m outside the plateau outline, so Defne cannot walk off the cliff.
+    - PixelCameraRig `_boundsMin` (-12.5, -11.5) → (-8, -6), `_boundsMax` (12.5, 11.5) → (8, 6).
+    - NavMeshSurface on Arena: collect Children → Volume, centre (-0.5, 1, -0.8), size (33, 4, 28), Physics Colliders, min region area 2. Re-baked to `Scenes/Arena/NavMesh-Arena.asset`: 78,852 → 737 vertices, 5.3 MB → 34 KB; only the plateau, no ocean, cliffs, stairs or background. The old `Scenes/Arena_NavMesh.asset` is gone (deleted by SefaSelim's bake). Project agent settings unchanged.
+  - Then, through MCP:
+    - Each spawn was snapped to the nearest NavMesh point ≥ 10.5 m out with a complete path to the start. West moved 1 m off a rock (Rock_02 (7), top 1.03 m) to (-14.2, 0.59, -5.8); NorthWest moved 2.7 m to (-5.5, 0.25, 11.17), because its first spot was an island behind the NW crypt.
+    - Floor plates and warnings were seated on the real floor by raycast (they sat up to 0.4 m high on the NavMesh height).
+  - Checks: all 8 spawns are on the NavMesh with complete paths to the start (11–19 m), and the start is on the NavMesh. 2 of 16 points on the centre ellipse touch the kept rim tombs at (±5.1, ±1.7).
+  - New explicit capture test `MapWaveCaptureTests` (RunBot plays 30 s with waves; a frame every 2 s).
+  - Docs: MAIN_GDD §9 (new map, 8 entrances, playable plateau, view of the sea) and K-14 text, change log.
+  - Scene: `Scenes/Arena.unity` (above). Prefab/ProjectSettings: none.
+- Why: SefaSelim: "Şu an hazır bir map attım o mape direkt olarak uyarlamanı istiyorum … gereksiz şeylerin çimen vs gibi colliderlarını kaldırabilirsin … dış tarafta görünmeyen kısımları bake lemene gerek yok … girişleri rastgele kenarlara koy … biraz boş alan aç".
+- Status: committed (Arena on the graveyard map)
+- Notes / risks:
+  - In the Editor through MCP: EditMode 67/67, PlayMode 55/55, no crash.
+  - Captures: top view after the changes; game view with waves, enemies coming in from the edges and RunBot held by the edge walls.
+  - Do NOT run Dance/Placeholders/Build Arena Scene any more: it rebuilds Arena.unity from code and would wipe the map.
+  - The map's own fog makes Defne fainter near the edges.
+  - The 1.9 m fence on the camera side (south, west) can hide Defne when she stands right behind it.
+  - Not playtested by a human.
+  - Not changed: `PC_RPAsset`, URP global settings, `Yazilar.xlsx`, `GameTextTable.asset` and `Build Profiles` (SefaSelim's, still uncommitted).

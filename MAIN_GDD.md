@@ -1,6 +1,6 @@
 # MAIN GDD — Dance with the Devil (Bir Şey Olmaz)
 
-**Son güncelleme: 2026-10-27 02:26 (UTC+3)**
+**Son güncelleme: 2026-10-27 02:54 (UTC+3)**
 
 > **Bu dosya projenin tek ve yaşayan Game Design Document'ıdır.** Sürüm numarası yoktur (GDD2, GDD3…
 > diye gitmez). Yeni bir mekanik eklendiğinde, var olan bir mekanik değiştiğinde ya da bir tasarım kararı
@@ -258,41 +258,31 @@ uygulanır, şarj sayısını değiştirmez.
 **Oyuncu HAYIR dediğinde:** 1. ölümde "Daha ilk seferden hayır mı? Amma sıkıcısın." · 2–5. ölümde
 "Şimdi mi hayır diyorsun? Aldıklarım bende kalıyor ama."
 
-## 9. Arena — 🟡 (oynanış blokları aynı; görünüş karanlık gotik harabe)
+## 9. Arena — 🟡 (uçurumdaki mezarlık haritası, 8 giriş; oyun testi bekliyor)
 
 İlk GDD §9 düzeni: ~32 × 28 m dikdörtgen platform, kesintisiz dış sekme duvarı (kırılmaz), ~12 × 10 m açık merkez,
 kuzeybatı ve güneydoğuda birbirini karşılayan iki L duvar, en dar geçit 4 m, dört kenarda işaretli giriş. Kamera
 yakınındaki duvarlar karakteri gizlediğinde saydamlaşır. İç L duvarlar ve dekorlar kırılabilir olarak planlandı;
 ne kadarının kırılacağı Faz 4'te dengelenir (❓ A-12: Yankı'nın sekme yüzeyleriyle çakışma).
 
-**Kamera (K-14):** Defne'yi takip eder, nişana doğru en fazla 2 m öne bakar, arena dışını göstermez; metre başına ~20 piksel.
+**Kamera (K-14):** Defne'yi takip eder, nişana doğru en fazla 2 m öne bakar (oyun başında bu pay ilk saniyede yavaşça gelir); metre başına ~20 piksel. Mezarlık haritasında arena dışındaki deniz ve uçurumlar görünür (2026-10-27).
 
-**Kurulan yerleşim (yer tutucu):** oynanabilir alan 32 × 28 m; kuzey ve doğu duvarları 2 m, kameraya yakın güney ve batı
-duvarları görüşü kapatmasın diye 1 m yüksekliktedir ama 2 m gibi seker. L bloklar 1,5 m yüksek, 3 m kalındır. Çevre
-halkası 5–6 m, iki L arası en az 11,7 m; merkezde kuzey–güney ve doğu–batı yönünde 4 m'lik iki açık görüş koridoru
-vardır (yer tutucu karolar, kasalar ve duvar çizgileri aşağıdaki gotik görünüşle değişti). Açık merkez ~14 × 12 m çıktı (ilk GDD ~12 × 10 m), halkayı ≥5 m ve 6 m diriliş şokuna yer bırakmak için.
-Dört giriş kenarların ortasında, içe bakan şeritli zemin plakalarıdır; doğuş noktaları oyuncu başlangıcından 12–14 m uzaktadır.
-
-**Görünüş: "kutsallığı bozulmuş nef" (kullanıcı isteği 2026-10-24, yalnız görsel):** arena, mezarlığa dönmüş yıkık bir
-katedral avlusudur. Oynanış yerleşimi, çarpışmalar, sekme ve yol bulma değişmedi; dekorun hiçbirinin çarpışması yoktur.
-- Kuzey ve doğu duvarları 3 m'lik taş duvarlar, sivri kemerli vitray pencereler ve sütunlarla kameranın baktığı yüksek fon
-  olur; kameraya yakın güney ve batı kenarları 1 m'lik alçak taş duvar, yarım sütun ve demir mezarlık parmaklığıdır
-  (Defne duvarın dibinde dururken bile gövdesini gizlemez).
-- Girişler kapalıdır (dış duvar her yerde kesintisiz seker): kuzey ve doğuda payandalı taş sütunlar arasında, üstünde ateş
-  kaseleri yanan kapalı demir mezarlık kapısı; güney ve batıda sütun başında fenerler ve alçak demir parmaklık. Dışarıda her
-  kapıya taş döşeli kısa bir yol gelir. Düşmanlar kapının hemen önündeki işaretli plakada belirir; her girişte sıcak, soluk
-  kehribar bir ışık havuzu düşmanın geldiği yeri gösterir.
-- Oynanabilir alanda görünen hiçbir taş (sütun, payanda, köşe sütunu) yoktur; duvar içi köşelerde yalnız üstünden
-  geçilebilecek alçak dekor (yassı mezar taşları, kemik ve kafatası yığınları) durur.
-- L bloklar yarım taş duvarlarla kaplı, üstleri taş döşemelidir. Her çeyrekte bir işaret: kuzeybatı bloğunda gargoyl
-  (soğuk mavi ışık), kuzeydoğu köşesinde sivri kule ve duvarın ardında bir türbe (leylak ışık), güneydoğu bloğunda yüzü
-  merkeze dönük heykel ve pentagramlı sunak (kehribar ışık), güneybatı köşesinde alçak, yanan bir kemik-moloz yığını.
-  Blok üstlerinde mumlar, kafatası yığınları, mezar taşları ve açık bir kitap vardır.
-- Zemin çatlak taş karolardır; halkada ve köşelerde aşınma ve yosun lekeleri, merkezde, koridorlarda ve giriş şeritlerinde
-  hiçbir şey yoktur. Duvarların ardında toprak, kayalık, ölü ağaçlar, türbe ve yarasalar görünür.
-- Işık: soğuk mavi ay ışığı ve koyu mavi ortam; 12 nokta ışık (4 giriş, 4 işaret, 3 pencere, 1 soluk merkez dolgusu).
-  Merkez en loş yerdir; karakterler sahnenin en doygun şeyleri kalır. Kırmızı ve turuncu düşmanlara, uyarı plakalarına ve
-  Şeytan'a ayrılmıştır (tek istisna sunaktaki küçük pentagram).
+**Harita: uçurumdaki mezarlık (kullanıcı kararı 2026-10-27):** arena, ekibin seçtiği hazır Synty haritasıdır: deniz
+üstünde yükselen bir kayalık adanın tepesinde, alçak taş çitle çevrili bir mezarlık. Eski blok arena ve gotik avlu kalktı.
+- **Oynanabilir alan:** adanın düzlüğü, ~30 × 25 m (x −16…+15, z −13,5…+11,8). Kenarında görünmez duvarlar vardır, Defne
+  uçurumdan düşemez. Dışarıda deniz, uçurumlar ve uzak kaya adaları görünür (bu harita bilerek manzara gösterir).
+- **Çit ve siperler:** ~23 × 18 m'lik mezarlık çiti (1,9 m, sütunlar 2,4 m) iç halka olarak durur ve mermiyi keser; kuzeyde,
+  güneyde, güneydoğuda, doğuda (eski kapı kaldırıldı) ve batıda geniş bir yıkıkta açıklıkları vardır. Çitin dışındaki
+  çimenli halka da oynanabilir. İki büyük türbe (kuzeybatı, kuzeydoğu), kuyu, ölü ağaçlar ve kenardaki büyük mezarlar
+  siper ve yön işaretidir.
+- **Açık merkez:** Defne'nin başlangıcı (orta) çevresinde ~11 × 9 m'lik boş bir alan açıldı; ortadaki türbe ve aradaki
+  mezar taşları, cesetler, mumlar kaldırıldı. Girişlerden merkeze ~3,6 m'lik yollar açıktır.
+- **Girişler:** sekiz giriş, adanın kenarına dağılmış (K, KD, D, GD, G, iki B, KB), hepsi başlangıçtan 11–15 m uzakta;
+  her birinde içe bakan şeritli zemin plakası ve doğuştan önce yanan uyarı vardır. Düşmanlar her birinden merkeze yürüyerek
+  ulaşır (yol bulma yalnız adanın düzlüğünde; deniz, uçurum ve merdivenler dışarıda).
+- Küçük dekorun (cesetler, mumlar, mangallar, yassı mezar taşları, kütükler, bitkiler) çarpışması yoktur; büyük mezarlar,
+  türbeler, çit, ağaç gövdeleri ve kayalar engeldir. Kamera, Defne'yi takip ederken odağını adanın ortasında tutar
+  (merkezden en çok ±8 m doğu–batı, ±6 m kuzey–güney).
 
 ## 10. Dalgalar ve zorluk — 🟡 (dalga yöneticisi çalışıyor; mermi cehennemi zorluğu K-21 uygulandı; ölüm takvimi henüz dengelenmedi)
 
@@ -622,3 +612,4 @@ seçenek seçerse değiştirilir:
 - 2026-10-25 15:44 — SefaSelim (Claude Code) — K-23: üç modül yuvası, yuvalar doluyken de teklif gelir ("DOLU", birini sökünce alınır), Q çemberinde modül simgeleri, Üçlü Atış'a yeni simge (§7, §12, §15); oyun müziği "Tense Conversational Pulse", Sözleşme 2 müziği boğuklaştırır (K-8; §8, §13, §15).
 - 2026-10-27 02:15 — SefaSelim (Claude Code) — Tüfek omuzda; mermi ve namlu ateşi tüfeğin ucundan çıkar, mermi ilk 2,5 m'de 1 m vuruş yüksekliğine iner (§13).
 - 2026-10-27 02:26 — SefaSelim (Claude Code) — Mermi izi eğimli inmek yerine namlu hizasında dümdüz gider; vuruş yüksekliği 1 m kalır (§13).
+- 2026-10-27 02:54 — SefaSelim (Claude Code) — Arena, uçurumdaki mezarlık haritasına taşındı: ~30 × 25 m düzlük, çit iç halka ve açıklıklar, açılmış merkez, sekiz kenar girişi, deniz ve uçurum görünür (§9, K-14).
