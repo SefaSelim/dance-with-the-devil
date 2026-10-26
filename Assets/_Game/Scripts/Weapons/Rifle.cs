@@ -39,8 +39,8 @@ namespace DanceWithTheDevil
         [Header("Aim (GDD §4)")]
         [Tooltip("With an owner, bullets leave at this height above the owner's feet (GDD: muzzle height 1.0 m); the gun model only sets where they start sideways. 0 = the muzzle's own height.")]
         [SerializeField, Min(0f)] private float _shotHeight = 1f;
-        [Tooltip("Bullets leave at the gun's own muzzle height and ease down to Shot Height over this many metres (0 = start at Shot Height).")]
-        [SerializeField, Min(0f)] private float _muzzleSettleDistance = 2.5f;
+        [Tooltip("With Defne's gun shown, bullets are drawn at the muzzle's height (hits stay at Shot Height) and stay unseen for this many metres inside the muzzle flash.")]
+        [SerializeField, Min(0f)] private float _muzzleHiddenDistance = 0.2f;
         [Tooltip("If the aim point is closer than this to the muzzle (flat metres), shoot along the body aim direction instead.")]
         [SerializeField, Min(0f)] private float _minConvergeDistance = 1f;
         [Tooltip("If the muzzle-to-aim direction differs from the body aim direction by more than this (degrees), shoot along the body aim direction.")]
@@ -344,15 +344,16 @@ namespace DanceWithTheDevil
             bool isPlayer = _owner != null;
             bool echo = _echoToken != null;
 
-            // Seen from the shouldered rifle: the bullet leaves the real muzzle and eases down to the gameplay height
-            // (origin, _shotHeight) within _muzzleSettleDistance, so the tracer starts at the barrel, not under it.
+            // The bullet flies, hits and bounces at the gameplay height (_shotHeight), under the shouldered rifle: its
+            // visual and tracer are drawn lifted to the muzzle, so it leaves the barrel level; the first
+            // _muzzleHiddenDistance stays unseen inside the muzzle flash.
             Transform gun = _animator != null ? _animator.Muzzle : null;
-            bool fromGun = gun != null && gun.gameObject.activeInHierarchy && _muzzleSettleDistance > 0f;
+            bool fromGun = gun != null && gun.gameObject.activeInHierarchy;
             var launch = new ProjectileLaunch
             {
-                Origin = fromGun ? new Vector3(origin.x, gun.position.y, origin.z) : origin,
-                SettleHeight = origin.y,
-                SettleDistance = fromGun ? _muzzleSettleDistance : 0f,
+                Origin = origin,
+                HiddenDistance = fromGun ? _muzzleHiddenDistance : 0f,
+                VisualLift = fromGun ? gun.position.y - origin.y : 0f,
                 Direction = Stray(direction),
                 Speed = _projectileSpeed,
                 MaxRange = _range,
@@ -397,7 +398,7 @@ namespace DanceWithTheDevil
             Fired?.Invoke(this, _tripleShot);
             // The flash sits on the gun's real tip; the bullet keeps the gameplay height (_shotHeight, GDD §4), which
             // is lower than the shouldered rifle, so the flash used to pop out under the barrel.
-            Vector3 flashAt = gun != null && gun.gameObject.activeInHierarchy ? gun.position : origin;
+            Vector3 flashAt = fromGun ? gun.position : origin;
             ImpactBus.Raise(new ImpactEvent
             {
                 kind = ImpactKind.MuzzleFire,

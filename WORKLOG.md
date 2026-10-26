@@ -445,3 +445,19 @@ Every change to this project goes here — from people and from AI tools. Git sh
   - In the Editor through MCP: EditMode 67/67, PlayMode 55/55 (+ explicit captures), no crash.
   - Captures checked: flash and tracer at the barrel tip (side view), Devil card text ending above the buttons, start frames panning gently instead of jumping.
   - A bullet fired point-blank at a Runner is still above 1.0 m for its first metres (1.13 m at 1 m out), inside the Runner's collider.
+
+### 2026-10-27 — SefaSelim (Claude Code) — branch juice
+- Changed: the rifle tracer leaves the barrel level instead of easing down; bullets still fly and hit at the gameplay height (SefaSelim's request: "silahın ucundan çıkmış gibi yapıp ama normalde olması gerektiği yerde spawnla").
+  - `Scripts/Weapons/Projectile.cs`:
+    - the previous commit's `SettleHeight`/`SettleDistance` (the sloped bullet) are removed;
+    - new `ProjectileLaunch.HiddenDistance`: the visual and trails stay off for the first metres; only renderers that were on are hidden, so a thrown module keeps its pool cube off;
+    - new `ProjectileLaunch.VisualLift`: the visual is drawn this far above the projectile. The trails move once per pooled projectile under a "LiftedTrails" child raised by the lift: a trail on the root is copied there and switched off. The projectile's own position, sweeps, hits and bounces are unchanged.
+  - `Scripts/Weapons/Rifle.cs`: with Defne's gun shown, `VisualLift` = muzzle height − bullet origin height (~0.35 m) and `HiddenDistance` = new `_muzzleHiddenDistance` 0.2 m (inside the flash); `_muzzleSettleDistance` removed.
+  - `Tests/PlayMode/FireCaptureTests.cs`: also saves game-camera frames.
+  - Docs: MAIN_GDD §13 Mermiler + change log.
+  - No scene, prefab or ProjectSettings change.
+- Status: committed (Tracer drawn at the muzzle, hits stay at 1 m)
+- Notes / risks:
+  - In the Editor through MCP: EditMode 67/67, PlayMode 55/55, no crash.
+  - Captures checked from the side and from the game camera: the tracer runs level from the muzzle flash.
+  - Impact effects still appear at 1 m, ~35 cm under the drawn tracer; hard to see from the game camera.

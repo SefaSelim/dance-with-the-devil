@@ -21,11 +21,17 @@ namespace DanceWithTheDevil
     {
         public Vector3 Origin;
         /// <summary>
-        /// With <see cref="SettleDistance"/> above 0: the projectile leaves at <see cref="Origin"/>'s height (the gun's
-        /// muzzle) and eases to this height over the first <see cref="SettleDistance"/> metres (the gameplay height).
+        /// Metres flown unseen (no visual, no trail) before the projectile shows. The rifle uses it so the bullet,
+        /// which flies at the gameplay height under the shouldered gun, first appears ahead of the muzzle flash and
+        /// reads as leaving the barrel. 0 = visible from the start.
         /// </summary>
-        public float SettleHeight;
-        public float SettleDistance;
+        public float HiddenDistance;
+        /// <summary>
+        /// Metres the visual and the trail are drawn above the projectile (which flies, hits and bounces at its own
+        /// height). The rifle lifts its bullets to the shouldered gun's muzzle, so the tracer leaves the barrel level
+        /// while the hits stay at the gameplay height.
+        /// </summary>
+        public float VisualLift;
         public Vector3 Direction;
         public float Speed;
         public float MaxRange;
@@ -119,6 +125,10 @@ namespace DanceWithTheDevil
         [SerializeField] private bool _stretchVisual = true;
 
         private TrailRenderer[] _trails;
+        private readonly System.Collections.Generic.List<Renderer> _hiddenRenderers =
+            new System.Collections.Generic.List<Renderer>(4);
+        private bool _hidden;
+        private Transform _liftedTrails;
 
         private readonly RaycastHit[] _hits = new RaycastHit[MaxHits];
         private readonly List<IDamageable> _alreadyHit = new List<IDamageable>(4);
@@ -131,8 +141,6 @@ namespace DanceWithTheDevil
         private ProjectileLaunch _launch;
         private Vector3 _direction;
         private float _travelled;
-        private float _settleFromY;
-        private bool _settling;
         private float _rangeLimit;
         private int _pierceLeft;
         private float _pierceDamageScale = 1f;
@@ -185,8 +193,6 @@ namespace DanceWithTheDevil
             _lastBounceCollider = null;
             _alreadyHit.Clear();
             _active = true;
-            _settleFromY = launch.Origin.y;
-            _settling = launch.SettleDistance > 0f && !Mathf.Approximately(launch.Origin.y, launch.SettleHeight);
             ClearTint();
 
             transform.SetPositionAndRotation(launch.Origin, Quaternion.LookRotation(_direction, Vector3.up));
@@ -194,7 +200,86 @@ namespace DanceWithTheDevil
 
             // A pooled projectile keeps its old trail points; without a clear the trail streaks from where it died.
             if (_trails == null) _trails = GetComponentsInChildren<TrailRenderer>(true);
+            if (launch.VisualLift != 0f && _liftedTrails == null) LiftTrails();
+            if (_liftedTrails != null) _liftedTrails.localPosition = new Vector3(0f, launch.VisualLift, 0f);
             for (int i = 0; i < _trails.Length; i++) _trails[i].Clear();
+            if (_hidden) SetHidden(false);
+            if (launch.HiddenDistance > 0f) SetHidden(true);
+        }
+
+        /// <summary>
+        /// Moves the trails under a "LiftedTrails" child that <see cref="ProjectileLaunch.VisualLift"/> raises: child
+        /// trails are re-parented, a trail on this object itself is copied onto a new child and switched off (a
+        /// component cannot change its object). Done once per pooled projectile.
+        /// </summary>
+        private void LiftTrails()
+        {
+            _liftedTrails = new GameObject("LiftedTrails").transform;
+            _liftedTrails.SetParent(transform, false);
+            for (int i = 0; i < _trails.Length; i++)
+            {
+                TrailRenderer source = _trails[i];
+                if (source.transform != transform)
+                {
+                    source.transform.SetParent(_liftedTrails, false);
+                    continue;
+                }
+                var copy = new GameObject("Trail").AddComponent<TrailRenderer>();
+                copy.transform.SetParent(_liftedTrails, false);
+                copy.time = source.time;
+                copy.minVertexDistance = source.minVertexDistance;
+                copy.widthCurve = source.widthCurve;
+                copy.widthMultiplier = source.widthMultiplier;
+                copy.colorGradient = source.colorGradient;
+                copy.sharedMaterials = source.sharedMaterials;
+                copy.numCornerVertices = source.numCornerVertices;
+                copy.numCapVertices = source.numCapVertices;
+                copy.alignment = source.alignment;
+                copy.textureMode = source.textureMode;
+                copy.shadowCastingMode = source.shadowCastingMode;
+                copy.receiveShadows = source.receiveShadows;
+                copy.sortingLayerID = source.sortingLayerID;
+                copy.sortingOrder = source.sortingOrder;
+                copy.autodestruct = false;
+                copy.emitting = source.emitting;
+                source.Clear();
+                source.emitting = false;
+                source.enabled = false;
+                _trails[i] = copy;
+            }
+        }
+
+        /// <summary>
+        /// Hides or shows the visual's renderers and the trails. Only renderers that were on are hidden and later
+        /// shown again (a thrown module keeps the pool cube it switched off). Showing clears the trails, so they start
+        /// where the projectile appears.
+        /// </summary>
+        private void SetHidden(bool hidden)
+        {
+            if (hidden)
+            {
+                _hiddenRenderers.Clear();
+                if (_visual != null)
+                    foreach (Renderer r in _visual.GetComponentsInChildren<Renderer>())
+                        if (r.enabled)
+                        {
+                            r.enabled = false;
+                            _hiddenRenderers.Add(r);
+                        }
+            }
+            else
+            {
+                for (int i = 0; i < _hiddenRenderers.Count; i++)
+                    if (_hiddenRenderers[i] != null) _hiddenRenderers[i].enabled = true;
+                _hiddenRenderers.Clear();
+            }
+            if (_trails != null)
+                for (int i = 0; i < _trails.Length; i++)
+                {
+                    _trails[i].emitting = !hidden;
+                    if (!hidden) _trails[i].Clear();
+                }
+            _hidden = hidden;
         }
 
         private void OnDisable()
@@ -229,23 +314,13 @@ namespace DanceWithTheDevil
 
             transform.position += _direction * step;
             _travelled += step;
-            if (_settling) Settle();
+            if (_hidden && _travelled >= _launch.HiddenDistance) SetHidden(false);
 
             if (reachesEnd)
             {
                 if (_launch.OnDetonate != null) Detonate(transform.position, -_direction);
                 else Despawn();
             }
-        }
-
-        /// <summary>Eases the height from the muzzle to the gameplay height over the settle distance (smooth stop).</summary>
-        private void Settle()
-        {
-            float t = Mathf.Clamp01(_travelled / _launch.SettleDistance);
-            Vector3 p = transform.position;
-            float eased = 1f - (1f - t) * (1f - t);
-            transform.position = new Vector3(p.x, Mathf.Lerp(_settleFromY, _launch.SettleHeight, eased), p.z);
-            if (t >= 1f) _settling = false;
         }
 
         /// <summary>Casts this frame's step: ended, bounced (already placed at the wall) or free to continue.</summary>
@@ -360,13 +435,7 @@ namespace DanceWithTheDevil
 
             _direction = reflected.normalized;
             _travelled += distance;
-            if (_settling)
-            {
-                // A bounce inside the settle distance: carry on at the gameplay height.
-                _settling = false;
-                Vector3 p = transform.position;
-                transform.position = new Vector3(p.x, _launch.SettleHeight, p.z);
-            }
+            if (_hidden) SetHidden(false); // a wall right at the muzzle: show the bounce
             // Echo: after a bounce at most this fraction of the range still left (crit-difficulty design: half).
             float rangeScale = _launch.BounceRangeScale;
             if (rangeScale > 0f && rangeScale < 1f)
@@ -468,7 +537,7 @@ namespace DanceWithTheDevil
             float length = Mathf.Max(thickness, _launch.Speed * _stretchTime);
             _visual.localRotation = Quaternion.identity;
             _visual.localScale = new Vector3(thickness, thickness, length);
-            _visual.localPosition = new Vector3(0f, 0f, -length * 0.5f); // trail behind the head
+            _visual.localPosition = new Vector3(0f, _launch.VisualLift, -length * 0.5f); // trail behind the head
         }
 
         private static void SortByDistance(RaycastHit[] hits, int count)

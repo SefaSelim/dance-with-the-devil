@@ -47,11 +47,14 @@ namespace DanceWithTheDevil.Tests
                 Time.timeScale = 0.15f; // slow, so the first frames of the tracer are visible
                 Vector3 target = body.position + body.forward * 10f + Vector3.up;
                 Assert.IsTrue(rifle.TryFire(rifle.MuzzlePosition, body.forward), "shot fired");
-                for (int f = 0; f < 4; f++)
+                for (int f = 0; f < 6; f++)
                 {
                     yield return null;
                     Vector3 centre = body.position + Vector3.up * 1.2f + body.forward * 1.2f;
                     yield return Render(folder, $"shot{shot}_f{f}", centre, centre + side * 3.2f + Vector3.up * 0.4f);
+                    Texture2D game = ScreenCapture.CaptureScreenshotAsTexture();
+                    File.WriteAllBytes(Path.Combine(folder, $"game{shot}_f{f}.png"), game.EncodeToPNG());
+                    Object.Destroy(game);
                 }
                 Time.timeScale = 1f;
                 end = Time.realtimeSinceStartup + 0.6f;

@@ -1,6 +1,6 @@
 # MAIN GDD — Dance with the Devil (Bir Şey Olmaz)
 
-**Son güncelleme: 2026-10-27 02:15 (UTC+3)**
+**Son güncelleme: 2026-10-27 02:26 (UTC+3)**
 
 > **Bu dosya projenin tek ve yaşayan Game Design Document'ıdır.** Sürüm numarası yoktur (GDD2, GDD3…
 > diye gitmez). Yeni bir mekanik eklendiğinde, var olan bir mekanik değiştiğinde ya da bir tasarım kararı
@@ -479,8 +479,9 @@ ile tabloya girer.
   yana koşar. Elinde gerçek bir AK tüfek var; roket atınca bir an omzuna RPG alır (atılan roket namludan çıkar, tüp boş
   görünür), sonra RPG sırtına döner. Koyu zeminde okunsun diye modelde sıcak bir kenar ışığı vardır.
 - **Mermiler:** tüfek mermisi pirinç renkli küçük bir mermi ve arkasında kısa sarı-turuncu iz (tracer); roket, RPG'nin kendi
-  savaş başlığı ve arkasında turuncudan griye dönen duman izi. Defne tüfeği omzunda tutar; mermi ve namlu ateşi
-  tüfeğin ucundan çıkar, mermi ilk 2,5 m'de vuruş yüksekliğine (yerden 1 m) iner, isabet kuralları değişmez (2026-10-27).
+  savaş başlığı ve arkasında turuncudan griye dönen duman izi. Defne tüfeği omzunda tutar; namlu ateşi ve mermi izi
+  tüfeğin ucundan dümdüz çıkar. Mermi yine yerden 1 m yükseklikte uçar ve vurur (isabet kuralları değişmez); yalnız
+  görüntüsü namlu hizasında çizilir (2026-10-27).
 - **Kamera ve ölçek (kullanıcı kararı 2026-10-24):** kamera yaklaştı (görünen yükseklik 18 m → 13 m) ve görüntü daha ince
   çizilir (640×360 → 960×540; hafif piksel his kalır ama karakterler bloklaşmaz). Defne 2,0 m boyunda; düşmanlar %15 büyük
   (çarpışma alanları da). Defne'nin modelinde dış parlama (kenar ışığı) yok.
@@ -620,3 +621,4 @@ seçenek seçerse değiştirilir:
 - 2026-10-25 14:58 — SefaSelim (Claude Code) — Oyuncunun gördüğü bütün yazılar tek Excel dosyasından (Yazilar.xlsx, Metin sütunu) okunuyor (§12).
 - 2026-10-25 15:44 — SefaSelim (Claude Code) — K-23: üç modül yuvası, yuvalar doluyken de teklif gelir ("DOLU", birini sökünce alınır), Q çemberinde modül simgeleri, Üçlü Atış'a yeni simge (§7, §12, §15); oyun müziği "Tense Conversational Pulse", Sözleşme 2 müziği boğuklaştırır (K-8; §8, §13, §15).
 - 2026-10-27 02:15 — SefaSelim (Claude Code) — Tüfek omuzda; mermi ve namlu ateşi tüfeğin ucundan çıkar, mermi ilk 2,5 m'de 1 m vuruş yüksekliğine iner (§13).
+- 2026-10-27 02:26 — SefaSelim (Claude Code) — Mermi izi eğimli inmek yerine namlu hizasında dümdüz gider; vuruş yüksekliği 1 m kalır (§13).
