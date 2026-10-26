@@ -20,6 +20,12 @@ namespace DanceWithTheDevil
     public struct ProjectileLaunch
     {
         public Vector3 Origin;
+        /// <summary>
+        /// With <see cref="SettleDistance"/> above 0: the projectile leaves at <see cref="Origin"/>'s height (the gun's
+        /// muzzle) and eases to this height over the first <see cref="SettleDistance"/> metres (the gameplay height).
+        /// </summary>
+        public float SettleHeight;
+        public float SettleDistance;
         public Vector3 Direction;
         public float Speed;
         public float MaxRange;
@@ -125,6 +131,8 @@ namespace DanceWithTheDevil
         private ProjectileLaunch _launch;
         private Vector3 _direction;
         private float _travelled;
+        private float _settleFromY;
+        private bool _settling;
         private float _rangeLimit;
         private int _pierceLeft;
         private float _pierceDamageScale = 1f;
@@ -177,6 +185,8 @@ namespace DanceWithTheDevil
             _lastBounceCollider = null;
             _alreadyHit.Clear();
             _active = true;
+            _settleFromY = launch.Origin.y;
+            _settling = launch.SettleDistance > 0f && !Mathf.Approximately(launch.Origin.y, launch.SettleHeight);
             ClearTint();
 
             transform.SetPositionAndRotation(launch.Origin, Quaternion.LookRotation(_direction, Vector3.up));
@@ -219,12 +229,23 @@ namespace DanceWithTheDevil
 
             transform.position += _direction * step;
             _travelled += step;
+            if (_settling) Settle();
 
             if (reachesEnd)
             {
                 if (_launch.OnDetonate != null) Detonate(transform.position, -_direction);
                 else Despawn();
             }
+        }
+
+        /// <summary>Eases the height from the muzzle to the gameplay height over the settle distance (smooth stop).</summary>
+        private void Settle()
+        {
+            float t = Mathf.Clamp01(_travelled / _launch.SettleDistance);
+            Vector3 p = transform.position;
+            float eased = 1f - (1f - t) * (1f - t);
+            transform.position = new Vector3(p.x, Mathf.Lerp(_settleFromY, _launch.SettleHeight, eased), p.z);
+            if (t >= 1f) _settling = false;
         }
 
         /// <summary>Casts this frame's step: ended, bounced (already placed at the wall) or free to continue.</summary>
@@ -339,6 +360,13 @@ namespace DanceWithTheDevil
 
             _direction = reflected.normalized;
             _travelled += distance;
+            if (_settling)
+            {
+                // A bounce inside the settle distance: carry on at the gameplay height.
+                _settling = false;
+                Vector3 p = transform.position;
+                transform.position = new Vector3(p.x, _launch.SettleHeight, p.z);
+            }
             // Echo: after a bounce at most this fraction of the range still left (crit-difficulty design: half).
             float rangeScale = _launch.BounceRangeScale;
             if (rangeScale > 0f && rangeScale < 1f)

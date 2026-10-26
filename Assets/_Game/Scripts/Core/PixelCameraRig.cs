@@ -20,6 +20,10 @@ namespace DanceWithTheDevil
         public const int Border = 8;
         private const float AimLeadFraction = 0.3f;      // lead = 30% of the flat distance to the aim, capped at _aimLead
         private const float AimLeadSmoothTime = 0.15f;   // the lead eases on its own so mouse jitter never shakes the view
+        // At the start of a scene the aim point appears all at once (the first mouse read): the lead fades in over this
+        // window instead, so the view does not jump up to 2 m in a few frames as the run begins.
+        private const float LeadWarmupDelay = 0.3f;
+        private const float LeadWarmupTime = 1f;
         private const float TraumaFullDistance = 10f;    // positional trauma: full within this flat distance of the focus
         private const float TraumaFarDistance = 25f;     // ...down to TraumaFarScale at this distance and beyond
         private const float TraumaFarScale = 0.25f;
@@ -183,6 +187,7 @@ namespace DanceWithTheDevil
 
             _targetPlayer = _target != null ? _target.GetComponentInParent<PlayerController>() : null;
             _focus = _target != null ? ClampFocus(_target.position + _focusOffset) : _focusOffset;
+            _leadStartTime = Time.time;
             UpdateLayout(force: true);
             UpdateCamera(snapImmediately: true);
         }
@@ -515,6 +520,8 @@ namespace DanceWithTheDevil
             _rawImage.uvRect = DisplayUvRect;
         }
 
+        private float _leadStartTime;
+
         // Flat look-ahead toward the player's aim point, eased on its own (scaled time: it waits through hitstop).
         private Vector3 UpdateLead(bool snap)
         {
@@ -524,6 +531,7 @@ namespace DanceWithTheDevil
                 Vector3 toAim = _targetPlayer.AimPoint - _target.position;
                 toAim.y = 0f;
                 desired = Vector3.ClampMagnitude(toAim * AimLeadFraction, _aimLead);
+                desired *= Mathf.SmoothStep(0f, 1f, (Time.time - _leadStartTime - LeadWarmupDelay) / LeadWarmupTime);
             }
 
             if (snap)

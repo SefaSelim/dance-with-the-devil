@@ -425,3 +425,23 @@ Every change to this project goes here — from people and from AI tools. Git sh
   - In the Editor through MCP: EditMode 67/67, PlayMode 55/55 (+ explicit GripCaptureTests, ComboCaptureTests), no crash.
   - Captures checked: shouldered rifle (idle, run), right fist on the grip, left hand closed under the handguard; Devil card with the centred pair and one-line stakes; bubble taller for a three-line line.
   - Not changed: the launcher hold and the bullet tracer height (it still starts at 1.0 m, below the rifle).
+
+### 2026-10-27 — SefaSelim (Claude Code) — branch juice
+- Changed: bullets leave the rifle's muzzle, no camera jump at the start of a run, Devil card text clear of the buttons (SefaSelim's requests).
+  - Bullets:
+    - `Scripts/Weapons/Projectile.cs`: `ProjectileLaunch` has new `SettleHeight` / `SettleDistance`. The projectile leaves at its origin's height and eases (quadratic ease-out) to the settle height over that distance. A bounce inside it snaps to the settle height.
+    - `Scripts/Weapons/Rifle.cs`: with Defne's gun shown, a bullet starts at the gun muzzle's height and settles to the gameplay height (`_shotHeight` 1.0 m, unchanged) over the new `_muzzleSettleDistance` 2.5 m. The flash already sat at the muzzle. Before, the tracer started 1.0 m up, under the shouldered rifle.
+    - Why not a higher shot height: the Runner's collider is 1.265 m tall and would be missed.
+  - Camera, `Scripts/Core/PixelCameraRig.cs`: the aim look-ahead (up to 2 m) fades in over 0.3–1.3 s after the rig wakes (`LeadWarmupDelay`, `LeadWarmupTime`). The first mouse read made the view jump up to 2 m within ~0.15 s as the run began: the "teleport". Defne herself never moved (StartCaptureTests: root fixed at the origin).
+  - Devil card, `Scripts/UI/DevilScreen.cs`:
+    - card 500×200 → 500×212, centre y 106 → 112;
+    - the stacked texts must end ≥ 66 units above the plate's bottom (button tops at 51), otherwise the offer and cost texts shrink one point at a time (at most 2).
+  - New explicit capture tests `StartCaptureTests` (first 40 frames with root, rotation and hips per frame) and `FireCaptureTests` (side close-up of a shot in slow motion).
+  - Docs: MAIN_GDD §13 Mermiler + change log 02:15.
+  - No scene, prefab or ProjectSettings change.
+- Why: SefaSelim: "silahın ucundan flaş çıkıyor ama mermi aşağıdan ateşleniyor"; "Oyun başladığında oyuncu bir anlığına ışınlanıyor"; card texts too close to the buttons.
+- Status: committed (Bullets from the muzzle, no start jump, card text margin)
+- Notes / risks:
+  - In the Editor through MCP: EditMode 67/67, PlayMode 55/55 (+ explicit captures), no crash.
+  - Captures checked: flash and tracer at the barrel tip (side view), Devil card text ending above the buttons, start frames panning gently instead of jumping.
+  - A bullet fired point-blank at a Runner is still above 1.0 m for its first metres (1.13 m at 1 m out), inside the Runner's collider.

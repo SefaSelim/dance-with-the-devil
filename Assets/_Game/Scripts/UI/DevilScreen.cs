@@ -77,11 +77,15 @@ namespace DanceWithTheDevil
         private const float ArtBottom = -30f;
         // Card: bottom-right of the 640×360 frame (x 116..616, y 6..206). The drawn Devil's figure starts near x 463,
         // so the text and buttons keep to a left column ending near x 454 (CardPad + CardColumnWidth inside the plate).
-        private static readonly Vector2 CardSize = new Vector2(500f, 200f);
-        private static readonly Vector2 CardCentre = new Vector2(-24f - 250f, 6f + 100f); // from the bottom-right corner
+        private static readonly Vector2 CardSize = new Vector2(500f, 212f);
+        private static readonly Vector2 CardCentre = new Vector2(-24f - 250f, 6f + 106f); // from the bottom-right corner
         private const float CardPad = 8f;
         private const float CardColumnWidth = 330f;
         private const float CardLineGap = 3f;
+        // The text blocks must end at least this far above the plate's bottom (button tops at 51 plus a clear gap);
+        // a longer card shrinks its two body texts a point at a time (at most MaxCardShrink points).
+        private const float CardTextBottomLimit = 66f;
+        private const int MaxCardShrink = 2;
         // Bottom row: HAYIR (smaller, dim) and EVET (bigger, bright) side by side, the pair centred in the text column
         // with a small gap; stakes lines under each, on one line.
         private static readonly Vector2 YesSize = new Vector2(140f, 34f);
@@ -693,11 +697,25 @@ namespace DanceWithTheDevil
         /// </summary>
         private void StackCardText()
         {
-            float y = -6f;
-            y = PlaceBlock(_giveText, y);
-            y = PlaceBlock(_costTitle, y);
-            PlaceBlock(_takeText, y);
+            if (_giveBaseSize == 0)
+            {
+                _giveBaseSize = _giveText.fontSize;
+                _takeBaseSize = _takeText.fontSize;
+            }
+            float plateHeight = ((RectTransform)_giveText.rectTransform.parent).rect.height;
+            for (int shrink = 0; shrink <= MaxCardShrink; shrink++)
+            {
+                _giveText.fontSize = _giveBaseSize - shrink;
+                _takeText.fontSize = _takeBaseSize - shrink;
+                float y = -6f;
+                y = PlaceBlock(_giveText, y);
+                y = PlaceBlock(_costTitle, y);
+                y = PlaceBlock(_takeText, y) + CardLineGap; // top-down: y is now the text's bottom edge
+                if (plateHeight + y >= CardTextBottomLimit) break;
+            }
         }
+
+        private int _giveBaseSize, _takeBaseSize;
 
         private static float PlaceBlock(Text text, float top)
         {
