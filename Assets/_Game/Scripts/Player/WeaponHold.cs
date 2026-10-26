@@ -6,6 +6,7 @@ namespace DanceWithTheDevil
     /// Places the held weapon of an imported humanoid from a <see cref="WeaponHoldProfile"/> every frame and pulls the
     /// left hand onto it with IK. Put it on the GameObject with the <see cref="Animator"/> (the "Body"); the base
     /// layer needs IK Pass on (Dance/Character/Build Defne sets it).
+    /// A shouldered profile (the rifle) sets the weapon against the right shoulder instead, level along the facing.
     /// Frame order: the Animator plays the clips, <see cref="OnAnimatorIK"/> reads the right-hand goal of this frame, then
     /// <see cref="LateUpdate"/> puts both hands on the weapon (a two-bone arm solve on the bones: right hand round the
     /// pistol grip, left hand under the handguard) and the weapon socket at goal × grip (before
@@ -129,16 +130,25 @@ namespace DanceWithTheDevil
                 FitProfile(profile);
                 GripFor(profile, out gripPosition, out gripRotation, out leftWeight);
             }
-            Vector3 weaponPosition = _goalPosition + _goalRotation * gripPosition;
-            Quaternion weaponRotation = _goalRotation * gripRotation;
+            Vector3 weaponPosition;
+            Quaternion weaponRotation;
+            if (!profile.Shouldered || !ShoulderPose(profile, out weaponPosition, out weaponRotation))
+            {
+                weaponPosition = _goalPosition + _goalRotation * gripPosition;
+                weaponRotation = _goalRotation * gripRotation;
+            }
 
-            // Hands first (the socket hangs under the right hand), then the weapon where the grip says.
+            // Hands first (the socket hangs under the right hand), then the weapon where the grip says. Elbows: the
+            // right one out to the side and down (a shouldered rifle), the left one down under the handguard.
+            Vector3 right = transform.right, down = Vector3.down, forward = transform.forward;
             if (profile.UseRightHandIK)
                 HoldHand(true, weaponPosition + weaponRotation * profile.RightHandPosition,
-                    weaponRotation * Quaternion.Euler(profile.RightHandRotation), 1f);
+                    weaponRotation * Quaternion.Euler(profile.RightHandRotation), 1f,
+                    right * 0.9f + down - forward * 0.2f);
             if (profile.UseLeftHandIK && leftWeight > 0f)
                 HoldHand(false, weaponPosition + weaponRotation * profile.LeftHandPosition,
-                    weaponRotation * Quaternion.Euler(profile.LeftHandRotation), leftWeight);
+                    weaponRotation * Quaternion.Euler(profile.LeftHandRotation), leftWeight,
+                    down - right * 0.35f);
             _socket.SetPositionAndRotation(weaponPosition, weaponRotation);
             KeepUniformScale();
         }
@@ -146,9 +156,11 @@ namespace DanceWithTheDevil
         /// <summary>
         /// Puts a hand bone at a world pose (blended by <paramref name="weight"/> from the animated one) with a two-bone
         /// arm solve: the elbow stays in the arm's animated bending plane, the upper arm and forearm keep their lengths,
-        /// the hand then takes the rotation. Fingers keep their animated curl.
+        /// the hand then takes the rotation. Fingers keep their animated curl. The arm is then turned about the
+        /// shoulder-to-hand line so the elbow points toward <paramref name="elbowPole"/> (world direction), which keeps it
+        /// out of the chest.
         /// </summary>
-        private void HoldHand(bool right, Vector3 position, Quaternion rotation, float weight)
+        private void HoldHand(bool right, Vector3 position, Quaternion rotation, float weight, Vector3 elbowPole)
         {
             Transform upper = _animator.GetBoneTransform(right ? HumanBodyBones.RightUpperArm : HumanBodyBones.LeftUpperArm);
             Transform lower = _animator.GetBoneTransform(right ? HumanBodyBones.RightLowerArm : HumanBodyBones.LeftLowerArm);
@@ -178,6 +190,18 @@ namespace DanceWithTheDevil
             upper.rotation = Quaternion.AngleAxis(shoulderWanted - shoulderNow, bendAxis) * upper.rotation;
             lower.rotation = Quaternion.AngleAxis(elbowWanted - elbowNow, bendAxis) * lower.rotation;
             upper.rotation = Quaternion.FromToRotation(hand.position - a, target - a) * upper.rotation;
+
+            Vector3 reachAxis = hand.position - a;
+            if (reachAxis.sqrMagnitude > 1e-8f && elbowPole.sqrMagnitude > 1e-8f)
+            {
+                Vector3 elbowNowDir = Vector3.ProjectOnPlane(lower.position - a, reachAxis);
+                Vector3 elbowWantDir = Vector3.ProjectOnPlane(elbowPole, reachAxis);
+                if (elbowNowDir.sqrMagnitude > 1e-8f && elbowWantDir.sqrMagnitude > 1e-8f)
+                {
+                    float swing = Vector3.SignedAngle(elbowNowDir, elbowWantDir, reachAxis) * weight;
+                    upper.rotation = Quaternion.AngleAxis(swing, reachAxis) * upper.rotation;
+                }
+            }
             hand.rotation = handRotation;
         }
 
@@ -231,6 +255,25 @@ namespace DanceWithTheDevil
             float sz = m.MultiplyVector(Vector3.forward).magnitude;
             if (sx < 1e-5f || sy < 1e-5f || sz < 1e-5f) return;
             _socket.localScale = new Vector3(_socketWorldScale / sx, _socketWorldScale / sy, _socketWorldScale / sz);
+        }
+
+        /// <summary>
+        /// The shouldered weapon pose: butt (<see cref="WeaponHoldProfile.StockPoint"/>) at the right shoulder joint plus
+        /// <see cref="WeaponHoldProfile.ShoulderOffset"/> in the body's frame, barrel along the body's facing, tilted up by
+        /// <see cref="WeaponHoldProfile.ShoulderPitch"/>. The shoulder bone carries the clips' breathing and run bob.
+        /// </summary>
+        private bool ShoulderPose(WeaponHoldProfile profile, out Vector3 position, out Quaternion rotation)
+        {
+            position = Vector3.zero;
+            rotation = Quaternion.identity;
+            Transform shoulder = _animator.GetBoneTransform(HumanBodyBones.RightUpperArm);
+            Vector3 forward = transform.forward;
+            forward.y = 0f;
+            if (shoulder == null || forward.sqrMagnitude < 1e-4f) return false;
+            Quaternion body = Quaternion.LookRotation(forward.normalized, Vector3.up);
+            rotation = body * Quaternion.Euler(-profile.ShoulderPitch, 0f, 0f);
+            position = shoulder.position + body * profile.ShoulderOffset - rotation * profile.StockPoint;
+            return true;
         }
 
         /// <summary>The grip of this frame: the profile's base plus the per-clip corrections weighted by the clips playing.</summary>
@@ -299,6 +342,7 @@ namespace DanceWithTheDevil
 
             Quaternion weaponRotation = Quaternion.LookRotation(forward.normalized, Vector3.up);
             Vector3 weaponPosition = rightFist - weaponRotation * profile.GripPoint;
+            if (profile.Shouldered) ShoulderPose(profile, out weaponPosition, out weaponRotation);
             Quaternion inverseGoal = Quaternion.Inverse(_goalRotation);
             profile.GripPosition = inverseGoal * (weaponPosition - _goalPosition);
             profile.GripRotation = (inverseGoal * weaponRotation).eulerAngles;
@@ -406,6 +450,18 @@ namespace DanceWithTheDevil
         {
             WeaponHoldProfile profile = ActiveProfile;
             if (profile == null || !_hasGoal) return;
+            if (profile.Shouldered)
+            {
+                Transform shoulder = _animator.GetBoneTransform(HumanBodyBones.RightUpperArm);
+                Vector3 forward = transform.forward;
+                forward.y = 0f;
+                if (shoulder == null || forward.sqrMagnitude < 1e-4f) return;
+                Quaternion body = Quaternion.LookRotation(forward.normalized, Vector3.up);
+                profile.ShoulderOffset = Quaternion.Inverse(body) * (position + rotation * profile.StockPoint - shoulder.position);
+                Vector3 barrel = Quaternion.Inverse(body) * (rotation * Vector3.forward);
+                profile.ShoulderPitch = Mathf.Asin(Mathf.Clamp(barrel.y, -1f, 1f)) * Mathf.Rad2Deg;
+                return;
+            }
             Quaternion inverseGoal = Quaternion.Inverse(_goalRotation);
             Vector3 grip = inverseGoal * (position - _goalPosition);
             Vector3 euler = (inverseGoal * rotation).eulerAngles;

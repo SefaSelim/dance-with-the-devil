@@ -623,7 +623,7 @@ namespace DanceWithTheDevil.Editor
                 Bounds local = LocalBounds(holder, mesh.gameObject);
                 var muzzle = new GameObject(muzzleName).transform;
                 muzzle.SetParent(holder, false);
-                muzzle.localPosition = new Vector3(local.center.x, local.center.y + local.extents.y * 0.35f, local.max.z);
+                muzzle.localPosition = BarrelTip(holder, mesh.gameObject, local);
                 muzzle.localRotation = Quaternion.identity;
             }
             return holder;
@@ -654,6 +654,32 @@ namespace DanceWithTheDevil.Editor
             }
             // Grip at the origin: one third of the length from the back.
             mesh.localPosition -= new Vector3(b.center.x, b.center.y, b.min.z + length / 3f);
+        }
+
+        /// <summary>
+        /// Centre of the barrel's end: the middle of the vertices in the last 1.2 cm of the weapon (the muzzle ring), at
+        /// the front face. The bounds' centre sat ~3.5 cm under the AK74's barrel (the magazine pulls it down).
+        /// </summary>
+        private static Vector3 BarrelTip(Transform space, GameObject go, Bounds local)
+        {
+            float minY = float.PositiveInfinity, maxY = float.NegativeInfinity;
+            float minX = float.PositiveInfinity, maxX = float.NegativeInfinity;
+            foreach (MeshFilter filter in go.GetComponentsInChildren<MeshFilter>(true))
+            {
+                if (filter.sharedMesh == null || !filter.gameObject.activeInHierarchy) continue;
+                Matrix4x4 m = space.worldToLocalMatrix * filter.transform.localToWorldMatrix;
+                foreach (Vector3 v in filter.sharedMesh.vertices)
+                {
+                    Vector3 p = m.MultiplyPoint3x4(v);
+                    if (p.z < local.max.z - 0.012f) continue;
+                    minY = Mathf.Min(minY, p.y);
+                    maxY = Mathf.Max(maxY, p.y);
+                    minX = Mathf.Min(minX, p.x);
+                    maxX = Mathf.Max(maxX, p.x);
+                }
+            }
+            if (minY > maxY) return new Vector3(local.center.x, local.center.y + local.extents.y * 0.35f, local.max.z);
+            return new Vector3((minX + maxX) * 0.5f, (minY + maxY) * 0.5f, local.max.z);
         }
 
         private static float MassCentreZ(Transform space, GameObject go)

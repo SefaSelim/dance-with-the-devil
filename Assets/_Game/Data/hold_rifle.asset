@@ -15,6 +15,10 @@ MonoBehaviour:
   Fitted: 1
   GripPoint: {x: -0.015, y: -0.015, z: -0.06}
   SupportPoint: {x: -0.015, y: 0.075, z: 0.22}
+  Shouldered: 1
+  StockPoint: {x: -0.015, y: 0.03, z: -0.27}
+  ShoulderOffset: {x: -0.07, y: -0.06, z: 0.1}
+  ShoulderPitch: 5
   GripPosition: {x: -0.0066328407, y: -0.26114094, z: 0.18168819}
   GripRotation: {x: 3.5738914, y: 36.090195, z: 55.961834}
   UseRightHandIK: 1
@@ -26,5 +30,5 @@ MonoBehaviour:
   LeftHandWeight: 1
   GripFingerCurl: 75
   TriggerFingerCurl: 30
-  SupportFingerCurl: 35
+  SupportFingerCurl: 60
   Corrections: []

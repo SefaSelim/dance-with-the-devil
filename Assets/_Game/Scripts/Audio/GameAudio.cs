@@ -6,7 +6,8 @@ namespace DanceWithTheDevil
     /// <summary>
     /// The game's whole audio layer (Phase 6 procedural audio spec; MAIN_GDD §13 Ses, K-8).
     /// 2D pooled AudioSources per event (voice limit, oldest stolen, min gap, pitch/volume jitter), five buses
-    /// (SFX, Voice, UI, MusicBase, MusicMelody) and the music: the bank's single <see cref="SoundBank.MusicTrack"/> when
+    /// (SFX, Voice, UI, MusicBase, MusicMelody) and the music: the bank's single <see cref="SoundBank.MusicTrack"/> (kept
+    /// playing across scene loads) when
     /// set (user decision 2026-10-25), else the two stems started on the same dspTime, all looping.
     /// Contract 2: <see cref="AudioCosts.VoiceMuted"/> mutes the Voice bus instantly; <see cref="AudioCosts.MusicLayerMuted"/>
     /// fades the melody stem out over 1.5 s of unscaled time, or with the single track sweeps a low-pass filter down
@@ -118,6 +119,11 @@ namespace DanceWithTheDevil
         private AudioSource _musicMelody;
         private AudioSource _musicTrack;
         private AudioLowPassFilter _musicMuffle;
+        // The single music track outlives scene loads (menu → arena, quit → menu): the next scene's GameAudio adopts
+        // it when it plays the same clip, so the music carries on from where it was instead of starting over. After an
+        // ending (the music faded out) the next scene starts it fresh.
+        private static AudioSource s_persistentTrack;
+        private static bool s_restartTrack;
         private float _melodyFade = 1f;
         private const float OpenCutoff = 22000f;
         private bool _voiceMuted;
@@ -155,6 +161,7 @@ namespace DanceWithTheDevil
         {
             if (_runEnded) return;
             _runEnded = true;
+            s_restartTrack = true; // the music fades out now; the next scene starts it from the top
             _endFadeSeconds = Mathf.Max(0.01f, fadeSeconds);
             for (int s = 0; s < _slots.Length; s++)
             {
@@ -198,7 +205,7 @@ namespace DanceWithTheDevil
             _tellHandles.Clear();
             _musicBase = null;
             _musicMelody = null;
-            if (_musicTrack != null) Destroy(_musicTrack.gameObject);
+            if (_musicTrack != null && _musicTrack != s_persistentTrack) Destroy(_musicTrack.gameObject);
             _musicTrack = null;
             _musicMuffle = null;
             _voiceMuted = false;
@@ -271,9 +278,20 @@ namespace DanceWithTheDevil
         /// </summary>
         private void StartMusicTrack(AudioClip clip)
         {
+            if (s_persistentTrack != null && s_persistentTrack.clip == clip && s_persistentTrack.isPlaying && !s_restartTrack)
+            {
+                _musicTrack = s_persistentTrack;
+                _musicMuffle = _musicTrack.GetComponent<AudioLowPassFilter>();
+                if (_musicMuffle == null) _musicMuffle = _musicTrack.gameObject.AddComponent<AudioLowPassFilter>();
+                return;
+            }
+            if (s_persistentTrack != null) Destroy(s_persistentTrack.gameObject);
+            s_restartTrack = false;
+
             var go = new GameObject("MusicTrack");
-            go.transform.SetParent(transform, false);
+            if (Application.isPlaying) DontDestroyOnLoad(go);
             _musicTrack = go.AddComponent<AudioSource>();
+            s_persistentTrack = _musicTrack;
             _musicTrack.playOnAwake = false;
             _musicTrack.spatialBlend = 0f;
             _musicTrack.ignoreListenerPause = true;

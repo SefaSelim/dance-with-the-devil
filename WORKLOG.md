@@ -396,3 +396,32 @@ Every change to this project goes here — from people and from AI tools. Git sh
   - The Editor did not crash.
   - Frames come out upside down on D3D; the edit flips them (vflip).
   - The Game view is 900×506, upscaled to 1080p.
+
+### 2026-10-27 — SefaSelim (Claude Code) — branch juice
+- Changed: music carries on across scene loads, the Devil's bubble fits its text, HAYIR/EVET centred together, shouldered rifle with elbows out, muzzle flash on the barrel tip (SefaSelim's requests).
+  - Toolkit: none of the agents fitted better than the main session: every item needed the Editor loop (change → capture → look) through MCP.
+  - Music, `Scripts/Audio/GameAudio.cs`: the single music track lives on a DontDestroyOnLoad "MusicTrack" object; the next scene's GameAudio adopts it when it plays the same clip, so menu → arena (and restart, quit to menu) continues from the same place; after an ending (`EndRun`, music faded) the next scene starts it from the top.
+  - Devil screen, `Scripts/UI/DevilScreen.cs`:
+    - speech bubble grows with the line (66 → up to 118 units, plate resized with it); the text best-fits down to 10 only past that;
+    - HAYIR (100×28 → 112×30) and EVET (140×34) side by side, 14 units apart, centred as a pair in the text column, vertically aligned (were at the two ends of the column);
+    - stakes lines best-fit to one line (width button + 40);
+    - card plate opaque (`UiKit.Panel` alpha 0.92 → 1): the HUD module slots showed through its bottom.
+  - Rifle hold:
+    - `Scripts/Player/WeaponHoldProfile.cs`: new `Shouldered`, `StockPoint` (-0.015, 0.03, -0.27), `ShoulderOffset` (-0.07, -0.06, 0.1), `ShoulderPitch` 5.
+    - `Scripts/Player/WeaponHold.cs`: a shouldered profile puts the butt against the right shoulder joint (plus the offset in the body frame), barrel along the facing tilted 5° up, instead of following the animated right hand. The bladed clip held the right fist at the chest centre, so the forearm crossed the chest.
+    - `HoldHand` gets an elbow pole: right elbow out and down, left elbow down under the handguard.
+    - The weapon handle in the editor writes `ShoulderOffset`/`ShoulderPitch` while shouldered.
+    - The pitch follows SefaSelim's placement (rifle 6° up at shoulder height). Their world pose could not be copied as is, because Defne's pose at that moment is unknown.
+  - `Data/hold_rifle.asset`: Shouldered 0 → 1 (+ the three new fields as above); SupportFingerCurl 35 → 60 (left fingers close round the handguard).
+  - Muzzle flash:
+    - `Scripts/Weapons/Rifle.cs`: the MuzzleFire event is raised at the gun's Muzzle; it was raised at the bullet origin, which stays at the 1.0 m gameplay height (GDD §4, unchanged) under the shouldered rifle.
+    - `Prefabs/char_defne.prefab` › Body › … › WeaponSocket › Rifle › Muzzle › Transform › localPosition (0, 0.0435, 0.5467) → (-0.0121, 0.0728, 0.5467) = centre of the barrel's end. The save also re-serialised the empty `_palette` lists on the ShatterProxy boxes.
+    - `Editor/CharacterBuilder.cs` places the Muzzle the same way (`BarrelTip`) for future rebuilds; Build Defne was not run.
+  - Tests: new `MusicContinuityTests` (menu → arena keeps the same playing track; seen failing on the old code).
+  - No scene or ProjectSettings change.
+- Why: SefaSelim: music restarts on the scene change; Devil text spills out of its box; HAYIR/EVET far apart; arm through the chest, left hand at the muzzle end, flash below the barrel.
+- Status: committed (Music across scenes, Devil card layout, shouldered rifle, flash at the barrel)
+- Notes / risks:
+  - In the Editor through MCP: EditMode 67/67, PlayMode 55/55 (+ explicit GripCaptureTests, ComboCaptureTests), no crash.
+  - Captures checked: shouldered rifle (idle, run), right fist on the grip, left hand closed under the handguard; Devil card with the centred pair and one-line stakes; bubble taller for a three-line line.
+  - Not changed: the launcher hold and the bullet tracer height (it still starts at 1.0 m, below the rifle).

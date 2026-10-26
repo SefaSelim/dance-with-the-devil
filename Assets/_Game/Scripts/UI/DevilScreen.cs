@@ -82,11 +82,21 @@ namespace DanceWithTheDevil
         private const float CardPad = 8f;
         private const float CardColumnWidth = 330f;
         private const float CardLineGap = 3f;
-        // Bottom row: HAYIR small on the left, EVET big on the right of the column; stakes lines under them.
+        // Bottom row: HAYIR (smaller, dim) and EVET (bigger, bright) side by side, the pair centred in the text column
+        // with a small gap; stakes lines under each, on one line.
         private static readonly Vector2 YesSize = new Vector2(140f, 34f);
-        private static readonly Vector2 NoSize = new Vector2(100f, 28f);
+        private static readonly Vector2 NoSize = new Vector2(112f, 30f);
+        private const float ButtonGap = 14f;
         private const float ButtonRowY = 17f;
         private const float StakesY = 4f;
+        private const float StakesWidthExtra = 40f;
+        // Speech bubble: grows with the line (wrapped at the bubble's width), the text shrinks only past the cap.
+        private const float SpeechMinHeight = 66f;
+        private const float SpeechMaxHeight = 118f;
+        private const float SpeechTopPad = 6f;
+        private const float SpeechBottomPad = 15f; // room for the "[Enter] devam" hint
+        private const int SpeechFontSize = 14;
+        private const int SpeechMinFontSize = 10;
         private static readonly Color YesColor = new Color(0.95f, 0.22f, 0.15f, 1f);
         private static readonly Color YesHover = new Color(1f, 0.42f, 0.3f, 1f);
         // HAYIR is a text button: dim label, brighter on hover / hold.
@@ -118,6 +128,8 @@ namespace DanceWithTheDevil
         private Text _speechText;
         private Text _continueText;
         private UiHoldButton _bubbleButton;
+        private RectTransform _speechFill;
+        private float _speechFillInset;
         private GameObject _card;
         private Text _giveText;
         private Text _costTitle;
@@ -456,6 +468,7 @@ namespace DanceWithTheDevil
         private void StartTyping(string line)
         {
             _line = line ?? "";
+            FitSpeechBubble(_line);
             int n = _line.Length;
             if (UiKit.ReduceMotion || _charsPerSecond <= 0f || n == 0)
             {
@@ -475,6 +488,31 @@ namespace DanceWithTheDevil
             _typing = true;
             _speechText.text = TransparentOpen + _line + TransparentClose;
             UpdateContinueHint();
+        }
+
+        /// <summary>
+        /// Sizes the bubble to the whole line before it types (the wrap never changes while typing): taller for a long
+        /// line up to <see cref="SpeechMaxHeight"/>, and only past that the text shrinks (best fit) so it never spills
+        /// out of the frame.
+        /// </summary>
+        private void FitSpeechBubble(string line)
+        {
+            RectTransform textRect = _speechText.rectTransform;
+            _speechText.resizeTextForBestFit = false;
+            _speechText.fontSize = _speechText.resizeTextMaxSize;
+            _speechText.text = line;
+            float width = textRect.sizeDelta.x;
+            var settings = _speechText.GetGenerationSettings(new Vector2(width, 0f));
+            float textHeight = Mathf.Ceil(_speechText.cachedTextGeneratorForLayout.GetPreferredHeight(line, settings)
+                                          / _speechText.pixelsPerUnit);
+            float height = Mathf.Clamp(textHeight + SpeechTopPad + SpeechBottomPad, SpeechMinHeight, SpeechMaxHeight);
+            _speechRect.sizeDelta = new Vector2(_speechRect.sizeDelta.x, height);
+            if (_speechFill != null)
+                _speechFill.sizeDelta = new Vector2(_speechFill.sizeDelta.x, height - _speechFillInset);
+            float textArea = height - SpeechTopPad - SpeechBottomPad;
+            textRect.sizeDelta = new Vector2(width, textArea);
+            textRect.anchoredPosition = new Vector2(0f, (SpeechBottomPad - SpeechTopPad) * 0.5f);
+            _speechText.resizeTextForBestFit = textHeight > textArea + 0.5f;
         }
 
         private void TickTyping(float dt)
@@ -625,6 +663,8 @@ namespace DanceWithTheDevil
             Image border = fill.transform.parent.GetComponent<Image>();
             _speech = border.gameObject;
             _speechRect = border.rectTransform;
+            _speechFill = fill.rectTransform;
+            _speechFillInset = border.rectTransform.sizeDelta.y - fill.rectTransform.sizeDelta.y;
             _bubbleButton = UiKit.MakeHoldButton(border);
 
             // Tail: a cream diamond with the bubble colour inside, on the right edge.
@@ -637,8 +677,10 @@ namespace DanceWithTheDevil
             tailFill.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 45f);
 
             Vector2 mid = new Vector2(0.5f, 0.5f);
-            _speechText = UiKit.Label(border.transform, "Line", font, 14, Color.white, TextAnchor.MiddleCenter,
+            _speechText = UiKit.Label(border.transform, "Line", font, SpeechFontSize, Color.white, TextAnchor.MiddleCenter,
                 mid, mid, new Vector2(0f, 4f), new Vector2(284f, 50f), FontStyle.Bold);
+            _speechText.resizeTextMinSize = SpeechMinFontSize;
+            _speechText.resizeTextMaxSize = _speechText.fontSize;
             UiKit.AddShadow(_speechText);
             _continueText = UiKit.Label(border.transform, "Continue", font, 10, UiKit.Light, TextAnchor.LowerRight,
                 br, br, new Vector2(-6f, 3f), new Vector2(120f, 12f));
@@ -676,7 +718,9 @@ namespace DanceWithTheDevil
 
             // Right side, bottom; the Devil is drawn over its right part (Build), so everything inside keeps to the
             // left column [CardPad, CardPad + CardColumnWidth] of the plate and wraps before him.
-            Image card = UiKit.Framed(_root, "Card", UiKit.DevilRed, UiKit.Panel, br, mid, CardCentre, CardSize);
+            Color plate = UiKit.Panel;
+            plate.a = 1f; // opaque: the HUD's module slots under the card's bottom edge showed through
+            Image card = UiKit.Framed(_root, "Card", UiKit.DevilRed, plate, br, mid, CardCentre, CardSize);
             _card = card.transform.parent.gameObject;
             _cardRect = (RectTransform)card.transform.parent;
             Transform c = card.transform;
@@ -695,10 +739,12 @@ namespace DanceWithTheDevil
 
             // Bottom row. EVET (right of the column): big and bright (K-2), static, held to sign; a gold fill sweeps
             // over the whole button while held.
-            float columnRight = CardPad + CardColumnWidth;
+            float pairLeft = CardPad + (CardColumnWidth - (NoSize.x + ButtonGap + YesSize.x)) * 0.5f;
+            float noCentre = pairLeft + NoSize.x * 0.5f;
+            float yesCentre = pairLeft + NoSize.x + ButtonGap + YesSize.x * 0.5f;
             RectTransform yes = (RectTransform)UiKit.PrefabHoldButton(choices, UiKit.ButtonPrefab,
-                GameTexts.Yes + "\n<size=55%><color=#EDE0BD>" + GameTexts.YesKeys + "</color></size>", bl, br,
-                new Vector2(columnRight, ButtonRowY), YesSize, out TMP_Text yesLabel, 16f, "Yes").transform;
+                GameTexts.Yes + "\n<size=55%><color=#EDE0BD>" + GameTexts.YesKeys + "</color></size>", bl, bottom,
+                new Vector2(yesCentre, ButtonRowY), YesSize, out TMP_Text yesLabel, 16f, "Yes").transform;
             _yesRect = yes;
             _yesScale = yes.localScale.x;
             _yesButton = yes.GetComponent<UiHoldButton>();
@@ -707,22 +753,34 @@ namespace DanceWithTheDevil
             for (int i = 0; i < _yesPlates.Length; i++) _yesPlates[i].color = YesColor;
             _yesFill = AddHoldFill(yes, YesFillColor, yesLabel);
             Text yesStakes = UiKit.Label(choices, "YesStakes", font, 10, UiKit.Cream, TextAnchor.MiddleCenter, bl,
-                bottom, new Vector2(columnRight - YesSize.x * 0.5f, StakesY), new Vector2(150f, 12f));
+                bottom, new Vector2(yesCentre, StakesY), new Vector2(YesSize.x + StakesWidthExtra, 12f));
             yesStakes.text = GameTexts.YesStakes;
+            FitOneLine(yesStakes);
             UiKit.AddShadow(yesStakes);
 
             // HAYIR (left of the column): small and dim, but readable and always selectable (K-2); held like EVET,
             // with a pale fill. Synty small text button prefab.
             RectTransform no = (RectTransform)UiKit.PrefabHoldButton(choices, UiKit.SmallButtonPrefab,
-                GameTexts.No + "\n<size=75%>" + GameTexts.NoKeys + "</size>", bl, bl, new Vector2(CardPad, ButtonRowY),
-                NoSize, out _noLabel, 11f, "No").transform;
+                GameTexts.No + "\n<size=75%>" + GameTexts.NoKeys + "</size>", bl, bottom,
+                new Vector2(noCentre, ButtonRowY + (YesSize.y - NoSize.y) * 0.5f), NoSize, out _noLabel, 11f, "No").transform;
             _noButton = no.GetComponent<UiHoldButton>();
             if (_noLabel != null) _noLabel.color = NoColor;
             _noFill = AddHoldFill(no, NoFillColor, _noLabel);
             Text noStakes = UiKit.Label(choices, "NoStakes", font, 10, UiKit.Light, TextAnchor.MiddleCenter, bl,
-                bottom, new Vector2(CardPad + NoSize.x * 0.5f, StakesY), new Vector2(NoSize.x, 12f));
+                bottom, new Vector2(noCentre, StakesY), new Vector2(NoSize.x + StakesWidthExtra * 0.5f, 12f));
             noStakes.text = GameTexts.NoStakes;
+            FitOneLine(noStakes);
             UiKit.AddShadow(noStakes);
+        }
+
+        /// <summary>A one-line label that shrinks (best fit) instead of wrapping out of its row.</summary>
+        private static void FitOneLine(Text text)
+        {
+            text.horizontalOverflow = HorizontalWrapMode.Wrap;
+            text.verticalOverflow = VerticalWrapMode.Truncate;
+            text.resizeTextMaxSize = text.fontSize;
+            text.resizeTextMinSize = Mathf.Max(6, text.fontSize - 4);
+            text.resizeTextForBestFit = true;
         }
 
         /// <summary>Placeholder Devil from blocks (team drawing replaces it, GDD §13). Keeps eye/mouth refs to animate.</summary>

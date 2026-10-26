@@ -36,7 +36,18 @@ namespace DanceWithTheDevil
         [Tooltip("Where the left fist closes on the weapon, in its local frame (metres): under the handguard.")]
         public Vector3 SupportPoint = new Vector3(-0.015f, 0.075f, 0.22f);
 
-        [Header("Grip (right hand)")]
+        [Header("Shouldered (rifle)")]
+        [Tooltip("Hold the weapon with its butt against the right shoulder, level along the facing, instead of following "
+                 + "the animated right hand: the right arm then comes from the side and never crosses the chest.")]
+        public bool Shouldered;
+        [Tooltip("The butt of the weapon in its local frame (metres): the point set against the shoulder.")]
+        public Vector3 StockPoint = new Vector3(-0.015f, 0.03f, -0.27f);
+        [Tooltip("Where the butt sits from the right shoulder joint, in the body's frame (x right, y up, z forward), metres.")]
+        public Vector3 ShoulderOffset = new Vector3(-0.07f, -0.06f, 0.1f);
+        [Tooltip("Barrel tilt while shouldered, degrees up.")]
+        [Range(-20f, 20f)] public float ShoulderPitch = 5f;
+
+        [Header("Grip (right hand, when not shouldered)")]
         [Tooltip("Weapon position relative to the right-hand IK goal, metres.")]
         public Vector3 GripPosition = new Vector3(0f, -0.03f, 0f);
         [Tooltip("Weapon rotation relative to the right-hand IK goal, degrees. The weapon's +Z is the barrel.")]

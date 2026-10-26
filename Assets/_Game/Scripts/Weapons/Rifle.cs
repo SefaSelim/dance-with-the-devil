@@ -387,10 +387,14 @@ namespace DanceWithTheDevil
             if (_animator != null) _animator.Kick(_recoilKick);
 
             Fired?.Invoke(this, _tripleShot);
+            // The flash sits on the gun's real tip; the bullet keeps the gameplay height (_shotHeight, GDD §4), which
+            // is lower than the shouldered rifle, so the flash used to pop out under the barrel.
+            Transform gunMuzzle = _animator != null ? _animator.Muzzle : null;
+            Vector3 flashAt = gunMuzzle != null && gunMuzzle.gameObject.activeInHierarchy ? gunMuzzle.position : origin;
             ImpactBus.Raise(new ImpactEvent
             {
                 kind = ImpactKind.MuzzleFire,
-                position = origin,
+                position = flashAt,
                 normal = direction,
                 direction = direction,
                 intensity = _muzzleIntensity,
