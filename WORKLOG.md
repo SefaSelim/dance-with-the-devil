@@ -624,3 +624,24 @@ Every change to this project goes here — from people and from AI tools. Git sh
 - Notes / risks:
   - Checked by a short Play run (not the test suites): the warning appeared for Spawn_NorthEast only, and across three samples 12 of 12 live enemies had a path to Defne.
   - Code-built tests with no NavMesh skip the check.
+
+### 2026-10-27 — SefaSelim (Claude Code) — branch juice
+- Fixed: no music in the WebGL build (SefaSelim's report).
+  - Likely causes:
+    - the music clip was imported as Streaming with Preload off and Load In Background on;
+    - it was started with `PlayScheduled(dspTime + 0.1)` before the browser lets audio run (first click or key);
+    - it sat on an object with an `AudioLowPassFilter`, which WebGL does not support.
+  - `Audio/Music/Tense Conversational Pulse.mp3` import:
+    - new WebGL override: Load Type Streaming → Compressed In Memory, Preload Audio Data off → on (AAC, 44.1 kHz);
+    - Load In Background on → off (all platforms);
+    - default settings otherwise unchanged.
+  - `Scripts/Audio/GameAudio.cs` (WebGL player only, editor and desktop unchanged):
+    - the track starts with `Play()` (clip data loaded first), not `PlayScheduled`;
+    - no AudioLowPassFilter is added;
+    - contract 2's "muffled music" becomes the track at 35 % volume instead of a low-pass;
+    - a once-a-second watchdog re-plays the track if the browser dropped the start (until the ending).
+- Status: committed
+- Notes / risks:
+  - Not checked in a WebGL build here; needs one WebGL build and a click in the page.
+  - Browsers never play sound before the first click or key on the page; the music starts then.
+  - The editor console shows a failed build at 13:37 with Build Profiles window errors (SerializedProperty m_PlatformBuildProfile…), not from game code.

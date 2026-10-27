@@ -281,8 +281,11 @@ namespace DanceWithTheDevil
             if (s_persistentTrack != null && s_persistentTrack.clip == clip && s_persistentTrack.isPlaying && !s_restartTrack)
             {
                 _musicTrack = s_persistentTrack;
-                _musicMuffle = _musicTrack.GetComponent<AudioLowPassFilter>();
-                if (_musicMuffle == null) _musicMuffle = _musicTrack.gameObject.AddComponent<AudioLowPassFilter>();
+                if (FiltersSupported)
+                {
+                    _musicMuffle = _musicTrack.GetComponent<AudioLowPassFilter>();
+                    if (_musicMuffle == null) _musicMuffle = _musicTrack.gameObject.AddComponent<AudioLowPassFilter>();
+                }
                 return;
             }
             if (s_persistentTrack != null) Destroy(s_persistentTrack.gameObject);
@@ -298,9 +301,38 @@ namespace DanceWithTheDevil
             _musicTrack.clip = clip;
             _musicTrack.loop = true;
             _musicTrack.priority = 0;
-            _musicMuffle = go.AddComponent<AudioLowPassFilter>();
-            _musicMuffle.cutoffFrequency = MuffleCutoff(_melodyFade);
-            _musicTrack.PlayScheduled(AudioSettings.dspTime + _musicStartDelay);
+            if (FiltersSupported)
+            {
+                _musicMuffle = go.AddComponent<AudioLowPassFilter>();
+                _musicMuffle.cutoffFrequency = MuffleCutoff(_melodyFade);
+                _musicTrack.PlayScheduled(AudioSettings.dspTime + _musicStartDelay);
+            }
+            else
+            {
+                if (clip.loadState == AudioDataLoadState.Unloaded) clip.LoadAudioData();
+                _musicTrack.Play();
+            }
+        }
+
+        // WebGL has no audio filters and its audio clock is not reliable for PlayScheduled while the browser still
+        // holds audio back (until the first click or key): there the track starts with Play(), "muffled" becomes a
+        // quieter track, and a watchdog restarts it if the browser dropped the start.
+#if UNITY_WEBGL && !UNITY_EDITOR
+        private static readonly bool FiltersSupported = false;
+#else
+        private static readonly bool FiltersSupported = true;
+#endif
+        private const float WebMuffledVolume = 0.35f;
+        private float _nextMusicCheck;
+
+        private void KeepMusicPlaying()
+        {
+            if (FiltersSupported || _musicTrack == null || _runEnded || Time.unscaledTime < _nextMusicCheck) return;
+            _nextMusicCheck = Time.unscaledTime + 1f;
+            AudioClip clip = _musicTrack.clip;
+            if (clip == null || _musicTrack.isPlaying) return;
+            if (clip.loadState == AudioDataLoadState.Unloaded) clip.LoadAudioData();
+            if (clip.loadState == AudioDataLoadState.Loaded) _musicTrack.Play();
         }
 
         // Even steps on a log scale, so the sweep is heard all the way down, not only at the end.
@@ -310,6 +342,7 @@ namespace DanceWithTheDevil
         private void Update()
         {
             ApplyBuses(false);
+            KeepMusicPlaying();
             if (_waves == null || Time.timeScale <= 0f || _waves.Paused) return;
             var enemies = _waves.ActiveEnemies;
             for (int i = 0; i < enemies.Count; i++)
@@ -355,8 +388,9 @@ namespace DanceWithTheDevil
                 _musicMelody.volume = SoundBank.DbToLinear(_bank.MusicMelodyDb) * master * _musicTrim * _melodyFade;
             if (_musicTrack != null)
             {
-                _musicTrack.volume = SoundBank.DbToLinear(_bank.MusicTrackDb) * master;
-                _musicMuffle.cutoffFrequency = MuffleCutoff(_melodyFade);
+                float muffle = _musicMuffle != null ? 1f : Mathf.Lerp(WebMuffledVolume, 1f, _melodyFade);
+                _musicTrack.volume = SoundBank.DbToLinear(_bank.MusicTrackDb) * master * muffle;
+                if (_musicMuffle != null) _musicMuffle.cutoffFrequency = MuffleCutoff(_melodyFade);
             }
         }
 
