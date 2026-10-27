@@ -645,3 +645,20 @@ Every change to this project goes here — from people and from AI tools. Git sh
   - Not checked in a WebGL build here; needs one WebGL build and a click in the page.
   - Browsers never play sound before the first click or key on the page; the music starts then.
   - The editor console shows a failed build at 13:37 with Build Profiles window errors (SerializedProperty m_PlatformBuildProfile…), not from game code.
+
+### 2026-10-27 — SefaSelim (Claude Code) — branch juice
+- Changed: experiment, the game drawn at full resolution instead of pixelated (SefaSelim's request "kaldır, bakalım nasıl oluyor").
+  - `Scripts/Core/PixelCameraRig.cs`: new field `_fullResolution` (default on; the scene has no value for it yet, so it is on in Arena).
+    - When on, the RenderTexture is k× the low-res size, where k = screen height / 540 rounded up, clamped 2..3.
+    - The RT is filtered bilinear, and the image fills the screen with a fractional fit (no integer-scale letterbox).
+    - The RT is rebuilt when the window size changes k.
+    - Snapping, sub-texel remainder, shake and border maths are unchanged (still in 960×540 texels), so aiming, popups and shake behave the same.
+    - Off = the old point-filtered pixel look.
+  - MAIN_GDD §13: 🧪 note for the experiment, plus a change-history line.
+- Status: committed
+- Notes / risks:
+  - Checked by a Play capture of the Arena RT (1952×1112, sharp).
+  - Not seen in a WebGL build.
+  - Rendering cost about 4× more pixels (9× at 3×), which matters on WebGL with many shadowed lights.
+  - Character outlines (1 px) are now thinner relative to the image.
+  - To go back: untick Full Resolution on the camera rig in Arena (or set the default to false).

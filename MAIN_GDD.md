@@ -1,6 +1,6 @@
 # MAIN GDD — Dance with the Devil (Bir Şey Olmaz)
 
-**Son güncelleme: 2026-10-27 04:37 (UTC+3)**
+**Son güncelleme: 2026-10-27 14:17 (UTC+3)**
 
 > **Bu dosya projenin tek ve yaşayan Game Design Document'ıdır.** Sürüm numarası yoktur (GDD2, GDD3…
 > diye gitmez). Yeni bir mekanik eklendiğinde, var olan bir mekanik değiştiğinde ya da bir tasarım kararı
@@ -482,6 +482,9 @@ ile tabloya girer.
 - **Kamera ve ölçek (kullanıcı kararı 2026-10-24):** kamera yaklaştı (görünen yükseklik 18 m → 13 m) ve görüntü daha ince
   çizilir (640×360 → 960×540; hafif piksel his kalır ama karakterler bloklaşmaz). Defne 2,0 m boyunda; düşmanlar %15 büyük
   (çarpışma alanları da). Defne'nin modelinde dış parlama (kenar ışığı) yok.
+- **🧪 Tam çözünürlük denemesi (kullanıcı isteği 2026-10-27):** pikselli görünüm kaldırıldı; aynı kadraj ekran
+  çözünürlüğünde (en az 2, en çok 3 kat) keskin ve yumuşak büyütmeyle çizilir. Ekip beğenmezse kamera ayarındaki tek
+  seçenekle eski pikselli görünüme dönülür.
 - **Silahı tutuş:** tüfek sağ elde, sol el silahın ön tutamağına uzanır; RPG sırtta çaprazdır. Tutuş, ekibin oyun içinde
   ince ayar yaptığı bir profilden gelir (animasyon başına düzeltme yapılabilir).
 - **Efektler (gerçekçi, dokulu):** tüfek ateşinde namlu parlaması, namlu boyunca kısa alev, kıvılcım ve ince duman; roket
@@ -624,3 +627,4 @@ seçenek seçerse değiştirilir:
 - 2026-10-27 03:41 — SefaSelim (Claude Code) — Defne'nin önündeki yüksek dekor saydamlaşır (§9).
 - 2026-10-27 04:00 — SefaSelim (Claude Code) — Saydamlaşma dekorun tamamı yerine yalnız Defne'nin çevresindeki yuvarlak alanda (§9).
 - 2026-10-27 04:37 — SefaSelim (Claude Code) — Defne'nin çevresindeki saydamlık deliğinin yarıçapı 1,5 m → 3 m (§9).
+- 2026-10-27 14:17 — SefaSelim (Claude Code) — 🧪 Pikselli görünüm yerine tam çözünürlük denemesi (§13).

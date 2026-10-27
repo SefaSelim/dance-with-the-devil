@@ -10,6 +10,11 @@ namespace DanceWithTheDevil
     /// sub-texel display offset so static geometry does not shimmer while panning; with a player target it leans a
     /// little toward the aim point, and the focus point is clamped to a world XZ box so the view never drifts far
     /// outside the arena (provisional decision D1).
+    /// Full resolution (<see cref="_fullResolution"/>, on by default since 2026-10-27): the same framing and texel grid,
+    /// but the RenderTexture holds k pixels per low-res texel (k = screen height / low-res height, rounded up; at least
+    /// 2, so a small window is supersampled; at most <see cref="MaxResolutionScale"/>) and is shown bilinear, so the
+    /// image is sharp instead of pixelated.
+    /// All texel maths (snapping, remainder, shake, border) stays in low-res texels; only the RT is k× larger.
     /// Use <see cref="ScreenPointToWorldRay"/> for mouse aiming (never Camera.main).
     /// </summary>
     [DefaultExecutionOrder(1000)] // after gameplay LateUpdates, so the follow uses the final target position
@@ -27,6 +32,7 @@ namespace DanceWithTheDevil
         private const float TraumaFullDistance = 10f;    // positional trauma: full within this flat distance of the focus
         private const float TraumaFarDistance = 25f;     // ...down to TraumaFarScale at this distance and beyond
         private const float TraumaFarScale = 0.25f;
+        private const int MaxResolutionScale = 3;        // full resolution: at most 3 RT pixels per texel (WebGL cost)
 
         [Header("Cameras")]
         [Tooltip("Orthographic game camera. Its targetTexture is created and owned by this rig.")]
@@ -39,6 +45,8 @@ namespace DanceWithTheDevil
         [SerializeField, Min(16)] private int _height = 360;
         [Tooltip("If the integer scale covers less than this fraction of the aspect-fit size, use a fractional fit instead.")]
         [SerializeField, Range(0f, 1f)] private float _minIntegerCoverage = 0.8f;
+        [Tooltip("On: render at screen resolution (sharp, smooth upscale). Off: the low-res pixel-art look.")]
+        [SerializeField] private bool _fullResolution = true;
         [Tooltip("Letterbox / clear colour behind the image.")]
         [SerializeField] private Color _barColor = Color.black;
         [Tooltip("Sorting order of the display canvas. HUD canvases must use a higher value.")]
@@ -171,6 +179,10 @@ namespace DanceWithTheDevil
 
         private int RtWidth => _width + 2 * Border;
         private int RtHeight => _height + 2 * Border;
+        private int _resolutionScale = 1;   // RT pixels per low-res texel
+
+        private int ResolutionScaleFor(int screenHeight) =>
+            _fullResolution ? Mathf.Clamp(Mathf.CeilToInt((float)screenHeight / _height), 2, MaxResolutionScale) : 1;
 
         private void Awake()
         {
@@ -181,6 +193,7 @@ namespace DanceWithTheDevil
                 return;
             }
 
+            _resolutionScale = ResolutionScaleFor(Screen.height);
             CreateRenderTexture();
             ConfigureGameCamera();
             CreateDisplay();
@@ -358,7 +371,8 @@ namespace DanceWithTheDevil
         private void CreateRenderTexture()
         {
             // sRGB colour so Linear-space rendering is stored/sampled correctly; 24-bit depth; no MSAA, no mips.
-            var desc = new RenderTextureDescriptor(RtWidth, RtHeight, RenderTextureFormat.ARGB32, 24)
+            var desc = new RenderTextureDescriptor(RtWidth * _resolutionScale, RtHeight * _resolutionScale,
+                RenderTextureFormat.ARGB32, 24)
             {
                 sRGB = QualitySettings.activeColorSpace == ColorSpace.Linear,
                 msaaSamples = 1,
@@ -369,7 +383,7 @@ namespace DanceWithTheDevil
             _renderTexture = new RenderTexture(desc)
             {
                 name = "PixelCameraRT",
-                filterMode = FilterMode.Point,
+                filterMode = _resolutionScale > 1 ? FilterMode.Bilinear : FilterMode.Point,
                 wrapMode = TextureWrapMode.Clamp,
                 anisoLevel = 0,
             };
@@ -449,9 +463,22 @@ namespace DanceWithTheDevil
             _lastScreenWidth = sw;
             _lastScreenHeight = sh;
 
+            int resolutionScale = ResolutionScaleFor(sh);
+            if (resolutionScale != _resolutionScale && _renderTexture != null)
+            {
+                // New RT for the new pixel density (same aspect, so the camera's ortho size is unchanged).
+                _resolutionScale = resolutionScale;
+                RenderTexture old = _renderTexture;
+                CreateRenderTexture();
+                _gameCamera.targetTexture = _renderTexture;
+                _rawImage.texture = _renderTexture;
+                old.Release();
+                Destroy(old);
+            }
+
             float fit = Mathf.Min((float)sw / _width, (float)sh / _height);
             int integerScale = Mathf.FloorToInt(fit);
-            float scale = (integerScale >= 1 && integerScale / fit >= _minIntegerCoverage) ? integerScale : fit;
+            float scale = (!_fullResolution && integerScale >= 1 && integerScale / fit >= _minIntegerCoverage) ? integerScale : fit;
 
             float w = Mathf.Round(_width * scale);
             float h = Mathf.Round(_height * scale);
