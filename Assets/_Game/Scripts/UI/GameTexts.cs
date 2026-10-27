@@ -256,14 +256,10 @@ namespace DanceWithTheDevil
         private static readonly TextEntry _creditsTitle = new TextEntry("credits.title", "Emeği Geçenler",
             "Emeği Geçenler panelinin başlığı.");
         private static readonly TextEntry _creditsBody = new TextEntry("credits.body",
-            "Dance with the Devil ekibi — Women Game Jam 2026\n\n" +
-            "Mekân: Synty POLYGON Dark Fantasy\n" +
-            "Arayüz: Synty Interface Dark Fantasy HUD\n" +
-            "Yazı tipleri: Pirata One, Markazi Text (SIL OFL)\n" +
-            "Animasyonlar: Adobe Mixamo · Silahlar: Low Poly Weapons VOL.1\n" +
-            "Efekt dokuları: Kenney (CC0)\n" +
-            "Şeytan çizimi (geçici): Gustave Doré gravürü (kamu malı)\n" +
-            "Sesler ve müzik: oyunun içinde üretildi",
+            "Sefa Selim Tura - Developer\n" +
+            "Zülfiye Selim - Art\n" +
+            "Duygu Ersoy - Sound Effects\n" +
+            "Burak Canbul - Musics, Developer",
             "Emeği Geçenler paneli: bütün metin. Satır atlamak için Alt+Enter.");
 
         public static string CreditsTitle => _creditsTitle.Text;

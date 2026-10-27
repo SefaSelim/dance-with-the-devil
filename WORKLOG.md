@@ -592,3 +592,10 @@ Every change to this project goes here — from people and from AI tools. Git sh
 - Notes / risks:
   - The splash only shows in builds (or Player Settings › Splash Image › Preview); not seen in a build yet.
   - The WebGL page's loading bar comes from the Default WebGL template (it shows Unity's logo); the browser tab icon on itch.io is itch's own.
+
+### 2026-10-27 — SefaSelim (Claude Code) — branch juice
+- Changed: the Credits panel lists the team instead of the asset sources (SefaSelim's request).
+  - `Scripts/UI/GameTexts.cs` `credits.body` default → "Sefa Selim Tura - Developer / Zülfiye Selim - Art / Duygu Ersoy - Sound Effects / Burak Canbul - Musics, Developer" (one per line).
+  - `Texts/Yazilar.xlsx` row `credits.body`: Metin and Varsayılan → the same four lines. No other cell touched (`credits.title` stays "Credits").
+- Status: GameTexts.cs committed; `Yazilar.xlsx` and `Resources/GameTextTable.asset` left uncommitted, since they also hold SefaSelim's own uncommitted text edits.
+- Notes / risks: the MCP link to Unity was down, so the re-import was not run here. Unity re-imports the xlsx when it gets focus; otherwise use Dance/Texts › Excel'den Oku. Asset licences remain listed in the repo docs.
