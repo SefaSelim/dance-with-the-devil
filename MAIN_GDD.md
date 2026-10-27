@@ -1,6 +1,6 @@
 # MAIN GDD — Dance with the Devil (Bir Şey Olmaz)
 
-**Son güncelleme: 2026-10-27 02:54 (UTC+3)**
+**Son güncelleme: 2026-10-27 03:08 (UTC+3)**
 
 > **Bu dosya projenin tek ve yaşayan Game Design Document'ıdır.** Sürüm numarası yoktur (GDD2, GDD3…
 > diye gitmez). Yeni bir mekanik eklendiğinde, var olan bir mekanik değiştiğinde ya da bir tasarım kararı
@@ -269,20 +269,23 @@ ne kadarının kırılacağı Faz 4'te dengelenir (❓ A-12: Yankı'nın sekme y
 
 **Harita: uçurumdaki mezarlık (kullanıcı kararı 2026-10-27):** arena, ekibin seçtiği hazır Synty haritasıdır: deniz
 üstünde yükselen bir kayalık adanın tepesinde, alçak taş çitle çevrili bir mezarlık. Eski blok arena ve gotik avlu kalktı.
-- **Oynanabilir alan:** adanın düzlüğü, ~30 × 25 m (x −16…+15, z −13,5…+11,8). Kenarında görünmez duvarlar vardır, Defne
+- **Ölçek ve zemin (2026-10-27):** harita karakterlere göre 1,5 kat büyütüldü. Düzlüğün engebeli toprak-çimen zemini,
+  eski arenanın düz, çatlak taş karolarıyla değiştirildi (tamamen düz, yükseklik 0); mezarlar, türbeler ve bitkiler bu
+  zemine oturur. Haritanın kendi sisi neredeyse tamamen kaldırıldı (yalnız çok hafif bir iz kalır).
+- **Oynanabilir alan:** adanın düzlüğü, ~45 × 38 m (x −24…+22,5, z −20…+18). Kenarında görünmez duvarlar vardır, Defne
   uçurumdan düşemez. Dışarıda deniz, uçurumlar ve uzak kaya adaları görünür (bu harita bilerek manzara gösterir).
-- **Çit ve siperler:** ~23 × 18 m'lik mezarlık çiti (1,9 m, sütunlar 2,4 m) iç halka olarak durur ve mermiyi keser; kuzeyde,
+- **Çit ve siperler:** ~35 × 27 m'lik mezarlık çiti (2,9 m, sütunlar 3,6 m) iç halka olarak durur ve mermiyi keser; kuzeyde,
   güneyde, güneydoğuda, doğuda (eski kapı kaldırıldı) ve batıda geniş bir yıkıkta açıklıkları vardır. Çitin dışındaki
   çimenli halka da oynanabilir. İki büyük türbe (kuzeybatı, kuzeydoğu), kuyu, ölü ağaçlar ve kenardaki büyük mezarlar
   siper ve yön işaretidir.
-- **Açık merkez:** Defne'nin başlangıcı (orta) çevresinde ~11 × 9 m'lik boş bir alan açıldı; ortadaki türbe ve aradaki
-  mezar taşları, cesetler, mumlar kaldırıldı. Girişlerden merkeze ~3,6 m'lik yollar açıktır.
-- **Girişler:** sekiz giriş, adanın kenarına dağılmış (K, KD, D, GD, G, iki B, KB), hepsi başlangıçtan 11–15 m uzakta;
+- **Açık merkez:** Defne'nin başlangıcı (orta) çevresinde ~16 × 13 m'lik boş bir alan açıldı; ortadaki türbe ve aradaki
+  mezar taşları, cesetler, mumlar kaldırıldı. Girişlerden merkeze ~5 m'lik yollar açıktır.
+- **Girişler:** sekiz giriş, adanın kenarına dağılmış (K, KD, D, GD, G, iki B, KB), hepsi başlangıçtan 16–23 m uzakta;
   her birinde içe bakan şeritli zemin plakası ve doğuştan önce yanan uyarı vardır. Düşmanlar her birinden merkeze yürüyerek
   ulaşır (yol bulma yalnız adanın düzlüğünde; deniz, uçurum ve merdivenler dışarıda).
 - Küçük dekorun (cesetler, mumlar, mangallar, yassı mezar taşları, kütükler, bitkiler) çarpışması yoktur; büyük mezarlar,
   türbeler, çit, ağaç gövdeleri ve kayalar engeldir. Kamera, Defne'yi takip ederken odağını adanın ortasında tutar
-  (merkezden en çok ±8 m doğu–batı, ±6 m kuzey–güney).
+  (merkezden en çok ±12 m doğu–batı, ±9 m kuzey–güney).
 
 ## 10. Dalgalar ve zorluk — 🟡 (dalga yöneticisi çalışıyor; mermi cehennemi zorluğu K-21 uygulandı; ölüm takvimi henüz dengelenmedi)
 
@@ -613,3 +616,4 @@ seçenek seçerse değiştirilir:
 - 2026-10-27 02:15 — SefaSelim (Claude Code) — Tüfek omuzda; mermi ve namlu ateşi tüfeğin ucundan çıkar, mermi ilk 2,5 m'de 1 m vuruş yüksekliğine iner (§13).
 - 2026-10-27 02:26 — SefaSelim (Claude Code) — Mermi izi eğimli inmek yerine namlu hizasında dümdüz gider; vuruş yüksekliği 1 m kalır (§13).
 - 2026-10-27 02:54 — SefaSelim (Claude Code) — Arena, uçurumdaki mezarlık haritasına taşındı: ~30 × 25 m düzlük, çit iç halka ve açıklıklar, açılmış merkez, sekiz kenar girişi, deniz ve uçurum görünür (§9, K-14).
+- 2026-10-27 03:08 — SefaSelim (Claude Code) — Mezarlık haritası 1,5 kat büyüdü, düzlük eski düz taş zeminle döşendi, haritanın sisi neredeyse kalktı (§9).

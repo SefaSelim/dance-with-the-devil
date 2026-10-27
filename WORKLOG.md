@@ -490,3 +490,37 @@ Every change to this project goes here — from people and from AI tools. Git sh
   - The 1.9 m fence on the camera side (south, west) can hide Defne when she stands right behind it.
   - Not playtested by a human.
   - Not changed: `PC_RPAsset`, URP global settings, `Yazilar.xlsx`, `GameTextTable.asset` and `Build Profiles` (SefaSelim's, still uncommitted).
+
+### 2026-10-27 — SefaSelim (Claude Code) — branch juice
+- Changed: the graveyard map is 1.5× bigger, its plateau has the old flat cracked-stone floor instead of the bumpy ground, and its fog is down to a trace (SefaSelim's request).
+  - `Editor/GraveyardArenaSetup.cs`:
+    - New menu Dance/Arena/Flatten And Scale Graveyard (run twice: the second run only re-laid the floor, re-baked and re-snapped, after a bake-volume fix).
+    - Every gameplay coordinate in the file is multiplied by the map's current scale (the Arena root's), so Fit Graveyard Map stays valid after scaling.
+    - The entrance list now holds the snapped West/NorthWest spots.
+    - New `SnapEntrances` step after each bake, in both menus.
+    - The NavMeshSurface volume is set in world metres, since the surface ignores its transform's scale.
+  - `Scenes/Arena.unity`:
+    - Roots Arena, Props, Lighting, Particles: position (0, 0 / 0.1, 0) → (0, 0, 0), scale 1 → 1.5. Entrance_*/Warning_* plates scaled back to 1/1.5 locally (unchanged size). Point lights range ×1.5.
+    - Flatten:
+      - 340 plateau objects (props, buildings, trees, cover, foliage, lights, effects) moved down by the old ground height under their pivot;
+      - 110 Arena/Environment/Ground patches whose centre is inside the play outline deleted;
+      - new root "Floor" with 272 SM_Bld_Base_Floor_01 tiles (2.5 m, top at y 0, a 2.5 × 0.5 m BoxCollider each, shadows off, static) over the outline;
+      - SM_Wep_Sword_03 (1), SM_Env_Moss_03 and SM_Env_Plant_Fern_01 (22) dropped 0.22–0.62 m onto the surface under them.
+    - Fog: Particles › FX_Fog_01 › ParticleSystem › startColor alpha 0.20 → 0.03, maxParticles 500 → 60. RenderSettings fog was already off.
+    - Refit ×1.5:
+      - entrances placed at the scaled spots, then snapped: all 8 on the NavMesh with complete paths to the start (16.5–28.6 m);
+      - PlayBounds edge walls rebuilt on the scaled outline;
+      - PixelCameraRig bounds (-8, -6)..(8, 6) → (-12, -9)..(12, 9);
+      - RunBot `_arenaHalfExtents` (13, 11) → (19.5, 16.5);
+      - NavMeshSurface volume centre (-0.75, 1, -1.2), size (49.5, 4, 42), re-baked to `Scenes/Arena/NavMesh-Arena.asset`.
+  - Checks:
+    - 271 map renderers on the plateau stand on a surface. The 20 "above the floor" are meant to be: tomb lids, door boards, hanging gallows bodies, vines and moss on the crypts, a candle on a tomb.
+    - Top view and game-view frames with waves: no fog, flat stone floor.
+  - Docs: MAIN_GDD §9 (scale, floor, fog, new sizes) + change log.
+  - Prefab/ProjectSettings: none.
+- Why: SefaSelim: "Mapteki sis çok fazla … çok çok az olacak şekilde güncelle, mapin scaleini genel olarak büyüt. Ayrıca zemini eski koyduğun zeminle değiştir dümdüz olsun".
+- Status: committed (Graveyard map ×1.5, flat stone floor, fog trace)
+- Notes / risks:
+  - Test suites were not run (SefaSelim: "test yapmana gerek yok"); only the NavMesh/spawn checks and the captures above.
+  - Floor tiles at the plateau edge stick out a little over the rim rocks in places.
+  - The crypts and dead trees, now 1.5× taller, can hide Defne when she stands behind them from the camera.
