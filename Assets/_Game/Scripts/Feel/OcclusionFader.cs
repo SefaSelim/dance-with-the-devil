@@ -30,7 +30,7 @@ namespace DanceWithTheDevil
         private const float MaxSize = 40f;         // wider than this: the island or the far background
 
         [Tooltip("Radius of the hole round Defne, metres.")]
-        [SerializeField, Min(0.1f)] private float _radius = 1.5f;
+        [SerializeField, Min(0.1f)] private float _radius = 3f;
         [Tooltip("Width of the dithered rim inside that radius, metres.")]
         [SerializeField, Min(0.01f)] private float _feather = 0.45f;
         [Tooltip("Seconds for the hole to open or close.")]

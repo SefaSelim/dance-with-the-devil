@@ -599,3 +599,11 @@ Every change to this project goes here — from people and from AI tools. Git sh
   - `Texts/Yazilar.xlsx` row `credits.body`: Metin and Varsayılan → the same four lines. No other cell touched (`credits.title` stays "Credits").
 - Status: GameTexts.cs committed; `Yazilar.xlsx` and `Resources/GameTextTable.asset` left uncommitted, since they also hold SefaSelim's own uncommitted text edits.
 - Notes / risks: the MCP link to Unity was down, so the re-import was not run here. Unity re-imports the xlsx when it gets focus; otherwise use Dance/Texts › Excel'den Oku. Asset licences remain listed in the repo docs.
+
+### 2026-10-27 — SefaSelim (Claude Code) — branch juice
+- Changed: the see-through hole round Defne is twice as wide (SefaSelim's request).
+  - `Scripts/Feel/OcclusionFader.cs` `_radius` default 1.5 → 3 m. The component is added at runtime by PixelCameraRig, so the code default is the live value; no scene change.
+  - Dithered rim (0.45 m) and open time unchanged.
+  - MAIN_GDD §9: ~1,5 m → ~3 m.
+- Status: committed
+- Notes / risks: not seen in play; the hole still opens only when a tall prop covers her.

@@ -1,6 +1,6 @@
 # MAIN GDD — Dance with the Devil (Bir Şey Olmaz)
 
-**Son güncelleme: 2026-10-27 04:00 (UTC+3)**
+**Son güncelleme: 2026-10-27 04:37 (UTC+3)**
 
 > **Bu dosya projenin tek ve yaşayan Game Design Document'ıdır.** Sürüm numarası yoktur (GDD2, GDD3…
 > diye gitmez). Yeni bir mekanik eklendiğinde, var olan bir mekanik değiştiğinde ya da bir tasarım kararı
@@ -273,7 +273,7 @@ ne kadarının kırılacağı Faz 4'te dengelenir (❓ A-12: Yankı'nın sekme y
   eski arenanın düz, çatlak taş karolarıyla değiştirildi (tamamen düz, yükseklik 0); mezarlar, türbeler ve bitkiler bu
   zemine oturur. Haritanın kendi sisi neredeyse tamamen kaldırıldı (yalnız çok hafif bir iz kalır).
 - **Saydamlaşma (2026-10-27):** kameradan bakınca Defne'nin önünde kalan yüksek dekorda (türbeler, çit, ağaçlar, büyük
-  mezarlar, çatıdaki yosun, asılı lambalar) yalnız Defne'nin çevresinde ~1,5 m yarıçaplı yuvarlak bir delik açılır
+  mezarlar, çatıdaki yosun, asılı lambalar) yalnız Defne'nin çevresinde ~3 m yarıçaplı yuvarlak bir delik açılır
   (kenarı piksel desenle yumuşar); dekorun geri kalanı olduğu gibi kalır. Delik 0,15 sn'de açılır, Defne çıkınca kapanır.
   Alçak dekor (yassı taşlar, bitkiler) delinmez.
 - **Oynanabilir alan:** adanın düzlüğü, ~45 × 38 m (x −24…+22,5, z −20…+18). Kenarında görünmez duvarlar vardır, Defne
@@ -623,3 +623,4 @@ seçenek seçerse değiştirilir:
 - 2026-10-27 03:08 — SefaSelim (Claude Code) — Mezarlık haritası 1,5 kat büyüdü, düzlük eski düz taş zeminle döşendi, haritanın sisi neredeyse kalktı (§9).
 - 2026-10-27 03:41 — SefaSelim (Claude Code) — Defne'nin önündeki yüksek dekor saydamlaşır (§9).
 - 2026-10-27 04:00 — SefaSelim (Claude Code) — Saydamlaşma dekorun tamamı yerine yalnız Defne'nin çevresindeki yuvarlak alanda (§9).
+- 2026-10-27 04:37 — SefaSelim (Claude Code) — Defne'nin çevresindeki saydamlık deliğinin yarıçapı 1,5 m → 3 m (§9).
