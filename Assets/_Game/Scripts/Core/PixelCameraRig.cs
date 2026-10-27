@@ -188,6 +188,9 @@ namespace DanceWithTheDevil
             _targetPlayer = _target != null ? _target.GetComponentInParent<PlayerController>() : null;
             _focus = _target != null ? ClampFocus(_target.position + _focusOffset) : _focusOffset;
             _leadStartTime = Time.time;
+            // Scenery between the camera and Defne turns see-through (no scene edit: added here).
+            if (!TryGetComponent(out _fader)) _fader = gameObject.AddComponent<OcclusionFader>();
+            _fader.Configure(_gameCamera, _target);
             UpdateLayout(force: true);
             UpdateCamera(snapImmediately: true);
         }
@@ -219,6 +222,7 @@ namespace DanceWithTheDevil
         {
             _target = target;
             _targetPlayer = target != null ? target.GetComponentInParent<PlayerController>() : null;
+            if (_fader != null) _fader.Configure(_gameCamera, target);
             if (snap && target != null)
             {
                 _lead = Vector3.zero;
@@ -521,6 +525,7 @@ namespace DanceWithTheDevil
         }
 
         private float _leadStartTime;
+        private OcclusionFader _fader;
 
         // Flat look-ahead toward the player's aim point, eased on its own (scaled time: it waits through hitstop).
         private Vector3 UpdateLead(bool snap)

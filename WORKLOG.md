@@ -524,3 +524,22 @@ Every change to this project goes here — from people and from AI tools. Git sh
   - Test suites were not run (SefaSelim: "test yapmana gerek yok"); only the NavMesh/spawn checks and the captures above.
   - Floor tiles at the plateau edge stick out a little over the rim rocks in places.
   - The crypts and dead trees, now 1.5× taller, can hide Defne when she stands behind them from the camera.
+
+### 2026-10-27 — SefaSelim (Claude Code) — branch juice
+- Changed: scenery that stands between the camera and Defne turns see-through (SefaSelim's request; GDD §9 already asked for walls near the camera to turn transparent when they hide her).
+  - New `Scripts/Feel/OcclusionFader.cs`:
+    - Collects once at start every MeshRenderer at least 1.4 m tall and under 40 m wide, using URP Lit/Simple Lit materials. It leaves out Defne, enemies, projectiles, UI, the floor and the far background.
+    - Each frame, three rays from Defne (0.35, 1.0, 1.6 m) toward the orthographic camera test those bounds, grown by 0.35 m.
+    - A covering renderer eases to alpha 0.12 over 0.15 s (unscaled), then back. While faded it uses cached transparent copies of its materials, made from the `Resources/OcclusionFade` template with the source base map, scale/offset and colour; alpha goes through a per-material property block. At full opacity it gets its own materials back.
+  - `Scripts/Core/PixelCameraRig.cs`: adds the fader at Awake if missing and passes the game camera and target (also on SetTarget). No scene edit.
+  - New asset `Resources/OcclusionFade.mat`: URP Lit, transparent (URP saved it premultiplied), ZWrite off, queue 3000. It is the build-safe template for the faded copies.
+  - New explicit capture test `OcclusionCaptureTests` (Defne put right behind the tallest crypt; fade off, on, crypt hidden).
+  - Docs: MAIN_GDD §9 Saydamlaşma + change log.
+  - Scene/Prefab/ProjectSettings: none (SefaSelim's own uncommitted Arena.unity changes were left as they are).
+- Why: SefaSelim: "oyuncu bir şeylerin önüne geçtiğinde engelleyen itemlerin saydamlaşması".
+- Status: committed (Occlusion fade)
+- Notes / risks:
+  - Test suites not run (SefaSelim asked for none).
+  - At alpha 0.3 the many-layered crypt still read as solid (the layers stack), hence 0.12.
+  - Low parts (door boards, roof moss under 1.4 m) stay opaque.
+  - Faded objects lose their normal map and emission while faded.
