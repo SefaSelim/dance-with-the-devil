@@ -1,57 +1,59 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Rendering;
 
 namespace DanceWithTheDevil
 {
     /// <summary>
-    /// Fades the scenery that stands between the camera and Defne (MAIN_GDD §9: what hides the player turns see-through).
-    /// Each frame three points on Defne (feet, chest, head) cast a ray toward the camera along its view direction (the
-    /// camera is orthographic, so every ray is parallel); a tall map renderer whose bounds (grown by
-    /// <see cref="_margin"/>) the rays cross eases to <see cref="_fadedAlpha"/> over <see cref="_fadeTime"/>, and back
-    /// when it no longer covers her. A fading renderer swaps to transparent copies of its materials, built from the
-    /// Resources/OcclusionFade template (URP Lit, transparent, so the variant is in builds) with the source's base map
-    /// and colour; at full opacity it gets its own materials back. Static scenery only, collected once when the scene
-    /// starts: characters, enemies, projectiles, effects, the floor and the far background are left out.
-    /// Added by <see cref="PixelCameraRig"/> at runtime; no scene edit needed.
+    /// Opens a round hole around Defne in the scenery that stands between her and the camera (MAIN_GDD §9): only the
+    /// part of a crypt, tree or fence inside a circle round her chest disappears (with a dithered rim), the rest of it
+    /// stays as it is. Each frame three points on Defne (feet, chest, head) cast a ray toward the camera along its view
+    /// direction (orthographic: parallel rays); a tall map renderer whose bounds (grown by <see cref="_margin"/>) the
+    /// rays cross swaps to its "Dance/Lit Occlusion" copies (URP Lit with the cut-out, same look outside the hole) and
+    /// back when it no longer covers her. The hole grows from nothing over <see cref="_openTime"/> when something first
+    /// covers her and closes again when nothing does. The shader reads the globals set here.
+    /// Copies come from Resources/OcclusionMaterials (built in the editor by Dance/Arena/Build Occlusion Materials, so
+    /// the shader variants are in builds); a material missing from it gets a runtime copy (fine in the editor).
+    /// Static URP Lit scenery only, collected once when the scene starts. Added by <see cref="PixelCameraRig"/>.
     /// </summary>
     [DefaultExecutionOrder(1010)] // after the camera rig has placed the camera for this frame
     [DisallowMultipleComponent]
     public sealed class OcclusionFader : MonoBehaviour
     {
-        private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
-        private static readonly int BaseMapId = Shader.PropertyToID("_BaseMap");
+        public const string LitShaderName = "Universal Render Pipeline/Lit";
+        public const string OcclusionShaderName = "Dance/Lit Occlusion";
+        private static readonly int TargetId = Shader.PropertyToID("_OcclusionTarget");
+        private static readonly int CircleId = Shader.PropertyToID("_OcclusionCircle");
         private static readonly float[] SampleHeights = { 0.35f, 1.0f, 1.6f };
+        private const float CentreHeight = 1.0f;   // the hole is centred on her chest
+        private const float MinHeight = 1.4f;      // shorter scenery never hides her…
+        private const float RaisedFrom = 1.0f;     // …unless it hangs above the floor (roof moss, lamps, branches)
+        private const float MaxSize = 40f;         // wider than this: the island or the far background
 
-        [Tooltip("Opacity of scenery that hides Defne.")]
-        [SerializeField, Range(0f, 1f)] private float _fadedAlpha = 0.12f;
-        [Tooltip("Seconds to fade out or back in.")]
-        [SerializeField, Min(0.01f)] private float _fadeTime = 0.15f;
+        [Tooltip("Radius of the hole round Defne, metres.")]
+        [SerializeField, Min(0.1f)] private float _radius = 1.5f;
+        [Tooltip("Width of the dithered rim inside that radius, metres.")]
+        [SerializeField, Min(0.01f)] private float _feather = 0.45f;
+        [Tooltip("Seconds for the hole to open or close.")]
+        [SerializeField, Min(0.01f)] private float _openTime = 0.15f;
         [Tooltip("Metres the occluders' bounds are grown by (Defne's width round the rays).")]
         [SerializeField, Min(0f)] private float _margin = 0.35f;
-        [Tooltip("Only renderers at least this tall (metres) can fade: low tombs and props never hide her.")]
-        [SerializeField, Min(0f)] private float _minHeight = 1.4f;
-        [Tooltip("Renderers wider than this (metres) are the far background or the island itself: never faded.")]
-        [SerializeField, Min(1f)] private float _maxSize = 40f;
 
         private sealed class Entry
         {
             public Renderer Renderer;
             public Bounds Bounds;
             public Material[] Original;
-            public Material[] Faded;
-            public Color[] Colors;
-            public float Alpha = 1f;
+            public Material[] Cut;
             public bool Swapped;
         }
 
         private readonly List<Entry> _entries = new List<Entry>(512);
-        private readonly List<Entry> _active = new List<Entry>(32);
-        private readonly Dictionary<Material, Material> _fadedCopies = new Dictionary<Material, Material>();
-        private MaterialPropertyBlock _block;
-        private Material _template;
+        private readonly Dictionary<Material, Material> _cutCopies = new Dictionary<Material, Material>();
+        private readonly List<Material> _runtimeCopies = new List<Material>();
         private Camera _camera;
         private Transform _target;
+        private Shader _shader;
+        private float _open;
         private bool _collected;
 
         /// <summary>Sets the camera and the character to keep visible.</summary>
@@ -61,60 +63,85 @@ namespace DanceWithTheDevil
             _target = target;
         }
 
+        /// <summary>True for scenery this can cut: tall or raised above the floor, not the backdrop, every material URP Lit.</summary>
+        public static bool IsCandidate(Renderer r)
+        {
+            if (!(r is MeshRenderer) || !r.enabled || r.sharedMaterials.Length == 0) return false;
+            if (r.GetComponentInParent<PlayerController>() != null || r.GetComponentInParent<Enemy>() != null
+                || r.GetComponentInParent<Projectile>() != null || r.GetComponentInParent<Canvas>() != null) return false;
+            Bounds b = r.bounds;
+            if ((b.size.y < MinHeight && b.min.y < RaisedFrom) || b.size.x > MaxSize || b.size.z > MaxSize) return false;
+            foreach (Material m in r.sharedMaterials)
+                if (m == null || m.shader == null || m.shader.name != LitShaderName) return false;
+            return true;
+        }
+
         private void Start()
         {
-            _block = new MaterialPropertyBlock();
-            _template = Resources.Load<Material>("OcclusionFade");
-            Collect();
+            _shader = Shader.Find(OcclusionShaderName);
+            var set = Resources.Load<OcclusionMaterialSet>("OcclusionMaterials");
+            if (set != null)
+                for (int i = 0; i < set.Sources.Count && i < set.Copies.Count; i++)
+                    if (set.Sources[i] != null && set.Copies[i] != null) _cutCopies[set.Sources[i]] = set.Copies[i];
+            foreach (MeshRenderer r in FindObjectsByType<MeshRenderer>(FindObjectsSortMode.None))
+                if (IsCandidate(r)) _entries.Add(new Entry { Renderer = r, Bounds = r.bounds, Original = r.sharedMaterials });
+            _collected = true;
+            Shader.SetGlobalVector(CircleId, Vector4.zero);
         }
 
         private void OnDestroy()
         {
             foreach (Entry e in _entries) Restore(e);
-            foreach (Material m in _fadedCopies.Values)
+            foreach (Material m in _runtimeCopies)
                 if (m != null) Destroy(m);
-            _fadedCopies.Clear();
+            Shader.SetGlobalVector(CircleId, Vector4.zero);
         }
 
-        private void Collect()
+        private void OnDisable()
         {
-            _collected = true;
-            foreach (MeshRenderer r in FindObjectsByType<MeshRenderer>(FindObjectsSortMode.None))
-            {
-                if (!r.enabled || r.sharedMaterials.Length == 0) continue;
-                if (r.GetComponentInParent<PlayerController>() != null || r.GetComponentInParent<Enemy>() != null
-                    || r.GetComponentInParent<Projectile>() != null || r.GetComponentInParent<Canvas>() != null) continue;
-                Bounds b = r.bounds;
-                if (b.size.y < _minHeight || b.size.x > _maxSize || b.size.z > _maxSize) continue;
-                if (!AllFadeable(r.sharedMaterials)) continue;
-                _entries.Add(new Entry { Renderer = r, Bounds = b, Original = r.sharedMaterials });
-            }
-        }
-
-        private static bool AllFadeable(Material[] materials)
-        {
-            foreach (Material m in materials)
-                if (m == null || !m.HasProperty(BaseColorId) || m.shader.name.Contains("Particles")) return false;
-            return true;
+            foreach (Entry e in _entries) Restore(e);
+            _open = 0f;
+            Shader.SetGlobalVector(CircleId, Vector4.zero);
         }
 
         private void LateUpdate()
         {
-            if (!_collected || _camera == null || _target == null) return;
+            if (!_collected || _camera == null || _target == null || _shader == null) return;
             Vector3 back = -_camera.transform.forward;
-            float dt = Time.unscaledDeltaTime;
-            float step = dt / _fadeTime;
-
+            bool any = false;
             for (int i = 0; i < _entries.Count; i++)
             {
                 Entry e = _entries[i];
                 if (e.Renderer == null) continue;
-                bool covers = Covers(e.Bounds, back);
-                float goal = covers ? _fadedAlpha : 1f;
-                if (Mathf.Approximately(e.Alpha, goal) && (covers || !e.Swapped)) continue;
-                e.Alpha = Mathf.MoveTowards(e.Alpha, goal, step);
-                Apply(e);
+                if (Covers(e.Bounds, back))
+                {
+                    any = true;
+                    if (!e.Swapped) Swap(e);
+                }
+                else if (e.Swapped && _open > 0f && AnyOtherCovering(i, back))
+                {
+                    Restore(e); // another piece still covers her: this one goes back at once
+                }
             }
+
+            _open = Mathf.MoveTowards(_open, any ? 1f : 0f, Time.unscaledDeltaTime / _openTime);
+            if (_open <= 0f)
+                for (int i = 0; i < _entries.Count; i++)
+                    if (_entries[i].Swapped) Restore(_entries[i]);
+
+            // Radius and rim as fractions of the rendered image's height (orthographic: 2 × size metres tall).
+            float metresTall = _camera.orthographic ? _camera.orthographicSize * 2f : 13f;
+            float eased = 1f - (1f - _open) * (1f - _open);
+            Shader.SetGlobalVector(TargetId, _target.position + Vector3.up * CentreHeight);
+            Shader.SetGlobalVector(CircleId, new Vector4(_radius * eased / metresTall, _feather / metresTall, 0f, 0f));
+        }
+
+        private bool AnyOtherCovering(int except, Vector3 back)
+        {
+            for (int i = 0; i < _entries.Count; i++)
+                if (i != except && _entries[i].Swapped && _entries[i].Renderer != null && Covers(_entries[i].Bounds, back))
+                    return true;
+            return false;
         }
 
         private bool Covers(Bounds bounds, Vector3 back)
@@ -129,77 +156,34 @@ namespace DanceWithTheDevil
             return false;
         }
 
-        private void Apply(Entry e)
+        private void Swap(Entry e)
         {
-            if (e.Alpha >= 0.999f)
+            if (e.Cut == null)
             {
-                Restore(e);
-                return;
+                e.Cut = new Material[e.Original.Length];
+                for (int m = 0; m < e.Original.Length; m++) e.Cut[m] = CutCopy(e.Original[m]);
             }
-            if (!e.Swapped)
-            {
-                if (e.Faded == null) BuildFaded(e);
-                e.Renderer.sharedMaterials = e.Faded;
-                e.Swapped = true;
-            }
-            for (int m = 0; m < e.Faded.Length; m++)
-            {
-                Color c = e.Colors[m];
-                c.a *= e.Alpha;
-                _block.Clear();
-                _block.SetColor(BaseColorId, c);
-                e.Renderer.SetPropertyBlock(_block, m);
-            }
+            e.Renderer.sharedMaterials = e.Cut;
+            e.Swapped = true;
         }
 
         private void Restore(Entry e)
         {
-            e.Alpha = 1f;
             if (!e.Swapped || e.Renderer == null) return;
             e.Renderer.sharedMaterials = e.Original;
-            for (int m = 0; m < e.Original.Length; m++) e.Renderer.SetPropertyBlock(null, m);
             e.Swapped = false;
         }
 
-        private void BuildFaded(Entry e)
+        private Material CutCopy(Material source)
         {
-            e.Faded = new Material[e.Original.Length];
-            e.Colors = new Color[e.Original.Length];
-            for (int m = 0; m < e.Original.Length; m++)
-            {
-                Material source = e.Original[m];
-                e.Colors[m] = source.GetColor(BaseColorId);
-                if (!_fadedCopies.TryGetValue(source, out Material copy))
-                {
-                    copy = _template != null ? new Material(_template) : MakeTransparentLit();
-                    copy.name = source.name + " (faded)";
-                    Texture map = source.HasProperty(BaseMapId) ? source.GetTexture(BaseMapId) : source.mainTexture;
-                    copy.SetTexture(BaseMapId, map);
-                    if (source.HasProperty(BaseMapId))
-                    {
-                        copy.SetTextureScale(BaseMapId, source.GetTextureScale(BaseMapId));
-                        copy.SetTextureOffset(BaseMapId, source.GetTextureOffset(BaseMapId));
-                    }
-                    copy.SetColor(BaseColorId, e.Colors[m]);
-                    _fadedCopies[source] = copy;
-                }
-                e.Faded[m] = copy;
-            }
-        }
-
-        /// <summary>Fallback when the Resources template is missing (the editor): URP Lit set to alpha blending.</summary>
-        private static Material MakeTransparentLit()
-        {
-            var m = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            m.SetFloat("_Surface", 1f);
-            m.SetFloat("_Blend", 0f);
-            m.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
-            m.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
-            m.SetFloat("_ZWrite", 0f);
-            m.SetOverrideTag("RenderType", "Transparent");
-            m.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-            m.renderQueue = (int)RenderQueue.Transparent;
-            return m;
+            if (_cutCopies.TryGetValue(source, out Material copy)) return copy;
+            copy = new Material(source) { name = source.name + " (occlusion)", shader = _shader };
+            copy.CopyPropertiesFromMaterial(source);
+            copy.shaderKeywords = source.shaderKeywords;
+            copy.renderQueue = source.renderQueue;
+            _cutCopies[source] = copy;
+            _runtimeCopies.Add(copy);
+            return copy;
         }
     }
 }

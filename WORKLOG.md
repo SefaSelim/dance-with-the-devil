@@ -543,3 +543,25 @@ Every change to this project goes here — from people and from AI tools. Git sh
   - At alpha 0.3 the many-layered crypt still read as solid (the layers stack), hence 0.12.
   - Low parts (door boards, roof moss under 1.4 m) stay opaque.
   - Faded objects lose their normal map and emission while faded.
+
+### 2026-10-27 — SefaSelim (Claude Code) — branch juice
+- Changed: instead of fading the whole object, a round hole opens around Defne in the scenery that covers her (SefaSelim: "sadece defnenin çevresinde bir yuvarlak alan saydamlaşsın").
+  - New shader `Art/Shaders/LitOcclusion.shader` ("Dance/Lit Occlusion"):
+    - a copy of URP Lit (com.unity.render-pipelines.universal, Unity 6000.6). ForwardLit, GBuffer, DepthOnly and DepthNormals wrap their fragments with `OcclusionClip`; ShadowCaster and the other passes are untouched;
+    - same properties and keywords as Lit, so a material swapped to it looks the same outside the hole.
+    - Re-copy from the package if URP is upgraded.
+  - New `Art/Shaders/OcclusionCut.hlsl`: clips inside a screen circle round Defne's chest (globals `_OcclusionTarget`, `_OcclusionCircle` = radius and feather as fractions of the image height), with a 4×4 ordered-dither rim, depth-correct.
+  - `Scripts/Feel/OcclusionFader.cs` rewritten:
+    - same detection (three rays toward the orthographic camera, grown bounds);
+    - covering renderers swap to their occlusion copies; the hole (radius 1.5 m, rim 0.45 m) opens or closes over 0.15 s;
+    - candidates are URP Lit renderers at least 1.4 m tall or lifted 1 m off the floor (roof moss, lamps, branches), under 40 m wide;
+    - the transparent whole-object fade and `Resources/OcclusionFade.mat` are removed.
+  - New `Scripts/Feel/OcclusionMaterialSet.cs` and editor `Editor/OcclusionMaterialBuilder.cs`: menu Dance/Arena/Build Occlusion Materials writes the occlusion copies of the open scene's candidate materials (10, `Art/Materials/Occlusion/*_occ.mat`) and pairs them in `Resources/OcclusionMaterials.asset`, so WebGL builds carry them and their shader variants. Re-run it when the map's materials change.
+  - `Tests/PlayMode/OcclusionCaptureTests.cs`: logs Defne's screen position; captures off / on / crypt hidden.
+  - Docs: MAIN_GDD §9 Saydamlaşma + change log.
+  - Scene/Prefab/ProjectSettings: none (SefaSelim's own uncommitted Arena.unity, NavMesh and settings changes left as they are).
+- Status: committed (Occlusion as a circle round Defne)
+- Notes / risks:
+  - Test suites not run (SefaSelim asked for none).
+  - Capture checked: a round dithered hole in the crypt roof and moss around Defne, with the rest of the crypt intact.
+  - Not yet seen in a WebGL build.
