@@ -565,3 +565,13 @@ Every change to this project goes here — from people and from AI tools. Git sh
   - Test suites not run (SefaSelim asked for none).
   - Capture checked: a round dithered hole in the crypt roof and moss around Defne, with the rest of the crypt intact.
   - Not yet seen in a WebGL build.
+
+### 2026-10-27 — SefaSelim (Claude Code) — branch juice
+- Changed: store-page screenshots and an itch.io cover (SefaSelim's request).
+  - New explicit capture `Tests/PlayMode/PromoCaptureTests.cs`: main menu, 18 fight shots by RunBot (each with and without the HUD; popups kept), the Devil's line and card, the ending after HAYIR, all at 2× the Game view (1800×1012).
+  - Outputs, outside git (Recordings/ is ignored):
+    - `Recordings/Screenshots/` holds 8 picked shots plus covers `00_kapak_630x500.png` (itch cover size) and `00_kapak_1280x720.png`;
+    - the covers are a text-free fight shot, darkened at the top, with the hand-drawn Devil on the right and the title in Pirata One plus "Bir şey olmaz." in Markazi (the game's fonts);
+    - the menu shot is taken from MenuCaptureTests and upscaled.
+- Status: committed (capture test only)
+- Notes / risks: `ScreenCapture.CaptureScreenshot` with superSize 2 drops the 2D menu stage (drawing missing), so the menu shot comes from a normal capture; the arena shots are fine.
