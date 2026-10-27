@@ -575,3 +575,20 @@ Every change to this project goes here — from people and from AI tools. Git sh
     - the menu shot is taken from MenuCaptureTests and upscaled.
 - Status: committed (capture test only)
 - Notes / risks: `ScreenCapture.CaptureScreenshot` with superSize 2 drops the 2D menu stage (drawing missing), so the menu shot comes from a normal capture; the arena shots are fine.
+
+### 2026-10-27 — SefaSelim (Claude Code) — branch juice
+- Changed: game icon, and a start splash with the team logo plus "Made with Unity" (SefaSelim's request).
+  - New `Art/UI/game_icon.png` (1024², uncompressed, no mipmaps): the hand-drawn Devil's face on a dark red glow. Cropped from `Art/UI/devil_handdraw.png`; the large black gap behind the left horn is cleared (opened mask, thin line art kept).
+  - `Logo/Gemini_Generated_Image_…_upscaled.png` (SefaSelim's "Code Zero" logo, 2676×1492): import Texture → Sprite (single), alpha is transparency, no mipmaps, max size 2048.
+  - ProjectSettings (Player):
+    - default icon (all platforms) → game_icon;
+    - splash: Show Unity Logo on, Draw Mode All Sequential → Unity Logo Below (your logo with Unity's own "Made with Unity" mark under it, the licence-safe way to combine them), logo style Light on Dark (unchanged);
+    - logos [] → [Code Zero, 3 s];
+    - background colour (0.137, 0.122, 0.125) → (0.055, 0.039, 0.047);
+    - overlay opacity 1 → 0;
+    - animation Dolly (unchanged).
+  - `Art/Materials/Occlusion/*_occ.mat` re-saved by Unity (motion-vectors pass re-enabled in the serialised list; no visual change).
+- Status: committed (Icon and start splash)
+- Notes / risks:
+  - The splash only shows in builds (or Player Settings › Splash Image › Preview); not seen in a build yet.
+  - The WebGL page's loading bar comes from the Default WebGL template (it shows Unity's logo); the browser tab icon on itch.io is itch's own.
