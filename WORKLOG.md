@@ -607,3 +607,20 @@ Every change to this project goes here — from people and from AI tools. Git sh
   - MAIN_GDD §9: ~1,5 m → ~3 m.
 - Status: committed
 - Notes / risks: not seen in play; the hole still opens only when a tall prop covers her.
+
+### 2026-10-27 — SefaSelim (Claude Code) — branch juice
+- Fixed: some zombies spawned outside the fence and stayed stuck there (SefaSelim's report).
+  - Cause, measured in the editor on the current Arena scene and NavMesh (SefaSelim's local, uncommitted version):
+    - `Spawn_NorthEast` (18, 0.6, 13.5) sits on a NavMesh patch outside the fence with no path into the arena (PathPartial);
+    - no reachable point exists within 10 m of it;
+    - the other 7 entrances have complete paths.
+  - `Scripts/Core/WaveDirector.cs`:
+    - `Begin` now snaps each entrance to the NavMesh and checks for a complete path to the player;
+    - an entrance that fails is never picked, and the console names it with a warning;
+    - if every entrance failed, none is blocked;
+    - the sideways spawn jitter (±0.75 m) stops at the NavMesh edge (NavMesh.Raycast from the entrance), so it can never cross a fence.
+  - No scene change: Spawn_NorthEast and its floor plate stay in place but are not used, so 7 entrances are live. To use 8 again, move Spawn_NorthEast inside the fence.
+- Status: committed
+- Notes / risks:
+  - Checked by a short Play run (not the test suites): the warning appeared for Spawn_NorthEast only, and across three samples 12 of 12 live enemies had a path to Defne.
+  - Code-built tests with no NavMesh skip the check.

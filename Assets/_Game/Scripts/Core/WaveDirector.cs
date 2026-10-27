@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.AI;
 
 namespace DanceWithTheDevil
 {
@@ -15,6 +16,9 @@ namespace DanceWithTheDevil
     /// Each release waits for room under the cap (warnings count), picks an entrance at least 9 m from the player,
     /// shows that entrance's warning for 0.8 s, then spawns (GDD §6 Doğuş güvenliği); no qualifying entrance
     /// postpones it. Shooters use at most 2 different entrances within 3 s (GDD §6, §8).
+    /// Spawns never land outside the arena: at <see cref="Begin"/> each entrance is snapped to the NavMesh and kept
+    /// only if it has a complete path to the player (an entrance behind a fence or on a cut-off patch is never used,
+    /// with a warning in the console), and a spawn's sideways jitter stays on the NavMesh next to its entrance.
     /// After the authored schedule (5:00) windows keep coming and keep growing until the player dies (K-15; death is
     /// guaranteed, K-4). The clock runs on scaled time, so it stops while Time.timeScale is 0 (contract screen,
     /// hitstop); <see cref="Paused"/> stops it explicitly.
@@ -186,6 +190,8 @@ namespace DanceWithTheDevil
         private readonly List<ShooterUse> _shooterUses = new List<ShooterUse>(8);
         private readonly List<PackDoor> _packDoors = new List<PackDoor>(16);
         private int[] _candidates = new int[4];
+        private bool[] _unreachable = Array.Empty<bool>();
+        private Vector3[] _anchors = Array.Empty<Vector3>();
         private Action<Enemy> _onEnemyDied;
 
         private float _elapsed;
@@ -277,6 +283,7 @@ namespace DanceWithTheDevil
             _begun = true;
             _spawning = true;
             if (_candidates.Length < _spawnPoints.Length) _candidates = new int[_spawnPoints.Length];
+            CheckEntrances();
             OpenWindows();
         }
 
@@ -551,6 +558,7 @@ namespace DanceWithTheDevil
         private bool IsEntranceUsable(int entrance, Vector3 playerPosition, EnemyType type)
         {
             if (entrance < 0 || entrance >= _spawnPoints.Length || _spawnPoints[entrance] == null) return false;
+            if (IsUnreachable(entrance)) return false;
             if (FlatDistanceSqr(_spawnPoints[entrance].position, playerPosition) < _minSpawnDistance * _minSpawnDistance)
                 return false;
             if (type != EnemyType.Shooter) return true;
@@ -573,7 +581,7 @@ namespace DanceWithTheDevil
             int idleCount = 0;
             for (int i = 0; i < _spawnPoints.Length; i++)
             {
-                if (_spawnPoints[i] == null) continue;
+                if (_spawnPoints[i] == null || IsUnreachable(i)) continue;
                 if (FlatDistanceSqr(_spawnPoints[i].position, playerPosition) < _minSpawnDistance * _minSpawnDistance) continue;
                 if (type == EnemyType.Shooter && !ShooterMayUse(i)) continue;
 
@@ -693,7 +701,7 @@ namespace DanceWithTheDevil
             Transform point = _spawnPoints[entrance];
             if (pool == null || point == null) return;
 
-            Vector3 position = point.position + point.right * UnityEngine.Random.Range(-_spawnJitter, _spawnJitter);
+            Vector3 position = SpawnPosition(entrance, point);
             Vector3 facing = _player != null ? _player.position - position : point.forward;
             facing.y = 0f;
             Quaternion rotation = facing.sqrMagnitude > 1e-6f ? Quaternion.LookRotation(facing, Vector3.up) : point.rotation;
@@ -703,6 +711,55 @@ namespace DanceWithTheDevil
             enemy.Died += _onEnemyDied;
             _active.Add(enemy);
             EnemySpawned?.Invoke(enemy);
+        }
+
+        /// <summary>
+        /// Snaps each entrance to the NavMesh and marks the ones with no complete path to the player as unusable.
+        /// Without a NavMesh under the player (code-built tests) nothing is checked; if no entrance passes, none is
+        /// blocked, so the run never stalls.
+        /// </summary>
+        private void CheckEntrances()
+        {
+            int count = _spawnPoints.Length;
+            _unreachable = new bool[count];
+            _anchors = new Vector3[count];
+            for (int i = 0; i < count; i++)
+                if (_spawnPoints[i] != null) _anchors[i] = _spawnPoints[i].position;
+            if (_player == null || !NavMesh.SamplePosition(_player.position, out NavMeshHit start, 3f, NavMesh.AllAreas))
+                return;
+
+            var path = new NavMeshPath();
+            int reachable = 0;
+            for (int i = 0; i < count; i++)
+            {
+                if (_spawnPoints[i] == null) continue;
+                bool ok = NavMesh.SamplePosition(_spawnPoints[i].position, out NavMeshHit hit, 2f, NavMesh.AllAreas)
+                    && NavMesh.CalculatePath(hit.position, start.position, NavMesh.AllAreas, path)
+                    && path.status == NavMeshPathStatus.PathComplete;
+                if (ok)
+                {
+                    _anchors[i] = hit.position;
+                    reachable++;
+                }
+                else
+                {
+                    _unreachable[i] = true;
+                    Debug.LogWarning($"WaveDirector: entrance '{_spawnPoints[i].name}' has no NavMesh path into the arena; it is not used.", _spawnPoints[i]);
+                }
+            }
+            if (reachable == 0) Array.Clear(_unreachable, 0, count);
+        }
+
+        private bool IsUnreachable(int entrance) => entrance < _unreachable.Length && _unreachable[entrance];
+
+        // The entrance's NavMesh point plus a sideways jitter that stops at the NavMesh edge (never through a fence).
+        private Vector3 SpawnPosition(int entrance, Transform point)
+        {
+            Vector3 anchor = entrance < _anchors.Length ? _anchors[entrance] : point.position;
+            Vector3 wanted = anchor + point.right * UnityEngine.Random.Range(-_spawnJitter, _spawnJitter);
+            if (entrance >= _anchors.Length || _spawnJitter <= 0f) return wanted;
+            if (!NavMesh.SamplePosition(anchor, out NavMeshHit onMesh, 0.5f, NavMesh.AllAreas)) return wanted;
+            return NavMesh.Raycast(onMesh.position, wanted, out NavMeshHit edge, NavMesh.AllAreas) ? edge.position : wanted;
         }
 
         private EnemyPool PoolFor(EnemyType type)
